@@ -1,0 +1,12 @@
+reference_projects/
+node_modules/
+/dist/
+/lib/
+packages/dsh-cctui-ink/dist/
+*.tsbuildinfo
+.dsh-dev-home/
+*.log
+.DS_Store
+e2e-scratch/
+/.dsh-install-home/
+__pycache__/

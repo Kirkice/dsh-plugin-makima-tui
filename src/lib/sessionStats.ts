@@ -1,0 +1,106 @@
+/**
+ * Accumulated session stats for the persistent line under the composer —
+ * the deleted REPL's bottom toolbar (repl/core.py `_bottom_toolbar`):
+ *
+ *   deepseek · deepseek-v4-flash · ~/work/app · turns: 3 · tokens: 33189 in / 622 out · cost $0.0048
+ *
+ * Token/cost totals derive from the backend's end-of-turn CostSnapshot (the
+ * same accumulators /cost prints, subagents included, restored on /resume)
+ * when there is one, and from its cumulative `usage` odometer when there is
+ * not — a backend with no price table publishes only the latter. The turn
+ * count is the server's `session_turns` odometer.
+ */
+import { stringWidth } from '@makima-tui/ink'
+
+import { shortCwd } from '../domain/paths.js'
+import type { CostSnapshot } from '../gatewayTypes.js'
+import type { Usage } from '../types.js'
+
+import { formatCost } from './costSummary.js'
+
+export interface SessionStats {
+  costUsd: number
+  /** Total prompt tokens sent: uncached input + cache reads + cache writes. */
+  inputTokens: number
+  outputTokens: number
+  turns: number
+}
+
+export const ZERO_SESSION_STATS: SessionStats = { costUsd: 0, inputTokens: 0, outputTokens: 0, turns: 0 }
+
+/** Fold a CostSnapshot's per-model accumulators into display totals. */
+export function statsFromCostSnapshot(snap: CostSnapshot, turns: number): SessionStats {
+  let input = 0
+  let output = 0
+
+  for (const u of Object.values(snap.model_usage ?? {})) {
+    input += (u.input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0)
+    output += u.output_tokens ?? 0
+  }
+
+  return { costUsd: snap.total_cost_usd ?? 0, inputTokens: input, outputTokens: output, turns }
+}
+
+/**
+ * Fold the cumulative `Usage` odometer a price-free backend publishes instead
+ * of a CostSnapshot. The dsh harness is one: its `TokenUsage` carries tokens
+ * and nothing else, so there is no per-model spend to snapshot and `cost_usd`
+ * is normally absent — `buildSessionStatsLine` then drops the cost segment
+ * rather than printing `$0.0000`. `usage.input` already has cache reads and
+ * writes folded in, which is exactly what `inputTokens` means above.
+ */
+export function statsFromUsage(usage: Usage, turns: number): SessionStats {
+  return {
+    costUsd: usage.cost_usd ?? 0,
+    inputTokens: usage.input ?? 0,
+    outputTokens: usage.output ?? 0,
+    turns
+  }
+}
+
+export interface SessionStatsLineInput {
+  cols: number
+  cwd: string
+  model: string
+  /** Nano mode chip (session.info.nano) — rides the model segment. */
+  nano?: boolean
+  provider: string
+  stats: SessionStats
+}
+
+/**
+ * Compose the stats line, shedding cwd detail as the terminal narrows:
+ * full path → `~`-abbreviated → 28-col tail → 12-col tail → no cwd. The
+ * accumulators on the right are the payload, so the path yields first; if
+ * even the cwd-less form overflows, the caller's truncate-end clips it.
+ */
+export function buildSessionStatsLine({ cols, cwd, model, nano, provider, stats }: SessionStatsLineInput): string {
+  const tail = [
+    `turns: ${stats.turns}`,
+    `tokens: ${stats.inputTokens} in / ${stats.outputTokens} out`,
+    ...(stats.costUsd > 0 ? [`cost ${formatCost(stats.costUsd)}`] : [])
+  ]
+
+  const home = process.env.HOME
+  // Boundary-safe prefix check: /Users/testuser must not abbreviate under
+  // HOME=/Users/test (shortCwd's looser match is a pre-existing quirk).
+  const underHome = !!home && (cwd === home || cwd.startsWith(`${home}/`))
+  const tilde = underHome ? `~${cwd.slice(home!.length)}` : cwd
+  const cwdVariants = cwd ? [cwd, tilde, shortCwd(cwd, 28), shortCwd(cwd, 12), ''] : ['']
+
+  let line = ''
+
+  // The chip rides the model segment (like StatusRule's `opus 4.8 nano`),
+  // so it is never shed by the cwd-narrowing loop below.
+  const modelSeg = nano && model ? `${model} nano` : model
+
+  for (const variant of cwdVariants) {
+    line = [provider, modelSeg, variant, ...tail].filter(Boolean).join(' · ')
+
+    if (stringWidth(line) <= cols) {
+      return line
+    }
+  }
+
+  return line
+}
