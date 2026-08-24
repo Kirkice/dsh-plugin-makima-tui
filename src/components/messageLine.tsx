@@ -174,14 +174,11 @@ export const MessageLine = memo(function MessageLine({
     )
   }
 
-  // Past user inputs and slash echoes render like the original transcript:
-  // the `❯ ` pointer in `subtle` with the text on a `userMessageBackground`
-  // band (UserPromptMessage.tsx:76 / UserCommandMessage.tsx:62 — the band,
-  // not bold text, carries the emphasis, per HighlightedThinkingText). Slash
-  // echoes keep their system role (and gutter width) but borrow the user
-  // pointer, matching UserCommandMessage.
-  const band = transcriptRowBand(msg, t)
-  const { body, glyph, prefix } = ROLE[band === undefined ? msg.role : 'user'](t)
+  // Past user inputs and slash echoes use the user pointer without painting a
+  // full-width background band. A solid band is noisy on dark terminals and
+  // makes terminal scrollback look like a selected row.
+  const useUserPointer = msg.role === 'user' || msg.kind === 'slash'
+  const { body, glyph, prefix } = ROLE[useUserPointer ? 'user' : msg.role](t)
   const gutterWidth = transcriptGutterWidth(msg.role, t.brand.prompt)
 
   const showDetails =
@@ -287,7 +284,7 @@ export const MessageLine = memo(function MessageLine({
         </Box>
       )}
 
-      <Box {...(band === undefined ? {} : { backgroundColor: band, width: '100%' })}>
+      <Box>
         <NoSelect flexShrink={0} fromLeftEdge width={gutterWidth}>
           <Text color={prefix}>
             {glyph}{' '}
@@ -304,12 +301,6 @@ export const MessageLine = memo(function MessageLine({
 // is chrome noise (and the structured branch above never reaches here).
 export const shouldShowResponseSeparator = (msg: Msg, showDetails: boolean): boolean =>
   msg.role === 'assistant' && msg.kind !== 'diff' && showDetails && /\S/.test(msg.text)
-
-// The highlight band behind past user inputs and slash echoes — the original
-// userMessageBackground emphasis (UserPromptMessage.tsx:76 /
-// UserCommandMessage.tsx:62). Assistant/system/tool rows get none.
-export const transcriptRowBand = (msg: Msg, t: Theme): string | undefined =>
-  msg.role === 'user' || msg.kind === 'slash' ? t.color.userMessageBackground : undefined
 
 interface MessageLineProps {
   cols: number

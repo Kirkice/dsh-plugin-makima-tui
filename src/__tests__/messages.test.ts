@@ -4,7 +4,7 @@ import { renderSync } from '@makima-tui/ink'
 import React from 'react'
 import { describe, expect, it } from 'vitest'
 
-import { MessageLine, transcriptRowBand } from '../components/messageLine.js'
+import { MessageLine } from '../components/messageLine.js'
 import { toTranscriptMessages } from '../domain/messages.js'
 import { upsert } from '../lib/messages.js'
 import { stripAnsi } from '../lib/text.js'
@@ -81,10 +81,8 @@ describe('MessageLine', () => {
     expect(renderedLine).toContain('❯   Okay')
   })
 
-  // Original-CC transcript emphasis: past user inputs sit on a
-  // userMessageBackground band (UserPromptMessage.tsx:76); slash echoes get
-  // the same band + user pointer (UserCommandMessage.tsx:62); assistant rows
-  // stay bandless.
+  // User inputs and slash echoes share the user pointer; neither paints a
+  // full-width background band.
   const renderRaw = (msg: Record<string, unknown>) => {
     const stdout = new PassThrough()
     const stdin = new PassThrough()
@@ -113,16 +111,6 @@ describe('MessageLine', () => {
 
     return output
   }
-
-  it('paints the userMessageBackground band behind user rows and slash echoes only', () => {
-    const band = DEFAULT_THEME.color.userMessageBackground
-
-    expect(transcriptRowBand({ role: 'user', text: 'find the bug' } as never, DEFAULT_THEME)).toBe(band)
-    expect(transcriptRowBand({ kind: 'slash', role: 'system', text: '/cost' } as never, DEFAULT_THEME)).toBe(band)
-    expect(transcriptRowBand({ role: 'assistant', text: 'prose' } as never, DEFAULT_THEME)).toBeUndefined()
-    expect(transcriptRowBand({ role: 'system', text: 'note' } as never, DEFAULT_THEME)).toBeUndefined()
-    expect(transcriptRowBand({ role: 'tool', text: 'result' } as never, DEFAULT_THEME)).toBeUndefined()
-  })
 
   it('renders slash echoes with the user pointer, not the system dot', () => {
     const raw = stripAnsi(renderRaw({ kind: 'slash', role: 'system', text: '/cost' }))

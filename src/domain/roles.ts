@@ -1,15 +1,11 @@
 import type { Theme } from '../theme.js'
 import type { Role } from '../types.js'
 
-// Original Claude Code glyphs/colors (messages/*.tsx): assistant prose gets a
-// plain text-white ⏺ (AssistantTextMessage), the user echo is a `❯` in
-// `subtle` with white text (HighlightedThinkingText figures.pointer +
-// pointerColor "subtle") whose emphasis comes from the userMessageBackground
-// band messageLine paints behind the row (UserPromptMessage.tsx:76), and
-// tools keep the green ⏺ result coloring.
+// Transcript glyphs/colors: use text symbols rather than emoji-prone glyphs so
+// Windows terminals cannot substitute colored emoji for tool status markers.
 export const ROLE: Record<Role, (t: Theme) => { body: string; glyph: string; prefix: string }> = {
-  assistant: t => ({ body: t.color.text, glyph: '⏺', prefix: t.color.text }),
+  assistant: t => ({ body: t.color.text, glyph: '›', prefix: t.color.text }),
   system: t => ({ body: '', glyph: '·', prefix: t.color.muted }),
-  tool: t => ({ body: t.color.muted, glyph: '⏺', prefix: t.color.ok }),
+  tool: t => ({ body: t.color.muted, glyph: '›', prefix: t.color.ok }),
   user: t => ({ body: t.color.text, glyph: '❯', prefix: t.color.subtle })
 }

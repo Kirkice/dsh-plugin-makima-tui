@@ -1102,14 +1102,14 @@ export const ToolTrail = memo(function ToolTrail({
     })
   }
 
-  // Claude Code flat tool render: each call as `⏺ Tool(args)` with its result
-  // indented under `⎿` — no collapsible "Tool calls" wrapper, tree rails, or
+  // Flat tool render: each call as `› Tool(args)` with its result indented
+  // under `⎿` — no collapsible "Tool calls" wrapper, tree rails, or
   // token tally. Live (running) tools keep their spinner bullet (group.live).
   // CC blink cadence for a running tool's bullet: the shared 500ms ticker
   // alternates glyph/space (original useBlink is 600ms — same read).
   const blinkOn = Math.floor(now / 500) % 2 === 0
 
-  // One full `⏺ Tool(args)` + `⎿ result` block. This is every row in the
+  // One full `› Tool(args)` + `⎿ result` block. This is every row in the
   // expanded (ctrl+o) view, and the shape STANDALONE tools — edits,
   // delegations, questions — keep even while collapsed. `gap` opens the blank
   // line upstream leaves between consecutive blocks.
@@ -1121,12 +1121,11 @@ export const ToolTrail = memo(function ToolTrail({
       <Box flexDirection="column" key={group.key} marginTop={gap ? 1 : 0}>
         <Text color={group.color}>
           {group.live ? (
-            // Running: dim blinking ⏺ — the off-frame renders two
-            // spaces matching the glyph+space width so the row never
-            // reflows mid-blink.
-            <Text dimColor>{blinkOn ? '⏺ ' : '  '}</Text>
+            // Running: dim blinking text chevron. Unlike `⏺`, it cannot be
+            // substituted with a colored emoji by Windows terminal fonts.
+            <Text dimColor>{blinkOn ? '› ' : '  '}</Text>
           ) : (
-            <Text color={bulletColor}>⏺ </Text>
+            <Text color={bulletColor}>› </Text>
           )}
           <Text color={t.color.text}>{toolLabel(group)}</Text>
           {isDelegateGroup ? (
@@ -1174,7 +1173,7 @@ export const ToolTrail = memo(function ToolTrail({
     )
   }
 
-  // Every call keeps its own `⏺ Tool(args)` block, in both views: the path a
+  // Every call keeps its own `› Tool(args)` block, in both views: the path a
   // read opened and the command a shell ran are the transcript's whole point,
   // and a tally that replaced them ("Ran 1 shell command") took the one thing
   // worth reading. ctrl+o changes how much of each RESULT shows, not whether
