@@ -1,6 +1,8 @@
 // Boot wiring for the TUI inside a dsh process — the plugin-mode equivalent
 // of src/entry.tsx. Everything terminal-global (mode resets, graceful exit,
 // memory monitor) stays here; React is mounted on the real process streams.
+import { appendFileSync } from 'node:fs'
+
 import { createElement } from 'react'
 
 import type { Context } from '@deepseek-ai/cordis'
@@ -8,7 +10,22 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { Config } from './index.js'
 import { HarnessGatewayClient } from './client.js'
 
+declare module '@deepseek-ai/cordis' {
+  interface Context {
+    /** Directory the DSH CLI captured before mounting application entries. */
+    launchCwd?: string
+  }
+}
+function traceStartup(stage: string): void {
+  const file = process.env.MAKIMA_TUI_STARTUP_TRACE
+
+  if (file !== undefined) {
+    appendFileSync(file, `${new Date().toISOString()} ${stage}\n`)
+  }
+}
+
 export async function mountCcTui(ctx: Context, config: Config): Promise<void> {
+  traceStartup('mount')
   const allowNoTty = config.allowNoTty || process.env.MAKIMA_TUI_ALLOW_NO_TTY === '1'
 
   if (!allowNoTty && (!process.stdin.isTTY || !process.stdout.isTTY)) {
@@ -21,6 +38,7 @@ export async function mountCcTui(ctx: Context, config: Config): Promise<void> {
 
   // Must run before chalk/supports-color initialize anywhere downstream.
   await import('../lib/forceTruecolor.js')
+  traceStartup('truecolor')
 
   const [{ INLINE_MODE, TERMUX_TUI_MODE }, { resetTerminalModes }, { setupGracefulExit }, { startMemoryMonitor }, { openExternalUrl }] =
     await Promise.all([
@@ -30,6 +48,7 @@ export async function mountCcTui(ctx: Context, config: Config): Promise<void> {
       import('../lib/memoryMonitor.js'),
       import('../lib/openExternalUrl.js')
     ])
+  traceStartup('terminal-modules')
 
   const FULLSCREEN = !INLINE_MODE
 
@@ -45,15 +64,18 @@ export async function mountCcTui(ctx: Context, config: Config): Promise<void> {
       process.stdout.write('\x1b[2J\x1b[H\x1b[3J')
     }
   }
+  traceStartup('terminal-ready')
 
   const gw = new HarnessGatewayClient(ctx, {
     cwd: config.cwd,
+    launchCwd: ctx.launchCwd,
     model: config.model,
     provider: config.provider,
     sessionId: config.sessionId
   })
 
   gw.start()
+  traceStartup('gateway-started')
 
   setupGracefulExit({
     cleanups: [
@@ -90,7 +112,9 @@ export async function mountCcTui(ctx: Context, config: Config): Promise<void> {
 
   process.on('beforeExit', () => stopMemoryMonitor())
 
+  traceStartup('before-app-import')
   const [ink, { App }] = await Promise.all([import('@makima-tui/ink'), import('../App.js')])
+  traceStartup('app-imported')
 
   const instance = await ink.render(createElement(App, { gw }), {
     exitOnCtrlC: false,
@@ -98,6 +122,7 @@ export async function mountCcTui(ctx: Context, config: Config): Promise<void> {
       openExternalUrl(url)
     }
   })
+  traceStartup('rendered')
 
   ctx.effect(() => () => {
     try {

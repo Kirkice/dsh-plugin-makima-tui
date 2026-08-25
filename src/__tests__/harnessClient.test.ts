@@ -66,6 +66,7 @@ const TOOL_CARDS: Record<string, unknown> = {
 
 function makeWorld() {
   const listeners = new Map<string, Listener[]>()
+  const deleted: string[] = []
   const followups: unknown[] = []
   const steers: unknown[] = []
   const cancels: unknown[] = []
@@ -171,6 +172,7 @@ function makeWorld() {
 
       if (name === 'sessionPersistence') {
         return {
+          delete: async (id: string) => { deleted.push(id) },
           list: async () => [
             { createdAt: 50, id: 'cc-old-1', version: 1 },
             { createdAt: 90, id: 'cc-old-2', version: 1 }
@@ -223,12 +225,24 @@ function makeWorld() {
     }
   }
 
-  return { agent, cancels, client, ctx, emit, events, fire, fireFrom, followups, listeners, planSets, policies, providers, resumedAgent, resumedHandle, steers }
+  return { agent, cancels, client, ctx, deleted, emit, events, fire, fireFrom, followups, listeners, planSets, policies, providers, resumedAgent, resumedHandle, steers }
 }
 
 const settle = () => new Promise(resolve => setTimeout(resolve, 0))
 
 describe('HarnessGatewayClient', () => {
+  it('uses the CLI launch directory when creating a session without a configured directory', async () => {
+    const w = makeWorld()
+    const client = new HarnessGatewayClient(w.ctx as never, { launchCwd: 'H:\\Project\\Roo-Code' })
+
+    client.start()
+    await settle()
+
+    expect(w.ctx.agents.create).toHaveBeenCalledWith(expect.objectContaining({
+      meta: { cwd: 'H:\\Project\\Roo-Code' },
+    }))
+  })
+
   it('start() creates the agent and emits gateway.ready + session.info', async () => {
     const w = makeWorld()
 
@@ -1032,15 +1046,28 @@ describe('HarnessGatewayClient', () => {
     expect(res.sessions.find(s => s.id === 'cc-resumed-1')?.current).toBe(true)
   })
 
-  it('session.list serves persisted headers newest-first', async () => {
+  it('session.list serves persisted headers newest-first and honors its requested limit', async () => {
     const w = makeWorld()
 
     w.client.start()
     await settle()
 
-    const res = await w.client.request<{ sessions: Array<{ id: string; started_at: number }> }>('session.list', {})
+    const res = await w.client.request<{ sessions: Array<{ id: string; started_at: number }> }>('session.list', { limit: 1 })
 
-    expect(res.sessions.map(s => s.id)).toEqual(['cc-old-2', 'cc-old-1'])
+    expect(res.sessions.map(s => s.id)).toEqual(['cc-old-2'])
+  })
+
+  it('session.delete delegates persisted-history removal and refuses active sessions', async () => {
+    const w = makeWorld()
+
+    w.client.start()
+    await settle()
+
+    await expect(w.client.request('session.delete', { session_id: 'cc-old-1' })).resolves.toEqual({ deleted: 'cc-old-1' })
+    expect(w.deleted).toEqual(['cc-old-1'])
+
+    const activeId = String((w.ctx.agents.create as ReturnType<typeof vi.fn>).mock.calls[0]![0].sessionId)
+    await expect(w.client.request('session.delete', { session_id: activeId })).rejects.toThrow('cannot delete active session')
   })
 
   it('session.close disposes the live handle and session.title renames', async () => {

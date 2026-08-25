@@ -77,6 +77,7 @@ interface ChildRun {
 
 export interface HarnessClientOptions {
   cwd?: string
+  launchCwd?: string
   model?: string
   provider?: string
   sessionId?: string
@@ -447,7 +448,7 @@ export class HarnessGatewayClient extends GatewayClient {
   }
 
   private workingDir(): string {
-    return this.opts.cwd ?? process.env.MAKIMA_TUI_WORKSPACE ?? process.env.MAKIMA_TUI_CWD ?? process.cwd()
+    return this.opts.cwd ?? process.env.MAKIMA_TUI_WORKSPACE ?? process.env.MAKIMA_TUI_CWD ?? this.opts.launchCwd ?? process.cwd()
   }
 
   private async createAgent(fixedSessionId?: string): Promise<AgentHandle> {
@@ -1397,13 +1398,25 @@ export class HarnessGatewayClient extends GatewayClient {
       | { list?: (signal?: AbortSignal) => Promise<SessionHeader[]> }
       | undefined
 
-    try {
-      const headers = (await persistence?.list?.()) ?? []
-
-      return [...headers].sort((a, b) => b.createdAt - a.createdAt)
-    } catch {
-      return []
+    if (!persistence?.list) {
+      throw new Error('session history is unavailable: session persistence is not configured')
     }
+
+    const headers = await persistence.list()
+
+    return [...headers].sort((a, b) => b.createdAt - a.createdAt)
+  }
+
+  private async deletePersisted(id: string): Promise<void> {
+    const persistence = this.ctx.get('sessionPersistence') as
+      | { delete?: (sessionId: string, signal?: AbortSignal) => Promise<void> }
+      | undefined
+
+    if (!persistence?.delete) {
+      throw new Error('session deletion is unavailable: session persistence does not support deletion')
+    }
+
+    await persistence.delete(id)
   }
 
   private cachedTitle(header: SessionHeader): string | undefined {
@@ -1731,17 +1744,38 @@ export class HarnessGatewayClient extends GatewayClient {
 
       case 'session.list':
         return this.listPersisted().then(headers => {
-          const sessions = headers.slice(0, 50).map(header => ({
-            id: String(header.id),
-            message_count: 0,
-            preview: this.cachedTitle(header) ?? '',
-            source: 'harness',
-            started_at: header.createdAt,
-            title: this.cachedTitle(header) ?? String(header.id)
-          }))
+          const limit = typeof p.limit === 'number' && Number.isSafeInteger(p.limit) && p.limit >= 0
+            ? p.limit
+            : 50
+          const sessions = headers.slice(0, limit).map(header => {
+            const title = this.cachedTitle(header)
+
+            return {
+              id: String(header.id),
+              message_count: 0,
+              preview: title ?? '',
+              source: 'harness',
+              started_at: header.createdAt,
+              title: title ?? String(header.id)
+            }
+          })
 
           return { sessions } as T
         })
+
+      case 'session.delete': {
+        const id = String(p.session_id ?? '')
+
+        if (!id) {
+          return Promise.reject(new Error('session_id is required'))
+        }
+
+        if (this.live.has(id)) {
+          return Promise.reject(new Error(`cannot delete active session "${id}"`))
+        }
+
+        return this.deletePersisted(id).then(() => ({ deleted: id } as T))
+      }
 
       case 'commands.catalog': {
         const pairs = SLASHES.map(s => [s.name, s.desc] as [string, string])
