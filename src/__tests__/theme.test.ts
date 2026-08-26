@@ -58,6 +58,7 @@ describe('DEFAULT_THEME', () => {
     expect(DEFAULT_THEME.color.thinking).toBe('#B9A1FF')
     expect(DEFAULT_THEME.color.highlight).toBe('#FF6FB5')
     expect(DEFAULT_THEME.color.heading).toBe('#FF6FB5')
+    expect(DEFAULT_THEME.color.user).toBe('#63E6A3')
     expect(DEFAULT_THEME.color.frame).toBe('#A78BFA')
     expect(DEFAULT_THEME.color.error).toBe('#FF718D')
     expect(DEFAULT_THEME.color.text).toBe('#F8F8F2')

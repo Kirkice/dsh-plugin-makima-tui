@@ -334,13 +334,12 @@ const renderTable = (k: number, rows: string[][], t: Theme, cols?: number) => {
     Math.max(...normalizedRows.map(r => minCellWidth(r[ci] ?? '')), MIN_COL_WIDTH)
   )
 
-  // Available width: cols minus table padding minus column gaps minus safety.
-  // transcriptBodyWidth (source of cols) subtracts message gutter + scrollbar,
-  // but NOT this table's paddingLeft — we subtract it here.
-  const gapOverhead = (numCols - 1) * COL_GAP
-
+  // Each cell gets one space of horizontal padding on either side and every
+  // column is separated by a one-cell box-drawing rail. `cols` does not include
+  // this renderer's left inset, so reserve both that inset and the full frame.
+  const frameOverhead = numCols * 3 + 1
   const availableWidth = cols
-    ? Math.max(cols - TABLE_PADDING_LEFT - gapOverhead - SAFETY_MARGIN, numCols * MIN_COL_WIDTH)
+    ? Math.max(cols - TABLE_PADDING_LEFT - frameOverhead - SAFETY_MARGIN, numCols * MIN_COL_WIDTH)
     : Infinity
 
   const totalIdeal = idealWidths.reduce((a, b) => a + b, 0)
@@ -467,155 +466,59 @@ const renderTable = (k: number, rows: string[][], t: Theme, cols?: number) => {
   }
 
   const isHard = totalMin > availableWidth // tier 3 needs hard word breaks
-  const sep = columnWidths.map(w => '─'.repeat(Math.max(1, w))).join('  ')
+  const border = (left: string, middle: string, right: string) =>
+    `${left}${columnWidths.map(width => '─'.repeat(width + 2)).join(middle)}${right}`
+  const topBorder = border('┌', '┬', '┐')
+  const rowBorder = border('├', '┼', '┤')
+  const bottomBorder = border('└', '┴', '┘')
 
-  // When wrapping isn't needed, build single-line strings per row.
-  // All cells render as plain text via stripInlineMarkup.
-  // TODO: follow-up — format to ANSI then wrap with wrapAnsi for inline markdown preservation.
-  // See free-code/src/components/MarkdownTable.tsx L44-L62 for approach.
-  if (!needsWrap) {
-    const buildRowString = (row: string[]): string =>
-      row
-        .map((cell, ci) => {
-          const text = stripInlineMarkup(cell)
-          const pad = ' '.repeat(Math.max(0, columnWidths[ci]! - stringWidth(text)))
-          const gap = ci < numCols - 1 ? '  ' : ''
-
-          return text + pad + gap
-        })
-        .join('')
-
-    return (
-      <Box flexDirection="column" key={k} paddingLeft={TABLE_PADDING_LEFT}>
-        {normalizedRows.map((row, ri) => (
-          <Fragment key={ri}>
-            <Text bold={ri === 0} color={ri === 0 ? t.color.highlight : undefined} wrap="truncate-end">
-              {buildRowString(row)}
-            </Text>
-            {ri === 0 && normalizedRows.length > 1 ? (
-              <Text color={t.color.frame} wrap="truncate-end">
-                {sep}
-              </Text>
-            ) : null}
-          </Fragment>
-        ))}
-      </Box>
-    )
-  }
-
-  // Wrapping path: build multi-line rows as complete strings.
-  type LineEntry = { text: string; kind: 'header' | 'separator' | 'body' }
-
-  const buildRowLines = (row: string[]): string[] => {
+  const buildRowLines = (row: string[]): string[][] => {
     const cellLines = row.map((cell, ci) => wrapCell(cell, columnWidths[ci]!, isHard))
+    const height = Math.max(...cellLines.map(lines => lines.length), 1)
 
-    const maxLines = Math.max(...cellLines.map(l => l.length), 1)
+    return Array.from({ length: height }, (_, lineIndex) =>
+      columnWidths.map((width, ci) => {
+        const text = cellLines[ci]?.[lineIndex] ?? ''
 
-    const result: string[] = []
-
-    for (let li = 0; li < maxLines; li++) {
-      let line = ''
-
-      for (let ci = 0; ci < numCols; ci++) {
-        const cl = cellLines[ci] ?? ['']
-        const cellText = li < cl.length ? cl[li]! : ''
-        const pad = ' '.repeat(Math.max(0, columnWidths[ci]! - stringWidth(cellText)))
-        line += cellText + pad
-
-        if (ci < numCols - 1) {
-          line += '  '
-        }
-      }
-
-      result.push(line)
-    }
-
-    return result
-  }
-
-  // Build all lines with metadata for styling, tracking tallest body row
-  const allEntries: LineEntry[] = []
-  let tallestBodyRow = 0
-  normalizedRows.forEach((row, ri) => {
-    const kind = ri === 0 ? ('header' as const) : ('body' as const)
-    const rowLines = buildRowLines(row)
-    rowLines.forEach(text => allEntries.push({ text, kind }))
-
-    if (ri > 0) {
-      tallestBodyRow = Math.max(tallestBodyRow, rowLines.length)
-    }
-
-    if (ri === 0 && normalizedRows.length > 1) {
-      allEntries.push({ text: sep, kind: 'separator' })
-    }
-  })
-
-  // Post-render safety condition: compute max line width.
-  const maxLineWidth = Math.max(...allEntries.map(e => stringWidth(e.text)))
-  const safetyOverflow = cols != null && maxLineWidth > cols - TABLE_PADDING_LEFT - SAFETY_MARGIN
-
-  // Scaled vertical threshold — 2-3 col tables stay tabular even with tall cells
-  const maxRowLinesThreshold = numCols <= 3 ? 8 : numCols <= 6 ? 5 : 4
-
-  const useVertical = tallestBodyRow > maxRowLinesThreshold || safetyOverflow
-
-  if (useVertical) {
-    // Edge case: header-only table
-    if (normalizedRows.length <= 1) {
-      return (
-        <Box flexDirection="column" key={k} paddingLeft={TABLE_PADDING_LEFT}>
-          <Text bold color={t.color.highlight} wrap="wrap-trim">
-            {normalizedRows[0]!.map(h => stripInlineMarkup(h)).join(' · ')}
-          </Text>
-        </Box>
-      )
-    }
-
-    const headers = normalizedRows[0]!
-    const dataRows = normalizedRows.slice(1)
-    const sepWidth = Math.max(1, cols ? Math.min(cols - TABLE_PADDING_LEFT - 1, 40) : 40)
-
-    return (
-      <Box flexDirection="column" key={k} paddingLeft={TABLE_PADDING_LEFT}>
-        {dataRows.map((row, ri) => (
-          <Fragment key={ri}>
-            {ri > 0 ? (
-              <Text color={t.color.frame}>
-                {'─'.repeat(sepWidth)}
-              </Text>
-            ) : null}
-            {headers.map((header, ci) => {
-              const cell = row[ci] ?? ''
-              const label = stripInlineMarkup(header) || `Col ${ci + 1}`
-
-              return (
-                <Text key={ci} wrap="wrap-trim">
-                  <Text bold color={t.color.command}>
-                    {label}:
-                  </Text>{' '}
-                  {stripInlineMarkup(cell)}
-                </Text>
-              )
-            })}
-          </Fragment>
-        ))}
-      </Box>
+        return `${text}${' '.repeat(Math.max(0, width - stringWidth(text)))}`
+      })
     )
   }
 
-  // Render wrapped horizontal rows — one <Text> per visual line.
+  // A framed table remains readable when cell text wraps: each visual row keeps
+  // its vertical rails, and every data row is separated with a full purple rule.
   return (
     <Box flexDirection="column" key={k} paddingLeft={TABLE_PADDING_LEFT}>
-      {allEntries.map((entry, i) => (
-        <Text
-          bold={entry.kind === 'header'}
-          color={entry.kind === 'header' ? t.color.highlight : entry.kind === 'separator' ? t.color.frame : undefined}
-          key={i}
-          wrap="truncate-end"
-        >
-          {entry.text}
-        </Text>
-      ))}
+      <Text color={t.color.frame} wrap="truncate-end">
+        {topBorder}
+      </Text>
+      {normalizedRows.flatMap((row, rowIndex) => {
+        const header = rowIndex === 0
+        const lines = buildRowLines(row)
+        const renderedLines = lines.map((cells, lineIndex) => (
+          <Box flexDirection="row" key={`row-${rowIndex}-line-${lineIndex}`}>
+            <Text color={t.color.frame}>│</Text>
+            {cells.map((cell, ci) => (
+              <Fragment key={ci}>
+                <Text bold={header} color={header ? t.color.highlight : undefined} wrap="truncate-end">
+                  {` ${cell} `}
+                </Text>
+                <Text color={t.color.frame}>│</Text>
+              </Fragment>
+            ))}
+          </Box>
+        ))
+        const divider = rowIndex < normalizedRows.length - 1 ? (
+          <Text color={t.color.frame} key={`row-${rowIndex}-border`} wrap="truncate-end">
+            {rowBorder}
+          </Text>
+        ) : null
+
+        return divider ? [...renderedLines, divider] : renderedLines
+      })}
+      <Text color={t.color.frame} wrap="truncate-end">
+        {bottomBorder}
+      </Text>
     </Box>
   )
 }

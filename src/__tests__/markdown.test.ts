@@ -275,6 +275,44 @@ describe('Md wrapping', () => {
   })
 })
 
+describe('Md tables', () => {
+  it('renders a complete Unicode frame around every table cell', () => {
+    const lines = renderPlain(
+      React.createElement(
+        Box,
+        { width: 80 },
+        React.createElement(Md, {
+          t: DEFAULT_THEME,
+          text: '| Name | Status |\n| --- | --- |\n| Makima | Ready |\n| User | Active |'
+        })
+      )
+    )
+
+    expect(lines).toContain('  ┌────────┬────────┐')
+    expect(lines).toContain('  │ Name   │ Status │')
+    expect(lines).toContain('  ├────────┼────────┤')
+    expect(lines).toContain('  │ Makima │ Ready  │')
+    expect(lines).toContain('  └────────┴────────┘')
+  })
+
+  it('retains vertical rails for wrapped cell content', () => {
+    const lines = renderPlain(
+      React.createElement(
+        Box,
+        { width: 30 },
+        React.createElement(Md, {
+          t: DEFAULT_THEME,
+          text: '| Name | Detail |\n| --- | --- |\n| Makima | A longer value that wraps |'
+        })
+      )
+    )
+
+    expect(lines.filter(line => line.includes('│')).length).toBeGreaterThan(2)
+    expect(lines.some(line => line.trimStart().startsWith('┌'))).toBe(true)
+    expect(lines.some(line => line.trimStart().startsWith('└'))).toBe(true)
+  })
+})
+
 describe('Md link labels', () => {
   // URLs must stay visible — see the ResolvedLink comment in
   // components/markdown.tsx for why.

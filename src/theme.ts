@@ -18,7 +18,7 @@ export interface ThemeColors {
   highlight: string
   /** Pale pink reserved for Markdown section headings. */
   heading: string
-  /** Orange reserved for user-authored transcript rows. */
+  /** Mint green reserved for user-authored transcript rows. */
   user: string
   /** Low-contrast frame color for nested terminal cards and separators. */
   frame: string
@@ -298,7 +298,7 @@ export const DARK_THEME: Theme = {
     thinking: '#B9A1FF',
     highlight: '#FF6FB5',
     heading: '#FF6FB5',
-    user: '#FFAA5C',
+    user: '#63E6A3',
     frame: '#A78BFA',
     ok: '#63E6A3',
     error: '#FF718D',
@@ -360,7 +360,7 @@ export const LIGHT_THEME: Theme = {
     thinking: '#674C9E',
     highlight: '#C5297A',
     heading: '#C5297A',
-    user: '#B45309',
+    user: '#197A4B',
     frame: '#7161B5',
     ok: '#197A4B',
     error: '#C52945',
