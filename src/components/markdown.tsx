@@ -288,6 +288,11 @@ const MIN_COL_WIDTH = 3
 const COL_GAP = 2 // the '  ' between columns
 const TABLE_PADDING_LEFT = 2 // paddingLeft={2} on the outer <Box>
 
+const ruleWidth = (cols?: number, inset = 0) => Math.max(1, Math.min(Math.max(1, (cols ?? 64) - inset), 72))
+
+const listMarkerColor = (t: Theme, depth: number) =>
+  depth === 0 ? t.color.highlight : depth === 1 ? t.color.command : t.color.thinking
+
 const renderTable = (k: number, rows: string[][], t: Theme, cols?: number) => {
   // Guard: empty table
   if (rows.length === 0 || rows[0]!.length === 0) {
@@ -484,11 +489,11 @@ const renderTable = (k: number, rows: string[][], t: Theme, cols?: number) => {
       <Box flexDirection="column" key={k} paddingLeft={TABLE_PADDING_LEFT}>
         {normalizedRows.map((row, ri) => (
           <Fragment key={ri}>
-            <Text bold={ri === 0} color={ri === 0 ? t.color.accent : undefined} wrap="truncate-end">
+            <Text bold={ri === 0} color={ri === 0 ? t.color.highlight : undefined} wrap="truncate-end">
               {buildRowString(row)}
             </Text>
             {ri === 0 && normalizedRows.length > 1 ? (
-              <Text color={t.color.muted} dimColor wrap="truncate-end">
+              <Text color={t.color.frame} wrap="truncate-end">
                 {sep}
               </Text>
             ) : null}
@@ -559,7 +564,7 @@ const renderTable = (k: number, rows: string[][], t: Theme, cols?: number) => {
     if (normalizedRows.length <= 1) {
       return (
         <Box flexDirection="column" key={k} paddingLeft={TABLE_PADDING_LEFT}>
-          <Text bold color={t.color.accent} wrap="wrap-trim">
+          <Text bold color={t.color.highlight} wrap="wrap-trim">
             {normalizedRows[0]!.map(h => stripInlineMarkup(h)).join(' · ')}
           </Text>
         </Box>
@@ -575,7 +580,7 @@ const renderTable = (k: number, rows: string[][], t: Theme, cols?: number) => {
         {dataRows.map((row, ri) => (
           <Fragment key={ri}>
             {ri > 0 ? (
-              <Text color={t.color.muted} dimColor>
+              <Text color={t.color.frame}>
                 {'─'.repeat(sepWidth)}
               </Text>
             ) : null}
@@ -585,7 +590,7 @@ const renderTable = (k: number, rows: string[][], t: Theme, cols?: number) => {
 
               return (
                 <Text key={ci} wrap="wrap-trim">
-                  <Text bold color={t.color.accent}>
+                  <Text bold color={t.color.command}>
                     {label}:
                   </Text>{' '}
                   {stripInlineMarkup(cell)}
@@ -604,8 +609,7 @@ const renderTable = (k: number, rows: string[][], t: Theme, cols?: number) => {
       {allEntries.map((entry, i) => (
         <Text
           bold={entry.kind === 'header'}
-          color={entry.kind === 'header' ? t.color.accent : entry.kind === 'separator' ? t.color.muted : undefined}
-          dimColor={entry.kind === 'separator'}
+          color={entry.kind === 'header' ? t.color.highlight : entry.kind === 'separator' ? t.color.frame : undefined}
           key={i}
           wrap="truncate-end"
         >
@@ -650,7 +654,7 @@ function MdInline({ t, text }: { t: Theme; text: string }) {
       // are verbatim by definition. Letting MdInline reprocess them
       // would corrupt regex examples and shell snippets.
       parts.push(
-        <Text color={t.color.accent} dimColor key={parts.length}>
+        <Text color={t.color.command} key={parts.length}>
           {m[7]}
         </Text>
       )
@@ -679,19 +683,19 @@ function MdInline({ t, text }: { t: Theme; text: string }) {
       )
     } else if (m[13]) {
       parts.push(
-        <Text color={t.color.muted} key={parts.length}>
+        <Text color={t.color.thinking} key={parts.length}>
           [{m[13]}]
         </Text>
       )
     } else if (m[14]) {
       parts.push(
-        <Text color={t.color.muted} key={parts.length}>
+        <Text color={t.color.thinking} key={parts.length}>
           ^{m[14]}
         </Text>
       )
     } else if (m[15]) {
       parts.push(
-        <Text color={t.color.muted} key={parts.length}>
+        <Text color={t.color.thinking} key={parts.length}>
           _{m[15]}
         </Text>
       )
@@ -714,7 +718,7 @@ function MdInline({ t, text }: { t: Theme; text: string }) {
       // preserved verbatim, so unfamiliar commands just look like their
       // raw LaTeX rather than vanishing.
       parts.push(
-        <Text color={t.color.accent} italic key={parts.length}>
+        <Text color={t.color.thinking} italic key={parts.length}>
           {renderMath(texToUnicode(m[17] ?? m[18]!))}
         </Text>
       )
@@ -874,8 +878,8 @@ function MdImpl({ cols, compact, t, text }: MdProps) {
         const highlighted = !isDiff && isHighlightable(lang)
 
         nodes.push(
-          <Box flexDirection="column" key={key} paddingLeft={2}>
-            {lang && !isDiff && <Text color={t.color.muted}>{'─ ' + lang}</Text>}
+          <Box borderColor={t.color.frame} borderStyle="round" flexDirection="column" key={key} marginLeft={1} paddingX={1}>
+            {lang && !isDiff && <Text color={t.color.command}>{'◆ ' + lang.toUpperCase()}</Text>}
 
             {block.map((l, j) => {
               if (highlighted) {
@@ -937,8 +941,8 @@ function MdImpl({ cols, compact, t, text }: MdProps) {
 
           start('code')
           nodes.push(
-            <Box flexDirection="column" key={key} paddingLeft={2}>
-              {inner ? <Text color={t.color.accent}>{renderMath(texToUnicode(inner))}</Text> : null}
+            <Box borderColor={t.color.frame} borderStyle="round" flexDirection="column" key={key} marginLeft={1} paddingX={1}>
+              {inner ? <Text color={t.color.thinking}>{renderMath(texToUnicode(inner))}</Text> : null}
             </Box>
           )
           i++
@@ -983,9 +987,9 @@ function MdImpl({ cols, compact, t, text }: MdProps) {
 
         start('code')
         nodes.push(
-          <Box flexDirection="column" key={key} paddingLeft={2}>
+          <Box borderColor={t.color.frame} borderStyle="round" flexDirection="column" key={key} marginLeft={1} paddingX={1}>
             {block.map((l, j) => (
-              <Text color={t.color.accent} key={j}>
+              <Text color={t.color.thinking} key={j}>
                 {renderMath(texToUnicode(l))}
               </Text>
             ))}
@@ -1001,7 +1005,7 @@ function MdImpl({ cols, compact, t, text }: MdProps) {
       if (heading) {
         start('heading')
         nodes.push(
-          <Text bold color={t.color.accent} key={key} wrap="wrap-trim">
+          <Text bold color={t.color.heading} key={key} wrap="wrap-trim">
             <MdInline t={t} text={heading} />
           </Text>
         )
@@ -1013,7 +1017,7 @@ function MdImpl({ cols, compact, t, text }: MdProps) {
       if (i + 1 < lines.length && SETEXT_RE.test(lines[i + 1]!)) {
         start('heading')
         nodes.push(
-          <Text bold color={t.color.accent} key={key} wrap="wrap-trim">
+          <Text bold color={t.color.heading} key={key} wrap="wrap-trim">
             <MdInline t={t} text={line.trim()} />
           </Text>
         )
@@ -1025,8 +1029,8 @@ function MdImpl({ cols, compact, t, text }: MdProps) {
       if (HR_RE.test(line)) {
         start('rule')
         nodes.push(
-          <Text color={t.color.muted} key={key}>
-            {'─'.repeat(36)}
+          <Text color={t.color.frame} key={key}>
+            {'─'.repeat(ruleWidth(cols))}
           </Text>
         )
         i++
@@ -1039,7 +1043,7 @@ function MdImpl({ cols, compact, t, text }: MdProps) {
       if (footnote) {
         start('list')
         nodes.push(
-          <Text color={t.color.muted} key={key} wrap="wrap-trim">
+          <Text color={t.color.thinking} key={key} wrap="wrap-trim">
             [{footnote[1]}] <MdInline t={t} text={footnote[2] ?? ''} />
           </Text>
         )
@@ -1048,7 +1052,7 @@ function MdImpl({ cols, compact, t, text }: MdProps) {
         while (i < lines.length && /^\s{2,}\S/.test(lines[i]!)) {
           nodes.push(
             <Box key={`${key}-cont-${i}`} paddingLeft={2}>
-              <Text color={t.color.muted} wrap="wrap-trim">
+              <Text color={t.color.thinking} wrap="wrap-trim">
                 <MdInline t={t} text={lines[i]!.trim()} />
               </Text>
             </Box>
@@ -1077,7 +1081,7 @@ function MdImpl({ cols, compact, t, text }: MdProps) {
 
           nodes.push(
             <Text key={`${key}-def-${i}`} wrap="wrap-trim">
-              <Text color={t.color.muted}> · </Text>
+              <Text color={t.color.command}> · </Text>
               <MdInline t={t} text={def} />
             </Text>
           )
@@ -1098,7 +1102,7 @@ function MdImpl({ cols, compact, t, text }: MdProps) {
         nodes.push(
           <Box key={key} paddingLeft={indentDepth(bullet[1]!) * 2}>
             <Text wrap="wrap-trim">
-              <Text color={t.color.muted}>{marker} </Text>
+              <Text color={listMarkerColor(t, indentDepth(bullet[1]!))}>{marker} </Text>
               <MdInline t={t} text={task ? task[2]! : bullet[2]!} />
             </Text>
           </Box>
@@ -1115,7 +1119,7 @@ function MdImpl({ cols, compact, t, text }: MdProps) {
         nodes.push(
           <Box key={key} paddingLeft={indentDepth(numbered[1]!) * 2}>
             <Text wrap="wrap-trim">
-              <Text color={t.color.muted}>{numbered[2]}. </Text>
+              <Text color={listMarkerColor(t, indentDepth(numbered[1]!))}>{numbered[2]}. </Text>
               <MdInline t={t} text={numbered[3]!} />
             </Text>
           </Box>
@@ -1141,8 +1145,11 @@ function MdImpl({ cols, compact, t, text }: MdProps) {
           <Box flexDirection="column" key={key}>
             {quoteLines.map((ql, qi) => (
               <Box key={qi} paddingLeft={Math.max(0, ql.depth - 1) * 2}>
-                <Text color={t.color.muted} wrap="wrap-trim">
-                  │ <MdInline t={t} text={ql.text} />
+                <Text wrap="wrap-trim">
+                  <Text color={listMarkerColor(t, Math.min(ql.depth, 2))}>│ </Text>
+                  <Text color={t.color.label}>
+                    <MdInline t={t} text={ql.text} />
+                  </Text>
                 </Text>
               </Box>
             ))}

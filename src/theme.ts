@@ -16,6 +16,10 @@ export interface ThemeColors {
   thinking: string
   /** High-contrast pink for compact labels and selected controls. */
   highlight: string
+  /** Pale pink reserved for Markdown section headings. */
+  heading: string
+  /** Orange reserved for user-authored transcript rows. */
+  user: string
   /** Low-contrast frame color for nested terminal cards and separators. */
   frame: string
   ok: string
@@ -277,53 +281,55 @@ const cleanPromptSymbol = (s: string | undefined, fallback: string) => {
 
 export const DARK_THEME: Theme = {
   color: {
-    // Makima Agent CLI palette: graphite canvas, restrained crimson/rose
-    // accents, warm ivory text, and muted rose-gray secondary text.
-    primary: '#F1A0A7',
-    accent: '#F1A0A7',
-    border: '#B24A56',
-    text: '#F6F0E8',
-    muted: '#9F8E93',
-    completionBg: '#101018',
-    completionCurrentBg: '#321F26',
-    completionMetaBg: '#101018',
-    completionMetaCurrentBg: '#321F26',
+    // Dark editor-inspired palette: cyan navigation, green success, pink
+    // identity, bright-yellow commands, and violet reasoning on graphite.
+    primary: '#FF79C6',
+    accent: '#59D9FF',
+    border: '#A78BFA',
+    text: '#F8F8F2',
+    muted: '#9AA4B2',
+    completionBg: '#11131B',
+    completionCurrentBg: '#20263A',
+    completionMetaBg: '#11131B',
+    completionMetaCurrentBg: '#20263A',
 
-    label: '#F1A0A7',
-    command: '#E8C27A',
-    thinking: '#C7A0D8',
-    highlight: '#FF8FA3',
-    frame: '#6F3B46',
-    ok: '#C9E4C6',
-    error: '#DA6570',
-    warn: '#E8C27A',
+    label: '#FF9DCE',
+    command: '#F8E45C',
+    thinking: '#B9A1FF',
+    highlight: '#FF6FB5',
+    heading: '#FF6FB5',
+    user: '#FFAA5C',
+    frame: '#A78BFA',
+    ok: '#63E6A3',
+    error: '#FF718D',
+    warn: '#F8E45C',
 
-    prompt: '#F6F0E8',
-    sessionLabel: '#9F8E93',
-    sessionBorder: '#5E2630',
+    prompt: '#F8F8F2',
+    sessionLabel: '#9AA4B2',
+    sessionBorder: '#302B45',
 
-    statusBg: '#101018',
-    statusFg: '#F6F0E8',
-    statusGood: '#C9E4C6',
-    statusWarn: '#E8C27A',
-    statusBad: '#DA6570',
-    statusCritical: '#DA6570',
-    selectionBg: '#42272E',
-    userMessageBackground: '#311F26',
+    statusBg: '#11131B',
+    statusFg: '#F8F8F2',
+    statusGood: '#63E6A3',
+    statusWarn: '#F8E45C',
+    statusBad: '#FF718D',
+    statusCritical: '#FF718D',
+    selectionBg: '#263859',
+    userMessageBackground: '#1C2030',
 
-    claudeShimmer: '#F1A0A7',
-    subtle: '#6F5D62',
-    planMode: '#D7B46A',
-    autoAccept: '#F1A0A7',
-    permission: '#D7B46A',
-    bashBorder: '#B24A56',
-    promptBorder: '#5E2630',
+    claudeShimmer: '#FF79C6',
+    subtle: '#667085',
+    planMode: '#F8E45C',
+    autoAccept: '#63E6A3',
+    permission: '#59D9FF',
+    bashBorder: '#A78BFA',
+    promptBorder: '#302B45',
 
-    diffAdded: '#203426',
-    diffRemoved: '#3C2026',
-    diffAddedWord: '#C9E4C6',
-    diffRemovedWord: '#DA6570',
-    shellDollar: '#F1A0A7'
+    diffAdded: '#17362B',
+    diffRemoved: '#3D202D',
+    diffAddedWord: '#63E6A3',
+    diffRemovedWord: '#FF718D',
+    shellDollar: '#59D9FF'
   },
 
   brand: BRAND,
@@ -338,52 +344,54 @@ export const DARK_THEME: Theme = {
 // cleanly (#11300).
 export const LIGHT_THEME: Theme = {
   color: {
-    // Warm light counterpart of the Makima Agent CLI palette.
-    primary: '#B24A56',
-    accent: '#B24A56',
-    border: '#B9A3A7',
-    text: '#2A2022',
-    muted: '#76666A',
-    completionBg: '#F8F1EE',
-    completionCurrentBg: '#F1DDE0',
-    completionMetaBg: '#F8F1EE',
-    completionMetaCurrentBg: '#F1DDE0',
+    // Light counterpart with darker semantic inks for readable white terminals.
+    primary: '#C5297A',
+    accent: '#007A99',
+    border: '#7161B5',
+    text: '#202432',
+    muted: '#667085',
+    completionBg: '#F7F8FC',
+    completionCurrentBg: '#DDEAF5',
+    completionMetaBg: '#F7F8FC',
+    completionMetaCurrentBg: '#DDEAF5',
 
-    label: '#9A3F4B',
-    command: '#8C641F',
-    thinking: '#75518A',
-    highlight: '#B23D4A',
-    frame: '#C9A8AE',
-    ok: '#397044',
-    error: '#B23D4A',
-    warn: '#8C641F',
+    label: '#B42369',
+    command: '#806700',
+    thinking: '#674C9E',
+    highlight: '#C5297A',
+    heading: '#C5297A',
+    user: '#B45309',
+    frame: '#7161B5',
+    ok: '#197A4B',
+    error: '#C52945',
+    warn: '#806700',
 
-    prompt: '#2A2022',
-    sessionLabel: '#76666A',
-    sessionBorder: '#B9A3A7',
+    prompt: '#202432',
+    sessionLabel: '#667085',
+    sessionBorder: '#B3B0C6',
 
-    statusBg: '#F8F1EE',
-    statusFg: '#76666A',
-    statusGood: '#397044',
-    statusWarn: '#8C641F',
-    statusBad: '#B23D4A',
-    statusCritical: '#B23D4A',
-    selectionBg: '#F0C9CE',
-    userMessageBackground: '#F3E5E4',
+    statusBg: '#F7F8FC',
+    statusFg: '#202432',
+    statusGood: '#197A4B',
+    statusWarn: '#806700',
+    statusBad: '#C52945',
+    statusCritical: '#C52945',
+    selectionBg: '#CDE9F2',
+    userMessageBackground: '#FFF1E5',
 
-    claudeShimmer: '#B24A56',
-    subtle: '#A58F94',
-    planMode: '#8A681F',
-    autoAccept: '#9A3F4B',
-    permission: '#8A681F',
-    bashBorder: '#B24A56',
-    promptBorder: '#B9A3A7',
+    claudeShimmer: '#C5297A',
+    subtle: '#98A2B3',
+    planMode: '#806700',
+    autoAccept: '#197A4B',
+    permission: '#007A99',
+    bashBorder: '#7161B5',
+    promptBorder: '#B3B0C6',
 
-    diffAdded: '#DDEEDF',
-    diffRemoved: '#F4D9DC',
-    diffAddedWord: '#397044',
-    diffRemovedWord: '#B23D4A',
-    shellDollar: '#9A3F4B'
+    diffAdded: '#DDF5E7',
+    diffRemoved: '#FCE3EA',
+    diffAddedWord: '#197A4B',
+    diffRemovedWord: '#C52945',
+    shellDollar: '#007A99'
   },
 
   brand: BRAND,
@@ -656,6 +664,8 @@ export function fromSkin(
         command: c('ui_command') ?? d.color.command,
         thinking: c('ui_thinking') ?? d.color.thinking,
         highlight: c('ui_highlight') ?? d.color.highlight,
+        heading: c('ui_heading') ?? d.color.heading,
+        user: c('ui_user') ?? d.color.user,
         frame: c('ui_frame') ?? d.color.frame,
         ok: c('ui_ok') ?? d.color.ok,
         error: c('ui_error') ?? d.color.error,

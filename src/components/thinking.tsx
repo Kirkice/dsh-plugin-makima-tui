@@ -42,7 +42,7 @@ import type {
   ThinkingMode
 } from '../types.js'
 
-const THINK: BrailleSpinnerName[] = ['helix', 'breathe', 'orbit', 'dna', 'waverows', 'snake', 'pulse']
+const THINK: BrailleSpinnerName[] = ['braille']
 const TOOL: BrailleSpinnerName[] = ['cascade', 'scan', 'diagswipe', 'fillsweep', 'rain', 'columns', 'sparkle']
 
 const fmtElapsed = (ms: number) => {
@@ -1077,17 +1077,35 @@ export const ToolTrail = memo(function ToolTrail({
             }
           }}
         >
-          <Text color={thinkingLive ? t.color.thinking : t.color.muted} dim={!thinkingLive}>
-            <Text color={thinkingLive ? t.color.thinking : t.color.muted} dim={!thinkingLive} italic>
-              {thinkingLive ? '∴ Reasoning…' : '∴ Reasoning'}
-            </Text>
-            {thinkingTokensLabel ? (
-              <Text color={t.color.muted} dim>
-                {'  '}
-                {thinkingTokensLabel}
+          {thinkingLive ? (
+            <Box borderColor={t.color.frame} borderStyle="round" paddingX={1}>
+              <Text color={t.color.highlight} bold>
+                MAKIMA
               </Text>
-            ) : null}
-          </Text>
+              <Text color={t.color.frame}> · </Text>
+              <Text color={t.color.thinking} italic>
+                <Spinner color={t.color.thinking} /> Thinking…
+              </Text>
+              {thinkingTokensLabel ? (
+                <Text color={t.color.muted} dim>
+                  {'  '}
+                  {thinkingTokensLabel}
+                </Text>
+              ) : null}
+            </Box>
+          ) : (
+            <Text color={t.color.muted} dim>
+              <Text color={t.color.muted} dim italic>
+                ∴ Reasoning
+              </Text>
+              {thinkingTokensLabel ? (
+                <Text color={t.color.muted} dim>
+                  {'  '}
+                  {thinkingTokensLabel}
+                </Text>
+              ) : null}
+            </Text>
+          )}
         </Box>
       ),
       key: 'thinking',

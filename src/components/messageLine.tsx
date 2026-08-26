@@ -27,6 +27,14 @@ import { TodoPanel } from './todoPanel.js'
 
 // Collapse threshold for long system messages (system prompt etc.)
 const SYSTEM_COLLAPSE_CHARS = 400
+const RESPONSE_LABEL = ' MAKIMA / ANSWER '
+
+export const responseDivider = (cols: number, gutterWidth: number): { left: string; right: string } => {
+  const ruleWidth = Math.max(8, cols - gutterWidth - RESPONSE_LABEL.length - 4)
+  const leftWidth = Math.max(3, Math.min(8, Math.floor(ruleWidth / 5)))
+
+  return { left: '─'.repeat(leftWidth), right: '─'.repeat(Math.max(1, ruleWidth - leftWidth)) }
+}
 
 export const MessageLine = memo(function MessageLine({
   cols,
@@ -277,16 +285,23 @@ export const MessageLine = memo(function MessageLine({
         </Box>
       )}
 
-      {showResponseSeparator && (
-        <Box marginBottom={1}>
-          <NoSelect flexShrink={0} fromLeftEdge width={gutterWidth}>
-            <Text color={t.color.frame}>└─ </Text>
-          </NoSelect>
-          <Text color={t.color.highlight} dim>
-            RESPONSE
-          </Text>
-        </Box>
-      )}
+      {showResponseSeparator && (() => {
+        const divider = responseDivider(cols, gutterWidth)
+
+        return (
+          <Box marginBottom={1}>
+            <NoSelect flexShrink={0} fromLeftEdge width={gutterWidth}>
+              <Text color={t.color.accent}>◆</Text>
+            </NoSelect>
+            <Text color={t.color.frame}>{divider.left}</Text>
+            <Text bold color={t.color.highlight}>
+              {RESPONSE_LABEL}
+            </Text>
+            <Text color={t.color.accent}>◆</Text>
+            <Text color={t.color.frame}>{divider.right}</Text>
+          </Box>
+        )
+      })()}
 
       <Box>
         <NoSelect flexShrink={0} fromLeftEdge width={gutterWidth}>
@@ -295,7 +310,13 @@ export const MessageLine = memo(function MessageLine({
           </Text>
         </NoSelect>
 
-        <Box width={transcriptBodyWidth(cols, msg.role, t.brand.prompt, TERMUX_TUI_MODE)}>{content}</Box>
+        {useUserPointer ? (
+          <Box borderColor={t.color.user} borderStyle="round" flexGrow={1} paddingX={1}>
+            {content}
+          </Box>
+        ) : (
+          <Box width={transcriptBodyWidth(cols, msg.role, t.brand.prompt, TERMUX_TUI_MODE)}>{content}</Box>
+        )}
       </Box>
     </Box>
   )
@@ -303,8 +324,8 @@ export const MessageLine = memo(function MessageLine({
 
 // Diff segments are a tool patch, not prose — a "Response" label above them
 // is chrome noise (and the structured branch above never reaches here).
-export const shouldShowResponseSeparator = (msg: Msg, showDetails: boolean): boolean =>
-  msg.role === 'assistant' && msg.kind !== 'diff' && showDetails && /\S/.test(msg.text)
+export const shouldShowResponseSeparator = (msg: Msg, _showDetails: boolean): boolean =>
+  msg.role === 'assistant' && msg.kind !== 'diff' && /\S/.test(msg.text)
 
 interface MessageLineProps {
   cols: number

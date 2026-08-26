@@ -1,6 +1,6 @@
 import { AlternateScreen, Box, NoSelect, ScrollBox, Text } from '@makima-tui/ink'
 import { useStore } from '@nanostores/react'
-import { Fragment, memo, useMemo, useRef } from 'react'
+import { Fragment, memo, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useGateway } from '../app/gatewayContext.js'
 import type { AppLayoutProps } from '../app/interfaces.js'
@@ -57,24 +57,42 @@ const PetPane = memo(function PetPane() {
   )
 })
 
+const INPUT_DOTS = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+
 const PromptPrefix = memo(function PromptPrefix({
+  animated = false,
   bold = false,
   color,
   promptText,
   width
 }: {
+  animated?: boolean
   bold?: boolean
   color: string
   promptText: string
   width: number
 }) {
   const glyphWidth = Math.max(1, width - COMPOSER_PROMPT_GAP_WIDTH)
+  const [frame, setFrame] = useState(0)
+  // A one-cell dot spinner keeps the composer edge stable while borrowing the
+  // quiet live-status motion used by Makima Agent's input and thinking panels.
+  const glyph = animated ? (INPUT_DOTS[frame % INPUT_DOTS.length] ?? '⠋') : promptText
+
+  useEffect(() => {
+    if (!animated) {
+      return
+    }
+
+    const id = setInterval(() => setFrame(value => value + 1), 90)
+
+    return () => clearInterval(id)
+  }, [animated])
 
   return (
     <Box width={width}>
       <Box width={glyphWidth}>
         <Text bold={bold} color={color}>
-          {promptText}
+          {glyph}
         </Text>
       </Box>
       <Box width={COMPOSER_PROMPT_GAP_WIDTH} />
@@ -337,8 +355,9 @@ const ComposerPane = memo(function ComposerPane({
                   <PromptPrefix color={ui.theme.color.shellDollar} promptText={promptText} width={promptWidth} />
                 ) : (
                   <PromptPrefix
+                    animated={!ui.busy}
                     bold
-                    color={ui.busy ? ui.theme.color.muted : ui.theme.color.prompt}
+                    color={ui.busy ? ui.theme.color.muted : ui.theme.color.user}
                     promptText={promptText}
                     width={promptWidth}
                   />

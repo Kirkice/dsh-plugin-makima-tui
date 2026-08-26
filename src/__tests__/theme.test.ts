@@ -48,24 +48,25 @@ describe('DEFAULT_THEME', () => {
     expect(DEFAULT_THEME.brand.tool).toBe('┊')
   })
 
-  it('has the Makima Agent dark palette', async () => {
+  it('has the dark editor-inspired semantic palette', async () => {
     const { DEFAULT_THEME } = await importThemeWithCleanEnv()
 
-    expect(DEFAULT_THEME.color.primary).toBe('#F1A0A7')
-    expect(DEFAULT_THEME.color.accent).toBe('#F1A0A7')
-    expect(DEFAULT_THEME.color.border).toBe('#B24A56')
-    expect(DEFAULT_THEME.color.command).toBe('#E8C27A')
-    expect(DEFAULT_THEME.color.thinking).toBe('#C7A0D8')
-    expect(DEFAULT_THEME.color.highlight).toBe('#FF8FA3')
-    expect(DEFAULT_THEME.color.frame).toBe('#6F3B46')
-    expect(DEFAULT_THEME.color.error).toBe('#DA6570')
-    expect(DEFAULT_THEME.color.text).toBe('#F6F0E8')
-    expect(DEFAULT_THEME.color.muted).toBe('#9F8E93')
-    expect(DEFAULT_THEME.color.ok).toBe('#C9E4C6')
-    expect(DEFAULT_THEME.color.warn).toBe('#E8C27A')
-    expect(DEFAULT_THEME.color.subtle).toBe('#6F5D62')
-    expect(DEFAULT_THEME.color.planMode).toBe('#D7B46A')
-    expect(DEFAULT_THEME.color.permission).toBe('#D7B46A')
+    expect(DEFAULT_THEME.color.primary).toBe('#FF79C6')
+    expect(DEFAULT_THEME.color.accent).toBe('#59D9FF')
+    expect(DEFAULT_THEME.color.border).toBe('#A78BFA')
+    expect(DEFAULT_THEME.color.command).toBe('#F8E45C')
+    expect(DEFAULT_THEME.color.thinking).toBe('#B9A1FF')
+    expect(DEFAULT_THEME.color.highlight).toBe('#FF6FB5')
+    expect(DEFAULT_THEME.color.heading).toBe('#FF6FB5')
+    expect(DEFAULT_THEME.color.frame).toBe('#A78BFA')
+    expect(DEFAULT_THEME.color.error).toBe('#FF718D')
+    expect(DEFAULT_THEME.color.text).toBe('#F8F8F2')
+    expect(DEFAULT_THEME.color.muted).toBe('#9AA4B2')
+    expect(DEFAULT_THEME.color.ok).toBe('#63E6A3')
+    expect(DEFAULT_THEME.color.warn).toBe('#F8E45C')
+    expect(DEFAULT_THEME.color.subtle).toBe('#667085')
+    expect(DEFAULT_THEME.color.planMode).toBe('#F8E45C')
+    expect(DEFAULT_THEME.color.permission).toBe('#59D9FF')
   })
 })
 
@@ -86,21 +87,13 @@ describe('LIGHT_THEME', () => {
     expect(LIGHT_THEME.brand).toEqual(DARK_THEME.brand)
   })
 
-  it('pins the Makima user-message band values', async () => {
+  it('keeps distinct user-message and selection backgrounds', async () => {
     const { DARK_THEME, LIGHT_THEME } = await importThemeWithCleanEnv()
 
-    expect(DARK_THEME.color.userMessageBackground).toBe('#171018')
-    expect(LIGHT_THEME.color.userMessageBackground).toBe('rgb(240,240,240)')
-  })
-
-  it('keeps text selection visible on the user-input band', async () => {
-    // Regression guard: dark selectionBg was #373737 — the exact band color —
-    // so selecting a past user row painted band-on-band and vanished. The
-    // original keeps selection a distinct blue in both themes.
-    const { DARK_THEME, LIGHT_THEME } = await importThemeWithCleanEnv()
-
-    expect(DARK_THEME.color.selectionBg).toBe('#3A1A32')
-    expect(LIGHT_THEME.color.selectionBg).toBe('rgb(180,213,255)')
+    expect(DARK_THEME.color.userMessageBackground).toBe('#1C2030')
+    expect(LIGHT_THEME.color.userMessageBackground).toBe('#FFF1E5')
+    expect(DARK_THEME.color.selectionBg).toBe('#263859')
+    expect(LIGHT_THEME.color.selectionBg).toBe('#CDE9F2')
     expect(DARK_THEME.color.selectionBg).not.toBe(DARK_THEME.color.userMessageBackground)
     expect(LIGHT_THEME.color.selectionBg).not.toBe(LIGHT_THEME.color.userMessageBackground)
   })

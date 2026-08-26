@@ -48,6 +48,18 @@ export const fixedSessionColumnStyle = () => ({ flexShrink: 0 })
 /** Compact workspace detail for persisted sessions, including older records without one. */
 export const sessionWorkspaceLabel = (cwd?: string) => cwd ? `workspace: ${shortCwd(cwd, 48)}` : 'workspace: unavailable'
 
+function SessionWorkspace({ cwd, t }: { cwd?: string; t: Theme }) {
+  if (!cwd) {
+    return <Text color={t.color.muted}>workspace: unavailable</Text>
+  }
+
+  return (
+    <Text color={t.color.muted} wrap="truncate-end">
+      workspace: <Text color={t.color.ok}>{shortCwd(cwd, 48)}</Text>
+    </Text>
+  )
+}
+
 export const activeSessionCountLabel = (count: number) => `${count} live ${count === 1 ? 'session' : 'sessions'}`
 
 export const sessionsCountLabel = (liveCount: number, resumableCount: number) =>
@@ -781,7 +793,7 @@ export function ActiveSessionSwitcher({
               </Box>
 
               <Box {...fixedSessionColumnStyle()} width={11}>
-                <Text bold={selected} color={rowTextColor ?? t.color.muted} wrap="truncate-end">
+                <Text bold={selected} color={t.color.accent} wrap="truncate-end">
                   {h.id}
                 </Text>
               </Box>
@@ -806,11 +818,7 @@ export function ActiveSessionSwitcher({
                 >
                   {title}
                 </Text>
-                {!pendingDelete && (
-                  <Text color={rowTextColor ?? t.color.muted} wrap="truncate-end">
-                    {sessionWorkspaceLabel(h.cwd)}
-                  </Text>
-                )}
+                {!pendingDelete && <SessionWorkspace cwd={h.cwd} t={t} />}
               </Box>
             </Box>
           )
@@ -840,11 +848,7 @@ export function ActiveSessionSwitcher({
             </Box>
 
             <Box {...fixedSessionColumnStyle()} width={11}>
-              <Text
-                bold={selected}
-                color={rowTextColor ?? (current ? t.color.label : t.color.muted)}
-                wrap="truncate-end"
-              >
+              <Text bold={selected} color={t.color.accent} wrap="truncate-end">
                 {current ? 'current' : s.id}
               </Text>
             </Box>
@@ -871,9 +875,7 @@ export function ActiveSessionSwitcher({
               <Text bold={selected} color={rowTextColor ?? t.color.muted} wrap="truncate-end">
                 {title}
               </Text>
-              <Text color={rowTextColor ?? t.color.muted} wrap="truncate-end">
-                {sessionWorkspaceLabel(s.cwd)}
-              </Text>
+              <SessionWorkspace cwd={s.cwd} t={t} />
             </Box>
           </Box>
         )
