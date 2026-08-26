@@ -5,6 +5,7 @@ import spinners, { type BrailleSpinnerName } from 'unicode-animations'
 import { THINKING_COT_MAX } from '../config/limits.js'
 import { sectionMode } from '../domain/details.js'
 import { isDelegationCall } from '../domain/toolBrief.js'
+import { toolVisual } from '../domain/toolVisual.js'
 import {
   buildSubagentTree,
   fmtTokens,
@@ -957,6 +958,9 @@ export const ToolTrail = memo(function ToolTrail({
   const inlineDelegateKey = hasSubagents && delegateGroups.length === 1 ? delegateGroups[0]!.key : null
 
   const toolLabel = (group: Group) => {
+    // Keep the tool name bold and the invocation arguments quiet. The leading
+    // semantic glyph is rendered by renderGroup so every tool has a stable
+    // visual identity without changing the stored transcript text.
     // CC parity: bold tool name, plain (args). Durations are no longer
     // emitted on trail lines; strip any legacy `(N.Ns)` from resumed
     // sessions via splitToolDuration.
@@ -973,8 +977,8 @@ export const ToolTrail = memo(function ToolTrail({
 
     return (
       <>
-        <Text bold>{label.slice(0, paren)}</Text>
-        {label.slice(paren)}
+        <Text bold color={t.color.highlight}>{label.slice(0, paren)}</Text>
+        <Text color={t.color.command}>{label.slice(paren)}</Text>
       </>
     )
   }
@@ -1073,12 +1077,12 @@ export const ToolTrail = memo(function ToolTrail({
             }
           }}
         >
-          <Text color={t.color.muted} dim={!thinkingLive}>
-            <Text color={t.color.muted} dim italic>
-              {'∴ Thinking…'}
+          <Text color={thinkingLive ? t.color.thinking : t.color.muted} dim={!thinkingLive}>
+            <Text color={thinkingLive ? t.color.thinking : t.color.muted} dim={!thinkingLive} italic>
+              {thinkingLive ? '∴ Reasoning…' : '∴ Reasoning'}
             </Text>
             {thinkingTokensLabel ? (
-              <Text color={t.color.statusFg} dim>
+              <Text color={t.color.muted} dim>
                 {'  '}
                 {thinkingTokensLabel}
               </Text>
@@ -1115,17 +1119,24 @@ export const ToolTrail = memo(function ToolTrail({
   // line upstream leaves between consecutive blocks.
   const renderGroup = (group: Group, gap: boolean) => {
     const isDelegateGroup = isDelegationCall(group.label)
-    const bulletColor = group.error ? t.color.error : t.color.ok
+    const visual = toolVisual(group.label, group.live ? 'running' : group.error ? 'error' : 'success')
+    const bulletColor = group.error ? t.color.error : group.live ? t.color.accent : t.color.ok
+    const visualColor = visual.tone === 'error' ? t.color.error : visual.tone === 'ok' ? t.color.ok : visual.tone === 'accent' ? t.color.accent : t.color.text
 
     return (
-      <Box flexDirection="column" key={group.key} marginTop={gap ? 1 : 0}>
+      <Box
+        borderColor={group.error ? t.color.error : group.live ? t.color.highlight : t.color.frame}
+        borderStyle="round"
+        flexDirection="column"
+        key={group.key}
+        marginTop={gap ? 1 : 0}
+        paddingX={1}
+      >
         <Text color={group.color}>
           {group.live ? (
-            // Running: dim blinking text chevron. Unlike `⏺`, it cannot be
-            // substituted with a colored emoji by Windows terminal fonts.
-            <Text dimColor>{blinkOn ? '› ' : '  '}</Text>
+            <Text color={visualColor} dim={!blinkOn}>{blinkOn ? `${visual.glyph} ` : '  '}</Text>
           ) : (
-            <Text color={bulletColor}>› </Text>
+            <Text color={visualColor}>{visual.glyph} </Text>
           )}
           <Text color={t.color.text}>{toolLabel(group)}</Text>
           {isDelegateGroup ? (
@@ -1134,6 +1145,7 @@ export const ToolTrail = memo(function ToolTrail({
             </Text>
           ) : null}
         </Text>
+        {group.details.length > 0 ? <Box borderColor={t.color.frame} borderTop marginY={0} /> : null}
         {group.details.map(detail => {
           // Multi-line details (Bash 3-line summaries, error caps):
           // first row carries the ⎿ connector, continuations align
@@ -1147,7 +1159,7 @@ export const ToolTrail = memo(function ToolTrail({
                     {/* String literal, not JSX text: the two trailing spaces are load-bearing
                         (the original's ⎿ gutter is 3 columns) and a formatter collapses
                         bare JSX whitespace. */}
-                    <Text color={t.color.muted}>{'⎿  '}</Text>
+                    <Text color={t.color.command}>{'⎿  '}</Text>
                   </>
                 ) : (
                   '     '
@@ -1163,7 +1175,7 @@ export const ToolTrail = memo(function ToolTrail({
               {/* String literal, not JSX text: the two trailing spaces are load-bearing
                         (the original's ⎿ gutter is 3 columns) and a formatter collapses
                         bare JSX whitespace. */}
-              <Text color={t.color.muted}>{'⎿  '}</Text>
+              <Text color={t.color.command}>{'⎿  '}</Text>
               {detail.content}
             </Text>
           )

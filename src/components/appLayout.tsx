@@ -263,7 +263,8 @@ const ComposerPane = memo(function ComposerPane({
       />
 
       {ui.bgTasks.size > 0 && (
-        <Text color={ui.theme.color.muted}>
+        <Text color={ui.theme.color.muted} dim>
+          <Text color={ui.theme.color.accent}>⟳ </Text>
           {ui.bgTasks.size} background {ui.bgTasks.size === 1 ? 'task' : 'tasks'} running
         </Text>
       )}

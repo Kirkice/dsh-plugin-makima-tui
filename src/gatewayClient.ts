@@ -814,6 +814,10 @@ export const SLASHES: ReadonlyArray<{ desc: string; hint?: string; name: string 
     name: '/vision'
   },
   { desc: 'List running and recent dynamic workflows', name: '/workflows' },
+  { desc: 'Browse, switch, or resume saved sessions', hint: '[new | <id or title>]', name: '/sessions' },
+  { desc: 'Alias for /sessions', hint: '[new | <id or title>]', name: '/session' },
+  { desc: 'Alias for /sessions', hint: '[new | <id or title>]', name: '/switch' },
+  { desc: 'Alias for /sessions', hint: '[new | <id or title>]', name: '/resume' },
   { desc: 'Search / manage the knowledge base', hint: '[status|list|clear|enable|disable]', name: '/knowledge' },
   {
     desc: 'Edit memory files, or manage the bounded memory store',
@@ -835,7 +839,6 @@ export const SLASHES: ReadonlyArray<{ desc: string; hint?: string; name: string 
   },
   { desc: 'Generate session insights', name: '/insights' },
   { desc: 'List or start background agents', name: '/bg' },
-  { desc: 'Resume a past session', name: '/resume' },
   { desc: 'Rename this session', hint: '<name>', name: '/rename' },
   { desc: 'Exit makima tui', name: '/exit' }
 ]

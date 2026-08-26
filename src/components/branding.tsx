@@ -4,7 +4,7 @@ import { applyColor, Box, stringWidth, Text, useStdout } from '@makima-tui/ink'
 import { useEffect, useState } from 'react'
 import unicodeSpinners from 'unicode-animations'
 
-import { artWidth, logo, LOGO_WIDTH, whale, WHALE_WIDTH } from '../banner.js'
+import { artWidth, logo } from '../banner.js'
 import { levelForMode } from '../lib/permissionLevels.js'
 import { flat } from '../lib/text.js'
 import { getWorktreeSession } from '../lib/worktree.js'
@@ -43,7 +43,44 @@ export function ArtLines({ lines }: { lines: [string, string][] }) {
   )
 }
 
-// Responsive Banner: full art → compact rule → text → hidden.
+// Makima Agent's CLI banner uses a small pixel portrait rather than a generic
+// wordmark. Keep the portrait as explicit background-colored cells so it stays
+// recognizable in a terminal without relying on six-row block-letter ASCII art.
+const MAKIMA_PIXEL_ART: readonly (readonly (string | null)[])[] = [
+  [null, null, null, '#b94d58', '#bc4f5a', '#d05966', '#d15966', '#d15966', '#d05966', '#bc4f5a', '#b94d58', null, null, null],
+  [null, null, '#d25864', '#ce5964', '#d15966', '#d25a67', '#d15a67', '#d15a67', '#d25a67', '#d15966', '#ce5964', '#d25864', null, null],
+  [null, '#c1515a', '#cf5865', '#d15966', '#d25b67', '#d05966', '#d15b67', '#d15b67', '#d05966', '#d25b67', '#d15966', '#cf5865', '#c1515a', null],
+  [null, '#c45862', '#d05863', '#d05964', '#d15663', '#d15966', '#d15a67', '#d15a67', '#d15966', '#d15663', '#d05964', '#d05863', '#c45862', null],
+  [null, '#d15965', '#d05965', '#d05966', '#d85f6a', '#a13e4a', '#d25b68', '#d25b68', '#a13e4a', '#d85f6a', '#d05966', '#d05965', '#d15965', null],
+  ['#ae4350', '#d15a66', '#a53f4c', '#cf5865', '#ca4d5d', '#a33e4b', '#d25a67', '#d25a67', '#a33e4b', '#ca4d5d', '#cf5865', '#a53f4c', '#d15a66', '#ae4350'],
+  ['#b74957', '#b14552', '#a33d4a', '#ae4654', '#ab3b48', '#e0afa3', '#bf4c59', '#bf4c59', '#e0afa3', '#ab3b48', '#ae4654', '#a33d4a', '#b14552', '#b74957'],
+  ['#b64856', '#ba4d58', '#8f554e', '#fcebdd', '#fcebdd', '#fcecde', '#fdebde', '#fdebde', '#fcecde', '#fcebdd', '#fcebdd', '#8f554e', '#ba4d58', '#b64856'],
+  ['#b64956', '#b44b56', '#4e2a15', '#45210e', '#42200e', '#975d52', '#fceadc', '#fceadc', '#975d52', '#42200e', '#45210e', '#4e2a15', '#b44b56', '#b64956'],
+  ['#b74b58', '#b54b56', '#814d43', '#fefbfc', '#f8c819', '#fdf7f0', '#fdeadd', '#fdeadd', '#fdf7f0', '#f8c819', '#fefbfc', '#814d43', '#b54b56', '#b74b58'],
+  ['#b54b56', '#b14953', '#b74b58', '#fceade', '#fde9d7', '#fceadd', '#fceadc', '#fceadc', '#fceadd', '#fde9d7', '#fceade', '#b74b58', '#b14953', '#b54b56'],
+  [null, '#a7424f', '#a4424e', '#fbeadd', '#fbebdd', '#fdebdd', '#af6f6a', '#af6f6a', '#fdebdd', '#fbebdd', '#fbeadd', '#a4424e', '#a7424f', null],
+  [null, '#a7414d', null, '#834e66', '#f8ded4', '#f9e4d9', '#ecc7ba', '#ecc7ba', '#f9e4d9', '#f8ded4', '#834e66', null, '#a7414d', null],
+  [null, '#b34858', null, null, '#bcbab4', '#f6f2e8', '#f7f3eb', '#f7f3eb', '#f6f2e8', '#bcbab4', null, null, '#b34858', null],
+  [null, '#9b4d62', null, '#969394', '#f8f3ea', '#bbb9b2', '#3e393b', '#3e393b', '#bbb9b2', '#f8f3ea', '#969394', null, '#9b4d62', null]
+]
+
+const PIXEL_LOGO_WIDTH = 28
+
+function MakimaPixelLogo() {
+  return (
+    <Box flexDirection="column" height={MAKIMA_PIXEL_ART.length} opaque width={PIXEL_LOGO_WIDTH}>
+      {MAKIMA_PIXEL_ART.map((row, y) => (
+        <Box flexDirection="row" height={1} key={y}>
+          {row.map((color, x) => (
+            <Text backgroundColor={color ?? undefined} key={x}>{'  '}</Text>
+          ))}
+        </Box>
+      ))}
+    </Box>
+  )
+}
+
+// Custom Banner: full art → compact rule → text → hidden.
 //
 // Terminals can't scale glyphs, so "responsive" means picking a layout that
 // fits the available columns. Thresholds are picked so each tier reads
@@ -95,8 +132,14 @@ export function Banner({ logoPalette, maxWidth, t }: { logoPalette?: string; max
     return null
   }
 
-  const logoLines = logo(t.color, t.bannerLogo || undefined, logoPalette)
-  const logoW = t.bannerLogo ? artWidth(logoLines) : LOGO_WIDTH
+  // The default portrait belongs to the session card, alongside the session it
+  // identifies. Keep this banner for an explicitly configured replacement only.
+  if (!t.bannerLogo) {
+    return null
+  }
+
+  const logoLines = logo(t.color, t.bannerLogo, logoPalette)
+  const logoW = artWidth(logoLines)
 
   if (cols >= logoW + 2) {
     return (
@@ -357,8 +400,10 @@ const TOOLSETS_MAX = 8
 export function SessionPanel({ info, logoPalette, maxWidth, sid, t }: SessionPanelProps) {
   const term = useStdout().stdout?.columns ?? 100
   const cols = Math.max(20, Math.min(term, maxWidth ?? term))
-  const heroLines = whale(t.color, t.bannerHero || undefined, logoPalette)
-  const heroW = artWidth(heroLines) || WHALE_WIDTH
+  // The portrait is the sole session identity artwork. It occupies the left
+  // column only when that column fits beside the capability feed; stacked cards
+  // keep the session data compact instead of pushing the card below the viewport.
+  const portraitWidth = PIXEL_LOGO_WIDTH
 
   // Left-column lines, built before layout so the column can be sized to them.
   // The cwd is pre-truncated to the column's hard cap: sizing the column to an
@@ -380,15 +425,11 @@ export function SessionPanel({ info, logoPalette, maxWidth, sid, t }: SessionPan
   const permsLabel = startLevel?.label ?? info.permission_mode ?? ''
   const permsLine = permsLabel ? `${PERMS_LABEL}${permsLabel}${PERMS_HINT}` : ''
 
-  const leftW = optimalLeftWidth(
-    // The perms row is in the sizing set, not just rendered into it: sized off
-    // the other rows it truncated to "…/permission…", which is exactly the row
-    // that must stay legible now that Full Access is the default.
-    [welcome, `${MODEL_LABEL}${modelLine}`, `${PATH_LABEL}${cwdLine}`, permsLine],
-    heroW
-  )
-
-  const wide = fitsHorizontal(cols, leftW)
+  const identityLines = [welcome, `${MODEL_LABEL}${modelLine}`, `${PATH_LABEL}${cwdLine}`, permsLine]
+  const portraitLeftWidth = optimalLeftWidth(identityLines, portraitWidth)
+  const showPixelLogo = fitsHorizontal(cols, portraitLeftWidth)
+  const leftW = showPixelLogo ? portraitLeftWidth : optimalLeftWidth(identityLines, 0)
+  const wide = showPixelLogo
   // Stacked: the column IS the interior (border + paddingX = BORDER_PADDING).
   // Flooring this at MIN_RIGHT_WIDTH would overflow a narrow box — that floor
   // gates whether to split at all, it is not a width to render at.
@@ -601,19 +642,23 @@ export function SessionPanel({ info, logoPalette, maxWidth, sid, t }: SessionPan
       : [])
   ]
 
-  // Identity block: welcome + mascot + labeled Model/Path rows. Shared by both
-  // layouts so the narrow one loses the *column*, never the information.
+  // Keep the portrait and session details in one deliberate vertical unit. The
+  // same unit is used in both layouts: narrow cards lose artwork first, never
+  // session information or the card's visual rhythm.
+  const identityWidth = wide ? leftW : w
   const identity = (
-    <>
+    <Box flexDirection="column" width={identityWidth}>
+      {showPixelLogo && (
+        <Box alignItems="center" flexDirection="column" marginBottom={1} width="100%">
+          <MakimaPixelLogo />
+        </Box>
+      )}
+
       <Text bold color={t.color.text} wrap="truncate-end">
         {welcome}
       </Text>
 
-      <Box marginY={1}>
-        <ArtLines lines={heroLines} />
-      </Box>
-
-      <Text color={t.color.border}>{'─'.repeat(12)}</Text>
+      <Box borderBottom borderColor={t.color.border} borderLeft={false} borderRight={false} borderStyle="single" borderTop={false} marginY={1} />
 
       <Text wrap="truncate-end">
         <Text color={t.color.muted}>{MODEL_LABEL}</Text>
@@ -663,7 +708,7 @@ export function SessionPanel({ info, logoPalette, maxWidth, sid, t }: SessionPan
           <Text color={t.color.sessionBorder}> {sid}</Text>
         </Text>
       )}
-    </>
+    </Box>
   )
 
   return (
@@ -694,11 +739,7 @@ export function SessionPanel({ info, logoPalette, maxWidth, sid, t }: SessionPan
       // terminal, while the container claimed 198.
       width={cols}
     >
-      {wide && (
-        <Box alignItems="center" flexDirection="column" width={leftW}>
-          {identity}
-        </Box>
-      )}
+      {wide && <Box flexDirection="column" width={leftW}>{identity}</Box>}
 
       {/* Column rule. A left-only border stretches to the taller column, so the
           rule always spans the full content height without being measured. */}
@@ -720,11 +761,7 @@ export function SessionPanel({ info, logoPalette, maxWidth, sid, t }: SessionPan
       <Box flexDirection="column" flexGrow={1} flexShrink={1} width={w}>
         {/* Narrow layout drops the column split; keep the identity block above
             the feed so nothing is lost. */}
-        {!wide && (
-          <Box alignItems="center" flexDirection="column" marginBottom={1}>
-            {identity}
-          </Box>
-        )}
+        {!wide && <Box flexDirection="column" marginBottom={1}>{identity}</Box>}
 
         {/* Built as a list so a hidden section takes its spacing with it — an
             inline `&&` leaves a dangling gap. The first section sits flush with

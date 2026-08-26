@@ -174,9 +174,16 @@ function FaceTicker({
   // space is harmless.
   const durationSegment = startedAt ? ` · ${fmtDuration(now - startedAt)}` : ''
 
+  // While a turn is running, the status text is the activity indicator rather
+  // than an idle-state status label. Keep the whole indicator on the accent
+  // foreground. Using the outer `color` here (usually the ready/status-green
+  // color) makes the ANSI style leak across the animated `✽` frame in some
+  // terminals, which is rendered as a distracting green flash/background.
+  const indicatorColor = glyphColor ?? color
+
   return (
-    <Text color={color}>
-      <Text color={glyphColor ?? color}>{frame}</Text>
+    <Text color={indicatorColor}>
+      <Text color={indicatorColor}>{frame}</Text>
       {verbSegment}
       {durationSegment}
     </Text>
@@ -577,7 +584,7 @@ export function StatusRule({
             renders as a separate shrinkable box below so a long notice
             ellipsizes instead of crushing model │ ctx (R3-M7). */}
         <Box flexDirection="row" flexShrink={0}>
-          <Text color={t.color.border}>{'─ '}</Text>
+          <Text color={t.color.frame}>{'─ '}</Text>
           {busy ? (
             <FaceTicker color={statusColor} glyphColor={t.color.accent} startedAt={turnStartedAt} style={indicatorStyle} />
           ) : showNotice ? null : (
@@ -591,7 +598,7 @@ export function StatusRule({
             before the pinned model │ ctx box ever clips. */}
         {showNotice ? (
           <Box flexDirection="row" flexShrink={1} overflow="hidden">
-            <Text color={noticeColor(notice!.level, t)} wrap="truncate-end">
+            <Text color={noticeColor(notice!.level, t)} dim={notice!.level === 'success'} wrap="truncate-end">
               {notice!.text}
             </Text>
           </Box>
@@ -603,14 +610,14 @@ export function StatusRule({
               {' (dev credits)'}
             </Text>
           ) : null}
-          <Text color={t.color.muted} wrap="truncate-end">
+          <Text color={t.color.frame} wrap="truncate-end">
             {' │ '}
-            {modelText}
+            <Text color={t.color.command}>{modelText}</Text>
           </Text>
           {ctxLabel ? (
-            <Text color={t.color.muted} wrap="truncate-end">
+            <Text color={t.color.frame} wrap="truncate-end">
               {' │ '}
-              {ctxLabel}
+              <Text color={t.color.thinking}>{ctxLabel}</Text>
             </Text>
           ) : null}
         </Box>
@@ -683,9 +690,9 @@ export function StatusRule({
 
       {rightWidth > 0 ? (
         <>
-          <Text color={t.color.border}>{separatorWidth >= 3 ? ' ─ ' : ' '}</Text>
+          <Text color={t.color.frame}>{separatorWidth >= 3 ? ' ─ ' : ' '}</Text>
           <Box flexShrink={0} width={rightWidth}>
-            <Text color={t.color.label} wrap="truncate-end">
+            <Text color={t.color.highlight} wrap="truncate-end">
               {cwdLabel}
             </Text>
           </Box>

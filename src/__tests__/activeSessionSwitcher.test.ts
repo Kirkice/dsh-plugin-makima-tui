@@ -23,6 +23,7 @@ import {
   relativeSessionAge,
   resumableHistory,
   selectedSessionRowStyle,
+  sessionWorkspaceLabel,
   sessionRowKindAt,
   sessionsCountLabel
 } from '../components/activeSessionSwitcher.js'
@@ -191,6 +192,14 @@ describe('unified Sessions overlay helpers', () => {
 
     expect(resumableHistory(history, live).map(h => h.id)).toEqual(['a', 'c'])
     expect(resumableHistory(history, []).map(h => h.id)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('renders persisted workspace labels with a tail-preserving fallback', () => {
+    expect(sessionWorkspaceLabel('/workspaces/first')).toBe('workspace: /workspaces/first')
+    expect(sessionWorkspaceLabel('/a/very/long/path/with/many/segments/to/a/project')).toBe(
+      'workspace: …/very/long/path/with/many/segments/to/a/project'
+    )
+    expect(sessionWorkspaceLabel()).toBe('workspace: unavailable')
   })
 
   it('labels live + resumable counts compactly', () => {

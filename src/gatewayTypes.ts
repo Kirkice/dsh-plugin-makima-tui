@@ -300,6 +300,8 @@ export interface SessionResumeResponse {
 export type LiveSessionStatus = 'idle' | 'starting' | 'waiting' | 'working'
 
 export interface SessionActiveItem {
+  /** Workspace of the live session. */
+  cwd?: string
   current?: boolean
   id: string
   last_active?: number
@@ -335,6 +337,8 @@ export interface SessionActivateResponse {
 }
 
 export interface SessionListItem {
+  /** Persisted workspace where this session was created, when available. */
+  cwd?: string
   id: string
   message_count: number
   preview: string

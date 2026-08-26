@@ -62,7 +62,8 @@ const LOGO_ART = [
   '╚═════╝ ╚══════╝╚═╝  ╚═╝         ╚═════╝ ╚═════╝   ╚═╝    ╚═════╝ ╚═╝'
 ]
 
-// makima tui mascot — a blue whale, matching the DeepSeek brand. Painted from
+// Legacy secondary mascot — retained for the session panel only. The startup
+// banner now uses Makima Agent's pixel portrait. Painted from
 // the active /logo gradient (default: ocean blues), beside the session panel.
 const WHALE_ART = [
   '       : \' :',

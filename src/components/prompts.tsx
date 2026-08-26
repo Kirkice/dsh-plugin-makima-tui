@@ -136,9 +136,13 @@ export function ApprovalPrompt({ cols = 80, onChoice, req, t }: ApprovalPromptPr
 
   return (
     <Box borderColor={t.color.warn} borderStyle="round" flexDirection="column" paddingX={1}>
-      <Text bold color={t.color.warn}>{toolTrailLabel(req.toolName)} command</Text>
+      <Text bold>
+        <Text color={t.color.highlight}>APPROVAL</Text>
+        <Text color={t.color.command}> · {toolTrailLabel(req.toolName)} command</Text>
+      </Text>
 
-      <Box flexDirection="column" paddingLeft={1}>
+      <Box borderColor={t.color.frame} borderTop />
+      <Box borderColor={t.color.frame} borderStyle="single" flexDirection="column" paddingX={1}>
         {shown.map((line, i) => (
           <Text color={t.color.text} key={i} wrap="truncate-end">{line || ' '}</Text>
         ))}
@@ -155,7 +159,7 @@ export function ApprovalPrompt({ cols = 80, onChoice, req, t }: ApprovalPromptPr
         <Text bold color={t.color.warn}>⚠ {req.warning}</Text>
       ) : null}
 
-      <Text color={t.color.muted}>Do you want to proceed?</Text>
+      <Text color={t.color.thinking}>Proceed with this command?</Text>
 
       {opts.map((o, i) => {
         const isSel = sel === i
@@ -167,7 +171,7 @@ export function ApprovalPrompt({ cols = 80, onChoice, req, t }: ApprovalPromptPr
             const staticRule = ruleText || req.ruleLabel || req.toolName
             return (
               <Box key={o}>
-                <Text bold={isSel} color={isSel ? t.color.warn : t.color.muted}>{label}</Text>
+                <Text bold={isSel} color={isSel ? t.color.highlight : t.color.muted}>{label}</Text>
                 {editing ? (
                   <TextInput columns={Math.max(12, innerWidth - label.length)} focus onChange={setRuleText} onSubmit={() => confirm('always')} value={ruleText} />
                 ) : (
@@ -183,11 +187,11 @@ export function ApprovalPrompt({ cols = 80, onChoice, req, t }: ApprovalPromptPr
             ? `Yes, ${req.sessionLabel}`
             : `${LABELS.always} ${req.ruleLabel || req.toolName}`
           return (
-            <Text bold={isSel} color={isSel ? t.color.warn : t.color.muted} key={o}>{head}{text}</Text>
+            <Text bold={isSel} color={isSel ? t.color.highlight : t.color.muted} key={o}>{head}{text}</Text>
           )
         }
         return (
-          <Text bold={isSel} color={isSel ? t.color.warn : t.color.muted} key={o}>{head}{LABELS[o]}</Text>
+          <Text bold={isSel} color={isSel ? t.color.highlight : t.color.muted} key={o}>{head}{LABELS[o]}</Text>
         )
       })}
 
@@ -205,6 +209,8 @@ export function ApprovalPrompt({ cols = 80, onChoice, req, t }: ApprovalPromptPr
 type PlanApprovalChoice = 'accept-edits' | 'bypass' | 'default' | 'deny'
 
 const PLAN_PREVIEW_LINES = 24
+
+const planLinesForReview = (plan: string): string[] => plan.split('\n').filter(line => line.trim().length > 0)
 
 /**
  * Pure option builder (exported for tests) — mirrors the original's
@@ -289,7 +295,8 @@ export function PlanApprovalPrompt({ cols = 80, onChoice, req, t }: PlanApproval
     { isActive: typing }
   )
 
-  const innerWidth = Math.max(20, cols - 6)
+  const innerWidth = Math.max(20, cols - 8)
+  const planSections = planLinesForReview(req.plan ?? '')
 
   const optionRows = opts.map((o, i) => {
     const isSel = sel === i
@@ -336,10 +343,14 @@ export function PlanApprovalPrompt({ cols = 80, onChoice, req, t }: PlanApproval
 
   return (
     <Box borderColor={t.color.planMode} borderStyle="round" flexDirection="column" paddingX={1}>
-      <Text bold color={t.color.planMode}>Ready to code?</Text>
-      <Text color={t.color.text}>Here is Claude&apos;s plan:</Text>
+      <Box justifyContent="space-between">
+        <Text bold color={t.color.planMode}>PLAN REVIEW</Text>
+        <Text color={t.color.muted} dim>{planSections.length} sections · {planLines.length} lines</Text>
+      </Box>
+      <Text color={t.color.text} bold>Ready to code?</Text>
+      <Text color={t.color.muted}>Review the implementation plan before execution.</Text>
 
-      <Box borderColor={t.color.muted} borderStyle="single" flexDirection="column" paddingX={1}>
+      <Box borderColor={t.color.muted} borderStyle="single" flexDirection="column" paddingX={1} marginTop={1}>
         <Md cols={innerWidth} t={t} text={shown.join('\n')} />
         {overflow > 0 ? (
           <Text color={t.color.muted}>… +{overflow} more line{overflow === 1 ? '' : 's'} · {req.planFilePath ?? ''}</Text>

@@ -124,7 +124,11 @@ export const MessageLine = memo(function MessageLine({
     const preview = compactPreview(stripped, maxChars) || '(empty tool result)'
 
     return (
-      <Box alignSelf="flex-start" borderColor={t.color.muted} borderStyle="round" marginLeft={3} paddingX={1}>
+      <Box alignSelf="flex-start" borderColor={t.color.frame} borderStyle="round" flexDirection="column" marginLeft={3} paddingX={1}>
+        <Text color={t.color.command} dim>
+          ⎿ RESULT
+        </Text>
+        <Box borderColor={t.color.frame} borderTop />
         {hasAnsi(msg.text) ? (
           <Text wrap="truncate-end">
             <Ansi>{safeAnsi}</Ansi>
@@ -276,10 +280,10 @@ export const MessageLine = memo(function MessageLine({
       {showResponseSeparator && (
         <Box marginBottom={1}>
           <NoSelect flexShrink={0} fromLeftEdge width={gutterWidth}>
-            <Text color={t.color.border}>└─ </Text>
+            <Text color={t.color.frame}>└─ </Text>
           </NoSelect>
-          <Text color={t.color.muted} dim>
-            Response
+          <Text color={t.color.highlight} dim>
+            RESPONSE
           </Text>
         </Box>
       )}

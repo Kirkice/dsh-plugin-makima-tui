@@ -70,17 +70,21 @@ export const TodoPanel = memo(function TodoPanel({
   // Original standalone header: "N tasks (X done, Y in progress, Z open)".
   const headerCounts = [
     `${done} done`,
-    ...(inProgress > 0 ? [`${inProgress} in progress`] : []),
-    `${open} open`
-  ].join(', ')
+    ...(inProgress > 0 ? [`${inProgress} active`] : []),
+    ...(open > 0 ? [`${open} open`] : [])
+  ].join(' · ')
 
   const visible = todos.slice(0, MAX_VISIBLE_TODOS)
   const hidden = todos.slice(MAX_VISIBLE_TODOS)
+  const hiddenParts: Array<[string, number, string]> = (
+    [
+      ['in_progress', hidden.filter(todo => todo.status === 'in_progress').length, 'active'],
+      ['pending', hidden.filter(todo => todo.status === 'pending').length, 'pending'],
+      ['completed', hidden.filter(todo => todo.status === 'completed').length, 'done']
+    ] as Array<[string, number, string]>
+  ).filter(([, count]) => count > 0)
 
-  const hiddenSummary =
-    hidden.length > 0
-      ? ` … +${hidden.filter(todo => todo.status === 'in_progress').length} in progress, ${hidden.filter(todo => todo.status === 'pending').length} pending, ${hidden.filter(todo => todo.status === 'completed').length} completed`
-      : ''
+  const hiddenSummary = hidden.length > 0 ? ` … ${hiddenParts.map(([, count, label]) => `+${count} ${label}`).join(' · ')}` : ''
 
   const rows = (
     <>
@@ -122,21 +126,25 @@ export const TodoPanel = memo(function TodoPanel({
   }
 
   return (
-    <Box flexDirection="column" marginBottom={marginBottom}>
+    <Box borderColor={t.color.frame} borderStyle="round" flexDirection="column" marginBottom={marginBottom} paddingX={1}>
       <Box onClick={handleToggle}>
         <Text color={t.color.muted}>
-          <Text color={t.color.accent}>{effectiveCollapsed ? '▸ ' : '▾ '}</Text>
-          <Text bold>{todos.length}</Text> {todos.length === 1 ? 'task' : 'tasks'}{' '}
+          <Text color={t.color.highlight}>{effectiveCollapsed ? '▸ ' : '▾ '}</Text>
+          <Text bold color={t.color.highlight}>TODO</Text>
+          <Text color={t.color.command}> · {todos.length}</Text> {todos.length === 1 ? 'task' : 'tasks'}{' '}
           <Text color={t.color.statusFg} dim>
-            ({headerCounts})
+            · {headerCounts}
           </Text>
         </Text>
       </Box>
 
       {!effectiveCollapsed && (
-        <Box flexDirection="column" marginLeft={2}>
-          {rows}
-        </Box>
+        <>
+          <Box borderColor={t.color.frame} borderTop />
+          <Box flexDirection="column" paddingLeft={1}>
+            {rows}
+          </Box>
+        </>
       )}
     </Box>
   )

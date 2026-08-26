@@ -1,23 +1,4 @@
-/**
- * The original Claude Code busy line (Spinner.tsx / SpinnerAnimationRow.tsx),
- * rendered directly above the composer when the opt-in status bar is off:
- *
- *   ✻ Extracting the loader… (1m 3s · ↓ ~1.2k tokens · thinking…)
- *   Next: Add unit tests for env overrides
- *
- * - Star ping-pong glyph `· ✢ ✳ ✶ ✻ ✽ ✽ ✻ ✶ ✳ ✢ ·` @120ms in claude orange.
- * - Verb = in-progress todo's activeForm ?? subject ?? a per-turn pick from
- *   the brand VERBS list, with a 3-column claudeShimmer band sweeping
- *   right→left @200ms (GlimmerMessage).
- * - Dim parenthetical appears only after 30s (SHOW_TOKENS_AFTER_MS): elapsed
- *   and `↓ ~N tokens` (chars/4 — an estimate, hence the ~). `thinking…`
- *   rides along while reasoning streams.
- * - Stall: >3s without any delta (and no running tools) cuts glyph+verb to
- *   the original's hardcoded rgb(171,43,63).
- * - Right-aligned dim delegation segment (depth/⚡/⛓) only during fan-out —
- *   deliberate delta from the original's bare row (that signal is
- *   load-bearing here).
- */
+/** Displays the active turn's current task, elapsed usage, and delegation state. */
 import { Box, stringWidth, Text } from '@makima-tui/ink'
 import { useStore } from '@nanostores/react'
 import { memo, useEffect, useMemo, useState } from 'react'
@@ -31,10 +12,9 @@ import { buildSubagentTree, treeTotals } from '../lib/subagentTree.js'
 import { fmtK } from '../lib/text.js'
 import type { Theme } from '../theme.js'
 
-const STAR_FRAMES = ['·', '✢', '✳', '✶', '✻', '✽', '✽', '✻', '✶', '✳', '✢', '·']
-const GLYPH_TICK_MS = 120
 const SHIMMER_TICK_MS = 200
 const SHIMMER_BAND = 3
+const MARKER_COLORS = 8
 const SHOW_SUFFIX_AFTER_MS = 30_000
 const STALL_AFTER_MS = 3_000
 // Original useStalledAnimation ERROR_RED — deliberately NOT theme.error.
@@ -59,6 +39,18 @@ function ShimmerVerb({ stalled, t, tick, verb }: { stalled: boolean; t: Theme; t
       ))}
     </Text>
   )
+}
+
+/** A fixed-width marker that breathes through foreground colors without terminal background repainting. */
+function BreathingMarker({ stalled, t, tick }: { stalled: boolean; t: Theme; tick: number }) {
+  if (stalled) {
+    return <Text color={STALL_RED}>› </Text>
+  }
+
+  const phase = tick % MARKER_COLORS
+  const color = phase === 0 || phase === MARKER_COLORS - 1 ? t.color.muted : phase === 3 || phase === 4 ? t.color.claudeShimmer : t.color.accent
+
+  return <Text color={color}>› </Text>
 }
 
 export const BusyLine = memo(function BusyLine({ t, turnStartedAt }: BusyLineProps) {
@@ -87,11 +79,11 @@ export const BusyLine = memo(function BusyLine({ t, turnStartedAt }: BusyLinePro
       return
     }
 
-    const glyph = setInterval(() => setTick(n => n + 1), GLYPH_TICK_MS)
+    const shimmer = setInterval(() => setTick(n => n + 1), SHIMMER_TICK_MS)
     const clock = setInterval(() => setNow(Date.now()), 1000)
 
     return () => {
-      clearInterval(glyph)
+      clearInterval(shimmer)
       clearInterval(clock)
     }
   }, [ui.busy])
@@ -103,8 +95,7 @@ export const BusyLine = memo(function BusyLine({ t, turnStartedAt }: BusyLinePro
   const activeTodo = todos.find(todo => todo.status === 'in_progress')
   const verb = `${activeTodo?.activeForm ?? activeTodo?.content ?? fallbackVerb}…`
 
-  const glyph = STAR_FRAMES[tick % STAR_FRAMES.length] ?? '✻'
-  const shimmerTick = Math.floor((tick * GLYPH_TICK_MS) / SHIMMER_TICK_MS)
+  const shimmerTick = tick
 
   const elapsedMs = turnStartedAt ? now - turnStartedAt : 0
   const stalled = tools.length === 0 && lastDeltaAt !== null && now - lastDeltaAt > STALL_AFTER_MS
@@ -147,7 +138,7 @@ export const BusyLine = memo(function BusyLine({ t, turnStartedAt }: BusyLinePro
     <Box flexDirection="column" marginTop={1}>
       <Box justifyContent="space-between">
         <Text>
-          <Text color={stalled ? STALL_RED : t.color.accent}>{glyph} </Text>
+          <BreathingMarker stalled={stalled} t={t} tick={tick} />
           <ShimmerVerb stalled={stalled} t={t} tick={shimmerTick} verb={verb} />
           {parts.length > 0 && (
             <Text color={t.color.muted} dim>
@@ -165,7 +156,7 @@ export const BusyLine = memo(function BusyLine({ t, turnStartedAt }: BusyLinePro
       </Box>
       {nextTodo && stringWidth(nextTodo.content) > 0 ? (
         <Text color={t.color.muted} dim>
-          Next: {nextTodo.content}
+          ↳ next {nextTodo.content}
         </Text>
       ) : null}
     </Box>

@@ -10,6 +10,14 @@ export interface ThemeColors {
   completionMetaCurrentBg: string
 
   label: string
+  /** Warm amber for command labels, paths, and keyboard affordances. */
+  command: string
+  /** Rose-violet for reasoning and analytical metadata. */
+  thinking: string
+  /** High-contrast pink for compact labels and selected controls. */
+  highlight: string
+  /** Low-contrast frame color for nested terminal cards and separators. */
+  frame: string
   ok: string
   error: string
   warn: string
@@ -251,7 +259,7 @@ function normalizeAnsiForeground(color: string): string {
 
 const BRAND: ThemeBrand = {
   name: 'makima tui',
-  icon: '🪼',
+  icon: '◆',
   prompt: '❯',
   welcome: 'Type your message or /help for commands.',
   goodbye: 'Goodbye!',
@@ -269,50 +277,53 @@ const cleanPromptSymbol = (s: string | undefined, fallback: string) => {
 
 export const DARK_THEME: Theme = {
   color: {
-    // Makima JellyFish palette: black canvas, pink primary, violet borders,
-    // cyan information accents, and neon status colors.
-    primary: '#E84393',
-    accent: '#7DD3E8',
-    border: '#B366FF',
-    text: '#EEEAF4',
-    muted: '#7E7888',
-    completionBg: '#000000',
-    completionCurrentBg: '#241322',
-    completionMetaBg: '#000000',
-    completionMetaCurrentBg: '#241322',
+    // Makima Agent CLI palette: graphite canvas, restrained crimson/rose
+    // accents, warm ivory text, and muted rose-gray secondary text.
+    primary: '#F1A0A7',
+    accent: '#F1A0A7',
+    border: '#B24A56',
+    text: '#F6F0E8',
+    muted: '#9F8E93',
+    completionBg: '#101018',
+    completionCurrentBg: '#321F26',
+    completionMetaBg: '#101018',
+    completionMetaCurrentBg: '#321F26',
 
-    label: '#D9D2E3',
-    ok: '#00FF9C',
-    error: '#FF3B6B',
-    warn: '#FFD060',
+    label: '#F1A0A7',
+    command: '#E8C27A',
+    thinking: '#C7A0D8',
+    highlight: '#FF8FA3',
+    frame: '#6F3B46',
+    ok: '#C9E4C6',
+    error: '#DA6570',
+    warn: '#E8C27A',
 
-    prompt: '#EEEAF4',
-    sessionLabel: '#7E7888',
-    sessionBorder: '#B366FF',
+    prompt: '#F6F0E8',
+    sessionLabel: '#9F8E93',
+    sessionBorder: '#5E2630',
 
-    statusBg: '#000000',
-    statusFg: '#D9D2E3',
-    statusGood: '#00FF9C',
-    statusWarn: '#FFD060',
-    statusBad: '#FF8A3D',
-    statusCritical: '#FF3B6B',
-    selectionBg: '#3A1A32',
-    userMessageBackground: '#171018',
+    statusBg: '#101018',
+    statusFg: '#F6F0E8',
+    statusGood: '#C9E4C6',
+    statusWarn: '#E8C27A',
+    statusBad: '#DA6570',
+    statusCritical: '#DA6570',
+    selectionBg: '#42272E',
+    userMessageBackground: '#311F26',
 
-    claudeShimmer: '#7DD3E8',
-    subtle: '#655F70',
-    planMode: '#00E5FF',
-    autoAccept: '#BF7FFF',
-    permission: '#E84393',
-    bashBorder: '#E84393',
-    promptBorder: '#B366FF',
+    claudeShimmer: '#F1A0A7',
+    subtle: '#6F5D62',
+    planMode: '#D7B46A',
+    autoAccept: '#F1A0A7',
+    permission: '#D7B46A',
+    bashBorder: '#B24A56',
+    promptBorder: '#5E2630',
 
-    // Opaque terminal-safe equivalents of JellyFish's translucent CSS diff colors.
-    diffAdded: '#123A27',
-    diffRemoved: '#3A1621',
-    diffAddedWord: '#00FF9C',
-    diffRemovedWord: '#FF3B6B',
-    shellDollar: '#7DD3E8'
+    diffAdded: '#203426',
+    diffRemoved: '#3C2026',
+    diffAddedWord: '#C9E4C6',
+    diffRemovedWord: '#DA6570',
+    shellDollar: '#F1A0A7'
   },
 
   brand: BRAND,
@@ -327,53 +338,52 @@ export const DARK_THEME: Theme = {
 // cleanly (#11300).
 export const LIGHT_THEME: Theme = {
   color: {
-    // A deeper blue than the dark theme's so the brand hue keeps contrast on white.
-    primary: '#3A57E8',
-    accent: '#3A57E8',
-    border: '#AFAFAF',
-    text: '#000000',
-    muted: '#666666',
-    completionBg: '#F5F5F5',
-    completionCurrentBg: mix('#F5F5F5', '#3A57E8', 0.25),
-    completionMetaBg: '#F5F5F5',
-    completionMetaCurrentBg: mix('#F5F5F5', '#3A57E8', 0.25),
+    // Warm light counterpart of the Makima Agent CLI palette.
+    primary: '#B24A56',
+    accent: '#B24A56',
+    border: '#B9A3A7',
+    text: '#2A2022',
+    muted: '#76666A',
+    completionBg: '#F8F1EE',
+    completionCurrentBg: '#F1DDE0',
+    completionMetaBg: '#F8F1EE',
+    completionMetaCurrentBg: '#F1DDE0',
 
-    label: '#666666',
-    ok: '#2C7A39',
-    error: '#AB2B3F',
-    warn: '#966C1E',
+    label: '#9A3F4B',
+    command: '#8C641F',
+    thinking: '#75518A',
+    highlight: '#B23D4A',
+    frame: '#C9A8AE',
+    ok: '#397044',
+    error: '#B23D4A',
+    warn: '#8C641F',
 
-    prompt: '#2B2B2B',
-    sessionLabel: '#666666',
-    sessionBorder: '#AFAFAF',
+    prompt: '#2A2022',
+    sessionLabel: '#76666A',
+    sessionBorder: '#B9A3A7',
 
-    statusBg: '#F5F5F5',
-    statusFg: '#666666',
-    statusGood: '#2C7A39',
-    statusWarn: '#966C1E',
-    statusBad: '#C25A3A',
-    statusCritical: '#AB2B3F',
-    // Original lightTheme selectionBg: "classic light-mode selection blue
-    // (macOS/VS Code-ish)" (utils/theme.ts); distinct from the 240 band.
-    selectionBg: 'rgb(180,213,255)',
-    // Original lightTheme userMessageBackground: "Slightly darker grey for
-    // optimal contrast" (utils/theme.ts).
-    userMessageBackground: 'rgb(240,240,240)',
+    statusBg: '#F8F1EE',
+    statusFg: '#76666A',
+    statusGood: '#397044',
+    statusWarn: '#8C641F',
+    statusBad: '#B23D4A',
+    statusCritical: '#B23D4A',
+    selectionBg: '#F0C9CE',
+    userMessageBackground: '#F3E5E4',
 
-    claudeShimmer: 'rgb(105,140,250)',
-    subtle: 'rgb(175,175,175)',
-    planMode: 'rgb(0,102,102)',
-    autoAccept: 'rgb(135,0,255)',
-    permission: 'rgb(87,105,247)',
-    bashBorder: 'rgb(255,0,135)',
-    promptBorder: 'rgb(153,153,153)',
+    claudeShimmer: '#B24A56',
+    subtle: '#A58F94',
+    planMode: '#8A681F',
+    autoAccept: '#9A3F4B',
+    permission: '#8A681F',
+    bashBorder: '#B24A56',
+    promptBorder: '#B9A3A7',
 
-    // Original Claude Code light-theme diff tokens (utils/theme.ts lightTheme).
-    diffAdded: 'rgb(105,219,124)',
-    diffRemoved: 'rgb(255,168,180)',
-    diffAddedWord: 'rgb(47,157,68)',
-    diffRemovedWord: 'rgb(209,69,75)',
-    shellDollar: '#5769F7'
+    diffAdded: '#DDEEDF',
+    diffRemoved: '#F4D9DC',
+    diffAddedWord: '#397044',
+    diffRemovedWord: '#B23D4A',
+    shellDollar: '#9A3F4B'
   },
 
   brand: BRAND,
@@ -643,6 +653,10 @@ export function fromSkin(
         completionMetaCurrentBg,
 
         label: c('ui_label') ?? d.color.label,
+        command: c('ui_command') ?? d.color.command,
+        thinking: c('ui_thinking') ?? d.color.thinking,
+        highlight: c('ui_highlight') ?? d.color.highlight,
+        frame: c('ui_frame') ?? d.color.frame,
         ok: c('ui_ok') ?? d.color.ok,
         error: c('ui_error') ?? d.color.error,
         warn: c('ui_warn') ?? d.color.warn,

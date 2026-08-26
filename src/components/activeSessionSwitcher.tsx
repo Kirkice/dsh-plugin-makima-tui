@@ -1,6 +1,7 @@
 import { Box, Text, useInput, useStdout } from '@makima-tui/ink'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { shortCwd } from '../domain/paths.js'
 import { TUI_SESSION_MODEL_FLAG } from '../domain/slash.js'
 import type { GatewayClient } from '../gatewayClient.js'
 import type {
@@ -43,6 +44,9 @@ const shortModel = (model = '') => model.replace(/^.*\//, '') || 'model?'
 const ctrlChar = (letter: string) => String.fromCharCode(letter.charCodeAt(0) - CTRL_OFFSET)
 
 export const fixedSessionColumnStyle = () => ({ flexShrink: 0 })
+
+/** Compact workspace detail for persisted sessions, including older records without one. */
+export const sessionWorkspaceLabel = (cwd?: string) => cwd ? `workspace: ${shortCwd(cwd, 48)}` : 'workspace: unavailable'
 
 export const activeSessionCountLabel = (count: number) => `${count} live ${count === 1 ? 'session' : 'sessions'}`
 
@@ -794,7 +798,7 @@ export function ActiveSessionSwitcher({
                 </Text>
               </Box>
 
-              <Box flexGrow={1} flexShrink={1} minWidth={0}>
+              <Box flexDirection="column" flexGrow={1} flexShrink={1} minWidth={0}>
                 <Text
                   bold={selected}
                   color={pendingDelete ? t.color.label : (rowTextColor ?? t.color.muted)}
@@ -802,6 +806,11 @@ export function ActiveSessionSwitcher({
                 >
                   {title}
                 </Text>
+                {!pendingDelete && (
+                  <Text color={rowTextColor ?? t.color.muted} wrap="truncate-end">
+                    {sessionWorkspaceLabel(h.cwd)}
+                  </Text>
+                )}
               </Box>
             </Box>
           )
@@ -858,9 +867,12 @@ export function ActiveSessionSwitcher({
               </Text>
             </Box>
 
-            <Box flexGrow={1} flexShrink={1} minWidth={0}>
+            <Box flexDirection="column" flexGrow={1} flexShrink={1} minWidth={0}>
               <Text bold={selected} color={rowTextColor ?? t.color.muted} wrap="truncate-end">
                 {title}
+              </Text>
+              <Text color={rowTextColor ?? t.color.muted} wrap="truncate-end">
+                {sessionWorkspaceLabel(s.cwd)}
               </Text>
             </Box>
           </Box>

@@ -174,8 +174,8 @@ function makeWorld() {
         return {
           delete: async (id: string) => { deleted.push(id) },
           list: async () => [
-            { createdAt: 50, id: 'cc-old-1', version: 1 },
-            { createdAt: 90, id: 'cc-old-2', version: 1 }
+            { createdAt: 50, cwd: '/workspaces/first', id: 'cc-old-1', version: 1 },
+            { createdAt: 90, cwd: '/workspaces/second', id: 'cc-old-2', version: 1 }
           ]
         }
       }
@@ -241,6 +241,24 @@ describe('HarnessGatewayClient', () => {
     expect(w.ctx.agents.create).toHaveBeenCalledWith(expect.objectContaining({
       meta: { cwd: 'H:\\Project\\Roo-Code' },
     }))
+  })
+
+  it('uses the CLI launch directory instead of a Makima workspace environment override', async () => {
+    vi.stubEnv('MAKIMA_TUI_WORKSPACE', 'H:\\Project\\dsh-makimaTUI')
+
+    try {
+      const w = makeWorld()
+      const client = new HarnessGatewayClient(w.ctx as never, { launchCwd: 'H:\\Project\\Roo-Code' })
+
+      client.start()
+      await settle()
+
+      expect(w.ctx.agents.create).toHaveBeenCalledWith(expect.objectContaining({
+        meta: { cwd: 'H:\\Project\\Roo-Code' },
+      }))
+    } finally {
+      vi.unstubAllEnvs()
+    }
   })
 
   it('start() creates the agent and emits gateway.ready + session.info', async () => {
@@ -1046,15 +1064,17 @@ describe('HarnessGatewayClient', () => {
     expect(res.sessions.find(s => s.id === 'cc-resumed-1')?.current).toBe(true)
   })
 
-  it('session.list serves persisted headers newest-first and honors its requested limit', async () => {
+  it('session.list serves persisted headers with their workspace and honors its requested limit', async () => {
     const w = makeWorld()
 
     w.client.start()
     await settle()
 
-    const res = await w.client.request<{ sessions: Array<{ id: string; started_at: number }> }>('session.list', { limit: 1 })
+    const res = await w.client.request<{ sessions: Array<{ cwd?: string; id: string; started_at: number }> }>('session.list', { limit: 1 })
 
-    expect(res.sessions.map(s => s.id)).toEqual(['cc-old-2'])
+    expect(res.sessions).toEqual([
+      expect.objectContaining({ cwd: '/workspaces/second', id: 'cc-old-2' })
+    ])
   })
 
   it('session.delete delegates persisted-history removal and refuses active sessions', async () => {
@@ -1085,6 +1105,25 @@ describe('HarnessGatewayClient', () => {
     await w.client.request('session.activate', { session_id: first })
     await expect(w.client.request('session.title', { title: 'My Task' })).resolves.toEqual({ title: 'My Task' })
     await expect(w.client.request('session.title', {})).resolves.toEqual({ title: 'existing title' })
+  })
+
+  it('lists the session browser and its aliases in the slash catalog and completions', async () => {
+    const w = makeWorld()
+
+    w.client.start()
+    await settle()
+
+    const catalog = await w.client.request<{ canon: Record<string, string>; hints: Record<string, string>; pairs: Array<[string, string]> }>('commands.catalog', {})
+
+    for (const name of ['/sessions', '/session', '/switch', '/resume']) {
+      expect(catalog.canon[name]).toBe(name)
+      expect(catalog.hints[name]).toBe('[new | <id or title>]')
+      expect(catalog.pairs.some(([candidate]) => candidate === name)).toBe(true)
+    }
+
+    const completion = await w.client.request<{ items: Array<{ text: string }> }>('complete.slash', { text: '/session' })
+
+    expect(completion.items.map(item => item.text)).toEqual(expect.arrayContaining(['/session', '/sessions']))
   })
 
   it('merges harness commands into the catalog and completions', async () => {

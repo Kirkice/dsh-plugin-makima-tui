@@ -448,7 +448,7 @@ export class HarnessGatewayClient extends GatewayClient {
   }
 
   private workingDir(): string {
-    return this.opts.cwd ?? process.env.MAKIMA_TUI_WORKSPACE ?? process.env.MAKIMA_TUI_CWD ?? this.opts.launchCwd ?? process.cwd()
+    return this.opts.cwd ?? this.opts.launchCwd ?? process.env.MAKIMA_TUI_WORKSPACE ?? process.env.MAKIMA_TUI_CWD ?? process.cwd()
   }
 
   private async createAgent(fixedSessionId?: string): Promise<AgentHandle> {
@@ -1730,6 +1730,7 @@ export class HarnessGatewayClient extends GatewayClient {
       case 'session.active_list': {
         const sessions = [...this.live.entries()].map(([id, handle]) => ({
           current: id === this.sid,
+          cwd: handle.agent.session.header.cwd,
           id,
           last_active: undefined,
           message_count: handle.agent.session.events.filter(e => e.type === 'user/message').length,
@@ -1751,6 +1752,7 @@ export class HarnessGatewayClient extends GatewayClient {
             const title = this.cachedTitle(header)
 
             return {
+              cwd: header.cwd,
               id: String(header.id),
               message_count: 0,
               preview: title ?? '',

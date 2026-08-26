@@ -58,7 +58,7 @@ describe('BusyLine', () => {
     expect(plain.trim()).toBe('')
   })
 
-  it('shows the in-progress todo activeForm as the verb', () => {
+  it('shows the in-progress todo activeForm with a fixed-width foreground-only marker', () => {
     resetTurnState()
     patchTurnState({
       lastDeltaAt: Date.now(),
@@ -70,7 +70,8 @@ describe('BusyLine', () => {
 
     const plain = stripAnsi(busyRender(Date.now()))
 
-    expect(plain).toContain('Extracting the loader…')
+    expect(plain).toContain('› Extracting the loader…')
+    expect(plain).not.toMatch(/[·✢✳✶✻✽]/)
     // The full checklist hangs right below (LiveTodoPanel attached variant),
     // so the one-line Next: hint would duplicate its first pending row.
     expect(plain).not.toContain('Next:')
@@ -78,7 +79,7 @@ describe('BusyLine', () => {
     expect(plain).not.toContain('tokens')
   })
 
-  it('shows Next: only when the checklist is hidden (ctrl+t)', () => {
+  it('shows the compact next-task hint only when the checklist is hidden (ctrl+t)', () => {
     resetTurnState()
     patchTurnState({
       lastDeltaAt: Date.now(),
@@ -91,7 +92,7 @@ describe('BusyLine', () => {
 
     const plain = stripAnsi(busyRender(Date.now()))
 
-    expect(plain).toContain('Next: Add unit tests')
+    expect(plain).toContain('↳ next Add unit tests')
   })
 
   it('adds the dim elapsed + ~token suffix only after 30s', () => {
