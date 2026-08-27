@@ -79,6 +79,7 @@ export interface HarnessClientOptions {
   cwd?: string
   launchCwd?: string
   model?: string
+  profile?: string
   provider?: string
   sessionId?: string
 }
@@ -1587,6 +1588,45 @@ export class HarnessGatewayClient extends GatewayClient {
     switch (method) {
       case 'setup.status':
         return Promise.resolve({ provider_configured: true } as T)
+
+      case 'plugins.list':
+      case 'plugins.install':
+      case 'plugins.remove':
+      case 'plugins.runtime': {
+        const inventory = this.ctx.get('pluginInventory') as {
+          list?: () => unknown
+          listProfile?: (profile: string) => unknown
+          install?: (profile: string, specifier: string) => unknown
+          remove?: (profile: string, packageName: string) => unknown
+        } | undefined
+        const profile = typeof p.profile === 'string' && p.profile.trim()
+          ? p.profile.trim()
+          : this.opts.profile ?? process.env.MAKIMA_TUI_PROFILE ?? 'makima'
+
+        if (!inventory) {
+          return Promise.reject(new Error('plugin management is unavailable: the profile does not mount pluginInventory'))
+        }
+
+        if (method === 'plugins.runtime') {
+          return Promise.resolve(inventory.list?.() ?? {}) as Promise<T>
+        }
+
+        if (method === 'plugins.list') {
+          return Promise.resolve(inventory.listProfile?.(profile) ?? {}) as Promise<T>
+        }
+
+        if (method === 'plugins.install') {
+          const specifier = typeof p.specifier === 'string' ? p.specifier.trim() : ''
+
+          if (!specifier) return Promise.reject(new Error('plugin install requires a package specifier'))
+          return Promise.resolve(inventory.install?.(profile, specifier) ?? {}) as Promise<T>
+        }
+
+        const packageName = typeof p.package_name === 'string' ? p.package_name.trim() : ''
+
+        if (!packageName) return Promise.reject(new Error('plugin remove requires a package name'))
+        return Promise.resolve(inventory.remove?.(profile, packageName) ?? {}) as Promise<T>
+      }
 
       case 'session.create':
         return this.harnessReady.then(async () => {

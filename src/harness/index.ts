@@ -19,6 +19,8 @@ export interface Config {
   model?: string
   /** Provider route; defaults to the profile's agent-default-model selection. */
   provider?: string
+  /** Profile whose persisted plugins the TUI manages. */
+  profile?: string
   /** Resume/attach to a fixed session id instead of generating one. */
   sessionId?: string
   /** Allow running without a TTY (headless tests only). */
@@ -30,6 +32,7 @@ export const Config: Schema<Config> = Schema.object({
   cwd: Schema.string(),
   model: Schema.string(),
   provider: Schema.string(),
+  profile: Schema.string(),
   sessionId: Schema.string()
 })
 

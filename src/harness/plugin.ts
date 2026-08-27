@@ -53,6 +53,7 @@ export async function mountCcTui(ctx: Context, config: Config): Promise<void> {
     cwd: config.cwd,
     launchCwd,
     model: config.model,
+    profile: config.profile,
     provider: config.provider,
     sessionId: config.sessionId
   })

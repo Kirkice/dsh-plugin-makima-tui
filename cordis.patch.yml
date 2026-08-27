@@ -8,7 +8,21 @@
 - id: hmr
   disabled: true
 
+# The base bundle supplies the LLM service; this row supplies the concrete
+# DeepSeek HTTPS adapter and resolves its credential per request.
+- id: llm-deepseek
+  name: '@deepseek-ai/dsh-llm-deepseek'
+  config:
+    apiKeyEnv: 'DEEPSEEK_API_KEY'
+    baseURL: !!js process.env.DEEPSEEK_BASE_URL
+    thinking: enabled
+    reasoningEffort: max
+
 - insert:
+    - id: plugin-inventory
+      name: '@deepseek-ai/dsh-host-plugin-inventory'
+
     - id: makima-tui
       name: makima-tui
-      config: {}
+      config:
+        profile: !!js process.env.MAKIMA_TUI_PROFILE ?? 'makima'

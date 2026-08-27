@@ -94,7 +94,7 @@ describe('ColorDiff layout', () => {
     expect(plain.join('\n')).not.toMatch(/^[-+]{3} /m)
   })
 
-  it('paints the original dark-theme backgrounds and word-diff highlights', () => {
+  it('paints the subdued dark-theme backgrounds and word-diff highlights', () => {
     // Small change (one token) so the 0.4 change-ratio threshold admits
     // word-level highlighting.
     const small = {
@@ -107,12 +107,12 @@ describe('ColorDiff layout', () => {
 
     const rows = new ColorDiff(small, null, '/ws/src/posts.ts', null).render('dark', 60, false)!
 
-    // deleteLine rgb(61,1,0) on the removed row, deleteWord rgb(92,2,0) on
-    // the changed token; addLine rgb(2,40,0) / addWord rgb(4,71,0).
-    expect(rows[1]).toContain('48;2;61;1;0')
-    expect(rows[1]).toContain('48;2;92;2;0')
-    expect(rows[2]).toContain('48;2;2;40;0')
-    expect(rows[2]).toContain('48;2;4;71;0')
+    // Removed rows use muted rose (51,25,35) with a focused word chip
+    // (91,38,57); added rows use subdued teal (20,43,50) / (30,75,83).
+    expect(rows[1]).toContain('48;2;51;25;35')
+    expect(rows[1]).toContain('48;2;91;38;57')
+    expect(rows[2]).toContain('48;2;20;43;50')
+    expect(rows[2]).toContain('48;2;30;75;83')
     // context rows keep the terminal default background
     expect(rows[0]).not.toContain('48;2;')
   })
@@ -120,8 +120,8 @@ describe('ColorDiff layout', () => {
   it('rejects word-diff when most of the line changed (threshold parity)', () => {
     const rows = new ColorDiff(HUNK, null, '/ws/src/posts.ts', null).render('dark', 60, false)!
 
-    expect(rows[1]).toContain('48;2;61;1;0')
-    expect(rows[1]).not.toContain('48;2;92;2;0')
+    expect(rows[1]).toContain('48;2;51;25;35')
+    expect(rows[1]).not.toContain('48;2;91;38;57')
   })
 
   it('wraps long lines with a blank continuation gutter', () => {
@@ -424,7 +424,7 @@ describe('DiffView rendering', () => {
     expect(plain).toMatch(/221 \+\s+id: "drone-warfare",/)
     expect(plain).not.toContain('---')
     // real ColorDiff output, not the fallback: add/remove backgrounds present
-    expect(output).toContain('48;2;61;1;0')
+    expect(output).toContain('48;2;51;25;35')
     expect(output).toContain('48;2;2;40;0')
   })
 

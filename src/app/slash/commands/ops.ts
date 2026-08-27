@@ -61,6 +61,26 @@ interface SkillsReloadResponse {
   output?: string
 }
 
+interface ManagedPlugin {
+  packageName?: string
+  moduleName?: string
+  fiberPhase?: string
+  specifier: string
+  bundle: boolean
+  builtIn: boolean
+}
+
+interface ManagedPluginListResponse {
+  profile?: string
+  entries?: ManagedPlugin[]
+}
+
+interface ManagedPluginMutationResponse {
+  operation?: 'install' | 'remove'
+  packageName?: string | null
+  restartRequired?: boolean
+}
+
 export const opsCommands: SlashCommand[] = [
   {
     help: 'stop background processes',
@@ -698,29 +718,53 @@ export const opsCommands: SlashCommand[] = [
   },
 
   {
-    argumentHint: '[enable|disable <name>]',
-    help: 'view & toggle plugins (no arg opens the hub; enable/disable <name> for direct toggle)',
+    argumentHint: '[list|install <spec>|remove <package>]',
+    help: 'list, install, or remove Harness profile plugins',
     name: 'plugins',
     run: (arg, ctx, cmd) => {
-      // No argument → open the interactive Plugins Hub overlay. Any
-      // subcommand (enable/disable/list/install/…) falls through to the
-      // text slash worker so it stays at parity with `clawcodex plugins`.
-      if (!arg.trim()) {
-        return patchOverlayState({ pluginsHub: true })
+      const [subcommand = 'list', ...rest] = arg.trim().split(/\s+/).filter(Boolean)
+      const action = subcommand.toLowerCase()
+
+      if (!['list', 'ls', 'install', 'add', 'remove', 'uninstall', 'rm', 'runtime'].includes(action)) {
+        return ctx.transcript.sys('usage: /plugins [list|install <package-spec>|remove <package-name>]')
+      }
+
+      const method = action === 'runtime'
+        ? 'plugins.runtime'
+        : action === 'install' || action === 'add'
+          ? 'plugins.install'
+        : action === 'remove' || action === 'uninstall' || action === 'rm'
+          ? 'plugins.remove'
+          : 'plugins.list'
+      const params: Record<string, unknown> = {}
+
+      if (method === 'plugins.install') {
+        const specifier = rest.join(' ').trim()
+        if (!specifier) return ctx.transcript.sys('usage: /plugins install <package-spec>')
+        params.specifier = specifier
+      }
+
+      if (method === 'plugins.remove') {
+        const packageName = rest[0]?.trim() ?? ''
+        if (!packageName) return ctx.transcript.sys('usage: /plugins remove <package-name>')
+        params.package_name = packageName
       }
 
       ctx.gateway.gw
-        .request<SlashExecResponse>('slash.exec', { command: cmd.slice(1), session_id: ctx.sid })
+        .request<ManagedPluginListResponse | ManagedPluginMutationResponse>(method, params)
         .then(r => {
-          if (ctx.stale()) {
-            return
+          if (ctx.stale() || !r) return
+          if (method === 'plugins.list' || method === 'plugins.runtime') {
+            const list = r as ManagedPluginListResponse & { entries?: Array<ManagedPlugin & { moduleName?: string; fiberPhase?: string }> }
+            const entries = list.entries ?? []
+            if (!entries.length) return ctx.transcript.sys(`no profile plugins found${list.profile ? ` for ${list.profile}` : ''}`)
+            const lines = entries.map(entry => `${entry.builtIn ? '•' : '○'} ${entry.packageName ?? entry.moduleName ?? '(unknown)'}${entry.bundle ? ' [bundle]' : ''}${entry.builtIn ? ' [built-in]' : ''}${entry.fiberPhase ? ` [${entry.fiberPhase}]` : ''}`)
+            return ctx.transcript.page(lines.join('\n'), `Plugins (${list.profile ?? 'profile'})`)
           }
-
-          const body = r?.output || '/plugins: no output'
-          const text = r?.warning ? `warning: ${r.warning}\n${body}` : body
-          const long = text.length > 180 || text.split('\n').filter(Boolean).length > 2
-
-          long ? ctx.transcript.page(text, 'Plugins') : ctx.transcript.sys(text)
+          const mutation = r as ManagedPluginMutationResponse
+          const subject = mutation.packageName ?? 'plugin'
+          const verb = mutation.operation === 'remove' ? 'removed' : 'installed'
+          ctx.transcript.sys(`${subject} ${verb}${mutation.restartRequired ? ' · restart Makima TUI to apply' : ''}`)
         })
         .catch(ctx.guardedErr)
     }

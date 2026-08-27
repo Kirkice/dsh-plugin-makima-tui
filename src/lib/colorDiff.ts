@@ -248,33 +248,34 @@ function defaultSyntaxThemeName(themeName: string): string {
   return 'GitHub'
 }
 
-// highlight.js scope → syntect Monokai Extended foreground (measured from the
-// Rust module's output so colors match the original exactly)
-const MONOKAI_SCOPES: Record<string, Color> = {
-  keyword: rgb(249, 38, 114),
-  _storage: rgb(102, 217, 239),
-  built_in: rgb(166, 226, 46),
-  type: rgb(166, 226, 46),
-  literal: rgb(190, 132, 255),
-  number: rgb(190, 132, 255),
-  string: rgb(230, 219, 116),
-  title: rgb(166, 226, 46),
-  'title.function': rgb(166, 226, 46),
-  'title.class': rgb(166, 226, 46),
-  'title.class.inherited': rgb(166, 226, 46),
-  params: rgb(253, 151, 31),
-  comment: rgb(117, 113, 94),
-  meta: rgb(117, 113, 94),
-  attr: rgb(166, 226, 46),
-  attribute: rgb(166, 226, 46),
-  variable: rgb(255, 255, 255),
-  'variable.language': rgb(255, 255, 255),
-  property: rgb(255, 255, 255),
-  operator: rgb(249, 38, 114),
-  punctuation: rgb(248, 248, 242),
-  symbol: rgb(190, 132, 255),
-  regexp: rgb(230, 219, 116),
-  subst: rgb(248, 248, 242)
+// highlight.js scope → Material Palenight syntax foregrounds. These values
+// intentionally affect code tokens only; the diff bands and all surrounding
+// TUI chrome remain independent from this palette.
+const PALENIGHT_SCOPES: Record<string, Color> = {
+  keyword: rgb(199, 146, 234),
+  _storage: rgb(199, 146, 234),
+  built_in: rgb(130, 170, 255),
+  type: rgb(255, 203, 107),
+  literal: rgb(255, 88, 116),
+  number: rgb(247, 140, 108),
+  string: rgb(195, 232, 141),
+  title: rgb(130, 170, 255),
+  'title.function': rgb(130, 170, 255),
+  'title.class': rgb(255, 203, 107),
+  'title.class.inherited': rgb(169, 199, 125),
+  params: rgb(121, 134, 231),
+  comment: rgb(105, 112, 152),
+  meta: rgb(137, 221, 255),
+  attr: rgb(137, 221, 255),
+  attribute: rgb(137, 221, 255),
+  variable: rgb(191, 199, 213),
+  'variable.language': rgb(255, 85, 114),
+  property: rgb(137, 221, 255),
+  operator: rgb(199, 146, 234),
+  punctuation: rgb(217, 245, 221),
+  symbol: rgb(255, 88, 116),
+  regexp: rgb(128, 203, 196),
+  subst: rgb(191, 199, 213)
 }
 
 // highlight.js scope → syntect GitHub-light foreground (measured from Rust)
@@ -361,10 +362,13 @@ function buildTheme(themeName: string, mode: ColorMode): Theme {
   }
 
   if (isDark) {
-    const fg = rgb(248, 248, 242)
-    const deleteLine = rgb(61, 1, 0)
-    const deleteWord = rgb(92, 2, 0)
-    const deleteDecoration = rgb(220, 90, 90)
+    // A subdued cool/warm pair keeps changed code readable without the
+    // traffic-light saturation of pure green/red bands. The closer word chip
+    // adds focus while the line band stays intentionally quiet.
+    const fg = rgb(232, 234, 240)
+    const deleteLine = tc ? rgb(51, 25, 35) : ansiIdx(52)
+    const deleteWord = tc ? rgb(91, 38, 57) : ansiIdx(89)
+    const deleteDecoration = rgb(245, 151, 169)
 
     if (isDaltonized) {
       return {
@@ -376,20 +380,20 @@ function buildTheme(themeName: string, mode: ColorMode): Theme {
         deleteDecoration,
         foreground: fg,
         background: DEFAULT_BG,
-        scopes: MONOKAI_SCOPES
+        scopes: PALENIGHT_SCOPES
       }
     }
 
     return {
-      addLine: tc ? rgb(2, 40, 0) : ansiIdx(22),
-      addWord: tc ? rgb(4, 71, 0) : ansiIdx(28),
-      addDecoration: rgb(80, 200, 80),
+      addLine: tc ? rgb(20, 43, 50) : ansiIdx(23),
+      addWord: tc ? rgb(30, 75, 83) : ansiIdx(30),
+      addDecoration: rgb(120, 215, 200),
       deleteLine,
       deleteWord,
       deleteDecoration,
       foreground: fg,
       background: DEFAULT_BG,
-      scopes: MONOKAI_SCOPES
+      scopes: PALENIGHT_SCOPES
     }
   }
 
