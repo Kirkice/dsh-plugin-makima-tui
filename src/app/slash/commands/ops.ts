@@ -61,6 +61,23 @@ interface SkillsReloadResponse {
   output?: string
 }
 
+interface PluginManageResponse {
+  bundled_count?: number
+  message?: string
+  ok?: boolean
+  plugin?: {
+    name?: string
+    status?: string
+  }
+  plugins?: Array<{
+    name?: string
+    source?: string
+    status?: string
+    version?: string
+  }>
+  user_count?: number
+}
+
 interface ManagedPlugin {
   packageName?: string
   moduleName?: string
@@ -718,53 +735,46 @@ export const opsCommands: SlashCommand[] = [
   },
 
   {
-    argumentHint: '[list|install <spec>|remove <package>]',
-    help: 'list, install, or remove Harness profile plugins',
+    aliases: ['plugin'],
+    argumentHint: '[list|enable <name>|disable <name>]',
+    help: 'list or enable/disable loaded Harness plugins',
     name: 'plugins',
     run: (arg, ctx, cmd) => {
       const [subcommand = 'list', ...rest] = arg.trim().split(/\s+/).filter(Boolean)
       const action = subcommand.toLowerCase()
 
-      if (!['list', 'ls', 'install', 'add', 'remove', 'uninstall', 'rm', 'runtime'].includes(action)) {
-        return ctx.transcript.sys('usage: /plugins [list|install <package-spec>|remove <package-name>]')
+      if (!['list', 'ls', 'enable', 'disable'].includes(action)) {
+        return ctx.transcript.sys('usage: /plugin [list|enable <name>|disable <name>]')
       }
 
-      const method = action === 'runtime'
-        ? 'plugins.runtime'
-        : action === 'install' || action === 'add'
-          ? 'plugins.install'
-        : action === 'remove' || action === 'uninstall' || action === 'rm'
-          ? 'plugins.remove'
-          : 'plugins.list'
-      const params: Record<string, unknown> = {}
-
-      if (method === 'plugins.install') {
-        const specifier = rest.join(' ').trim()
-        if (!specifier) return ctx.transcript.sys('usage: /plugins install <package-spec>')
-        params.specifier = specifier
+      const name = rest.join(' ').trim()
+      if ((action === 'enable' || action === 'disable') && !name) {
+        return ctx.transcript.sys(`usage: /plugin ${action} <name>`)
       }
 
-      if (method === 'plugins.remove') {
-        const packageName = rest[0]?.trim() ?? ''
-        if (!packageName) return ctx.transcript.sys('usage: /plugins remove <package-name>')
-        params.package_name = packageName
-      }
+      const params: Record<string, unknown> = action === 'list' || action === 'ls'
+        ? { action: 'list' }
+        : { action: 'toggle', enable: action === 'enable', name }
 
       ctx.gateway.gw
-        .request<ManagedPluginListResponse | ManagedPluginMutationResponse>(method, params)
+        .request<PluginManageResponse>('plugins.manage', params)
         .then(r => {
           if (ctx.stale() || !r) return
-          if (method === 'plugins.list' || method === 'plugins.runtime') {
-            const list = r as ManagedPluginListResponse & { entries?: Array<ManagedPlugin & { moduleName?: string; fiberPhase?: string }> }
-            const entries = list.entries ?? []
-            if (!entries.length) return ctx.transcript.sys(`no profile plugins found${list.profile ? ` for ${list.profile}` : ''}`)
-            const lines = entries.map(entry => `${entry.builtIn ? '•' : '○'} ${entry.packageName ?? entry.moduleName ?? '(unknown)'}${entry.bundle ? ' [bundle]' : ''}${entry.builtIn ? ' [built-in]' : ''}${entry.fiberPhase ? ` [${entry.fiberPhase}]` : ''}`)
-            return ctx.transcript.page(lines.join('\n'), `Plugins (${list.profile ?? 'profile'})`)
+
+          if (action === 'list' || action === 'ls') {
+            const plugins = r.plugins ?? []
+            if (!plugins.length) return ctx.transcript.sys('no loaded plugins found')
+            const lines = plugins.map(plugin => {
+              const source = plugin.source === 'bundled' ? ' [bundled]' : ''
+              const version = plugin.version ? ` v${plugin.version}` : ''
+              return `${plugin.status === 'enabled' ? '✓' : '○'} ${plugin.name ?? '(unknown)'}${version}${source} (${plugin.status ?? 'unknown'})`
+            })
+            return ctx.transcript.page(lines.join('\n'), `Plugins (${r.user_count ?? 0} user · ${r.bundled_count ?? 0} bundled)`)
           }
-          const mutation = r as ManagedPluginMutationResponse
-          const subject = mutation.packageName ?? 'plugin'
-          const verb = mutation.operation === 'remove' ? 'removed' : 'installed'
-          ctx.transcript.sys(`${subject} ${verb}${mutation.restartRequired ? ' · restart Makima TUI to apply' : ''}`)
+
+          const plugin = r.plugin?.name ?? name
+          const status = r.plugin?.status ?? (action === 'enable' ? 'enabled' : 'disabled')
+          ctx.transcript.sys(r.message ?? `${plugin} ${status}`)
         })
         .catch(ctx.guardedErr)
     }

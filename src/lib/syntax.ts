@@ -2,6 +2,18 @@ import type { Theme } from '../theme.js'
 
 export type Token = [string, string]
 
+// Material Palenight syntax palette. This renderer paints fenced Markdown
+// code blocks (the common assistant-response path), independently from the
+// structured-diff renderer in colorDiff.ts.
+const PALENIGHT = {
+  comment: '#676E98',
+  identifier: '#BFC7D5',
+  keyword: '#C792EA',
+  number: '#F78C6C',
+  string: '#C3E88D',
+  type: '#FFCB6B'
+} as const
+
 interface LangSpec {
   comment: null | string
   keywords: Set<string>
@@ -41,7 +53,16 @@ const SQL = KW(`
   table drop alter add column primary key foreign references join left right inner outer on
 `)
 
+const CPP = KW(`
+  alignas alignof asm auto bool break case catch char char8_t char16_t char32_t class concept const consteval
+  constexpr constinit continue co_await co_return co_yield decltype default delete do double else enum explicit export
+  extern false float for friend goto if inline int long mutable namespace new noexcept nullptr operator private protected
+  public register reinterpret_cast requires return short signed sizeof static static_assert static_cast struct switch
+  template this thread_local throw true try typedef typeid typename union unsigned using virtual void volatile wchar_t while
+`)
+
 const LANGS: Record<string, LangSpec> = {
+  cpp: { comment: '//', keywords: CPP },
   go: { comment: '//', keywords: GO },
   json: { comment: null, keywords: KW('true false null') },
   py: { comment: '#', keywords: PY },
@@ -53,7 +74,11 @@ const LANGS: Record<string, LangSpec> = {
 }
 
 const ALIAS: Record<string, string> = {
+  'c++': 'cpp',
   bash: 'sh',
+  cc: 'cpp',
+  cxx: 'cpp',
+  hpp: 'cpp',
   javascript: 'ts',
   js: 'ts',
   jsx: 'ts',
@@ -72,7 +97,7 @@ export const isHighlightable = (lang: string): boolean => resolve(lang) !== null
 
 const TOKEN_RE = /'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`(?:[^`\\]|\\.)*`|\b\d+(?:\.\d+)?\b|[A-Za-z_$][\w$]*/g
 
-export function highlightLine(line: string, lang: string, t: Theme): Token[] {
+export function highlightLine(line: string, lang: string, _t: Theme): Token[] {
   const spec = resolve(lang)
 
   if (!spec) {
@@ -80,7 +105,7 @@ export function highlightLine(line: string, lang: string, t: Theme): Token[] {
   }
 
   if (spec.comment && line.trimStart().startsWith(spec.comment)) {
-    return [[t.color.muted, line]]
+    return [[PALENIGHT.comment, line]]
   }
 
   const tokens: Token[] = []
@@ -97,13 +122,13 @@ export function highlightLine(line: string, lang: string, t: Theme): Token[] {
     const ch = tok[0]!
 
     if (ch === '"' || ch === "'" || ch === '`') {
-      tokens.push([t.color.accent, tok])
+      tokens.push([PALENIGHT.string, tok])
     } else if (ch >= '0' && ch <= '9') {
-      tokens.push([t.color.text, tok])
+      tokens.push([PALENIGHT.number, tok])
     } else if (spec.keywords.has(tok)) {
-      tokens.push([t.color.border, tok])
+      tokens.push([tok === 'class' || tok === 'interface' || tok === 'type' ? PALENIGHT.type : PALENIGHT.keyword, tok])
     } else {
-      tokens.push(['', tok])
+      tokens.push([PALENIGHT.identifier, tok])
     }
 
     last = start + tok.length

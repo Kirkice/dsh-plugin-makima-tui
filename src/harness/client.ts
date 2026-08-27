@@ -1589,6 +1589,34 @@ export class HarnessGatewayClient extends GatewayClient {
       case 'setup.status':
         return Promise.resolve({ provider_configured: true } as T)
 
+      case 'plugins.manage': {
+        const inventory = this.ctx.get('pluginInventory') as {
+          listProfile?: (profile: string) => unknown
+          toggle?: (profile: string, name: string, enable: boolean) => unknown
+        } | undefined
+        const profile = typeof p.profile === 'string' && p.profile.trim()
+          ? p.profile.trim()
+          : this.opts.profile ?? process.env.MAKIMA_TUI_PROFILE ?? 'makima'
+        const action = typeof p.action === 'string' ? p.action : 'list'
+
+        if (!inventory) {
+          return Promise.reject(new Error('plugin management is unavailable: the profile does not mount pluginInventory'))
+        }
+
+        if (action === 'list') {
+          return Promise.resolve(inventory.listProfile?.(profile) ?? {}) as Promise<T>
+        }
+
+        if (action === 'toggle') {
+          const name = typeof p.name === 'string' ? p.name.trim() : ''
+          if (!name) return Promise.reject(new Error('plugin management requires a plugin name'))
+          if (typeof p.enable !== 'boolean') return Promise.reject(new Error('plugin management requires enable=true or false'))
+          return Promise.resolve(inventory.toggle?.(profile, name, p.enable) ?? {}) as Promise<T>
+        }
+
+        return Promise.reject(new Error(`unsupported plugin management action: ${action}`))
+      }
+
       case 'plugins.list':
       case 'plugins.install':
       case 'plugins.remove':
