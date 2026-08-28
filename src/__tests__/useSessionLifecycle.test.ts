@@ -118,15 +118,15 @@ describe('resume scroll settle', () => {
     expect(scrollToBottom).not.toHaveBeenCalled()
   })
 
-  it('keeps the immediate resume snap even before sticky state settles', () => {
+  it('forces a restored virtual transcript past a stale top spacer once Yoga has measured it', () => {
     vi.useFakeTimers()
-    let sticky = false
+    const scrollTo = vi.fn()
     const scrollToBottom = vi.fn()
     const cancel = scheduleResumeScrollToBottom(
       {
         current: {
           getLastManualScrollAt: () => 0,
-          isSticky: () => sticky,
+          scrollTo,
           scrollToBottom
         }
       } as any,
@@ -137,9 +137,11 @@ describe('resume scroll settle', () => {
     expect(scrollToBottom).toHaveBeenCalledTimes(1)
 
     vi.advanceTimersByTime(80)
-    expect(scrollToBottom).toHaveBeenCalledTimes(1)
+    expect(scrollToBottom).toHaveBeenCalledTimes(2)
 
-    sticky = true
+    vi.advanceTimersByTime(880)
+    expect(scrollTo).toHaveBeenCalledWith(Number.MAX_SAFE_INTEGER)
+
     cancel()
   })
 })

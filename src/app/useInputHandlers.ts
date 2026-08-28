@@ -730,44 +730,13 @@ export function useInputHandlers(ctx: InputHandlerContext): InputHandlerResult {
     // available), so the keybinding can never step into "allow everything"
     // in a session that didn't opt into bypass, and never desyncs after
     // /mode. Previously it toggled an unwired `config.set{yolo}` → dead.
-    // Ctrl+O is viewport-aware: if any detail is open, close details globally;
-    // otherwise expand only collapsed blocks that intersect the current view.
-    // This avoids exploding old off-screen tool output and preserves the user's
-    // reading position as closely as possible.
+    // Ctrl+O restores the original global details toggle.
     if (isCtrl(key, ch, 'o')) {
       const current = getUiState()
-      const anyExpanded =
-        current.detailsMode === 'expanded' ||
-        Object.values(current.detailExpanded).some(Boolean) ||
-        Object.values(current.sections).includes('expanded')
+      const next = current.detailsMode === 'expanded' ? 'collapsed' : 'expanded'
 
-      if (anyExpanded) {
-        patchUiState(state => ({
-          ...state,
-          detailExpanded: {},
-          detailsMode: 'collapsed',
-          detailsModeCommandOverride: true,
-          sections: Object.fromEntries(SECTION_NAMES.map(section => [section, 'collapsed']))
-        }))
-        actions.sys('details: collapsed globally')
-
-        return
-      }
-
-      const targets = visibleDetailTargets().filter(target => !target.expanded)
-
-      if (!targets.length) {
-        return actions.sys('details: no collapsed reasoning or tool results in view')
-      }
-
-      patchUiState(state => ({
-        ...state,
-        detailExpanded: {
-          ...state.detailExpanded,
-          ...Object.fromEntries(targets.map(target => [target.key, true]))
-        }
-      }))
-      actions.sys(`details: expanded ${targets.length} block${targets.length === 1 ? '' : 's'} in view`)
+      patchUiState({ detailsMode: next, detailsModeCommandOverride: true })
+      actions.sys(`details: ${next}`)
 
       return
     }

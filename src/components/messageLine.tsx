@@ -29,6 +29,8 @@ import { TodoPanel } from './todoPanel.js'
 const SYSTEM_COLLAPSE_CHARS = 400
 const RESPONSE_LABEL = ' MAKIMA / ANSWER '
 
+export const isDetailsNotice = (msg: Msg): boolean => msg.role === 'system' && msg.text.startsWith('details:')
+
 export const responseDivider = (cols: number, gutterWidth: number): { left: string; right: string } => {
   const ruleWidth = Math.max(8, cols - gutterWidth - RESPONSE_LABEL.length - 4)
   const leftWidth = Math.max(3, Math.min(8, Math.floor(ruleWidth / 5)))
@@ -264,6 +266,13 @@ export const MessageLine = memo(function MessageLine({
           {rest.join('')}
         </Text>
       )
+    }
+
+    // Ctrl+O feedback is a transient details notice. Keep the role gutter in
+    // its normal color, but make only the notice body stand out from ordinary
+    // system transcript output.
+    if (isDetailsNotice(msg)) {
+      return <Text color="#80fba3">{msg.text}</Text>
     }
 
     return <Text {...(body ? { color: body } : {})}>{msg.text}</Text>

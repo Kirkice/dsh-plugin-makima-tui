@@ -74,20 +74,38 @@ export const scheduleResumeScrollToBottom = (
   delays: readonly number[] = [0, 80, 240]
 ) => {
   const startedAt = Date.now()
-  const timers = delays.map((delay, index) =>
+  const timers = delays.map(delay =>
     setTimeout(() => {
       const scroll = scrollRef.current
 
-      if (!scroll) {
+      if (!scroll || scroll.getLastManualScrollAt() > startedAt) {
         return
       }
 
-      const manuallyScrolledAfterResume = scroll.getLastManualScrollAt() > startedAt
-
-      if (!manuallyScrolledAfterResume && (index === 0 || scroll.isSticky())) {
-        scroll.scrollToBottom()
-      }
+      // A resumed transcript initially mounts only a small tail window and
+      // represents older rows with a top spacer. Keep the ScrollBox in follow
+      // mode while React and Yoga commit that tail.
+      scroll.scrollToBottom()
     }, delay)
+  )
+
+  // `scrollToBottom()` is follow-mode: it depends on the renderer's preceding
+  // scroll-height snapshot. For a large restored transcript that snapshot can
+  // still be the top spacer even after the normal settle passes. A final
+  // explicit overshoot is clamped by ScrollBox against the freshly rendered
+  // height, which guarantees that the mounted tail — not the spacer — enters
+  // the viewport. It intentionally runs after markdown/Yoga have had time to
+  // measure the restored rows.
+  timers.push(
+    setTimeout(() => {
+      const scroll = scrollRef.current
+
+      if (!scroll || scroll.getLastManualScrollAt() > startedAt) {
+        return
+      }
+
+      scroll.scrollTo(Number.MAX_SAFE_INTEGER)
+    }, Math.max(600, ...delays) + 360)
   )
 
   return () => {

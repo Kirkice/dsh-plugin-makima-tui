@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
-import { responseDivider, shouldShowResponseSeparator } from '../components/messageLine.js'
+import { isDetailsNotice, responseDivider, shouldShowResponseSeparator } from '../components/messageLine.js'
+
+describe('isDetailsNotice', () => {
+  it('recognizes only system feedback emitted by the details controls', () => {
+    expect(isDetailsNotice({ role: 'system', text: 'details: no collapsed reasoning or tool results in view' })).toBe(true)
+    expect(isDetailsNotice({ role: 'system', text: 'details expanded elsewhere' })).toBe(false)
+    expect(isDetailsNotice({ role: 'assistant', text: 'details: expanded 1 block in view' })).toBe(false)
+  })
+})
 
 describe('shouldShowResponseSeparator', () => {
   it('marks every non-empty assistant answer', () => {
