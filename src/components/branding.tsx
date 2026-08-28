@@ -820,7 +820,7 @@ export function SessionPanel({ info, logoPalette, maxWidth, sid, t }: SessionPan
 
 export function Panel({ sections, t, title }: PanelProps) {
   return (
-    <Box borderColor={t.color.border} borderStyle="round" flexDirection="column" paddingX={2} paddingY={1}>
+    <Box borderColor={t.color.border} borderStyle="round" flexDirection="column" paddingX={2} paddingY={1} width="100%">
       <Box justifyContent="center" marginBottom={1}>
         <Text bold color={t.color.primary}>
           {title}
@@ -836,14 +836,18 @@ export function Panel({ sections, t, title }: PanelProps) {
           )}
 
           {sec.rows?.map(([k, v], ri) => (
-            <Text key={ri} wrap="truncate">
-              <Text color={t.color.muted}>{k.padEnd(20)}</Text>
-              <Text color={t.color.text}>{v}</Text>
-            </Text>
+            <Box flexDirection="row" key={ri} width="100%">
+              <Text color={t.color.muted} flexShrink={0} wrap="truncate-end" width={20}>
+                {k}
+              </Text>
+              <Text color={t.color.text} flexGrow={1} flexShrink={1} wrap="truncate-end">
+                {v}
+              </Text>
+            </Box>
           ))}
 
           {sec.items?.map((item, ii) => (
-            <Text color={t.color.text} key={ii} wrap="truncate">
+            <Text color={t.color.text} key={ii} width="100%" wrap="truncate-end">
               {item}
             </Text>
           ))}

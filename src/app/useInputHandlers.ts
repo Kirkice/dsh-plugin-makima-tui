@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react'
 import { DASHBOARD_TUI_MODE } from '../config/env.js'
 import { TYPING_IDLE_MS } from '../config/timing.js'
 import { PLACEHOLDER, suggestedQuery } from '../content/placeholders.js'
+import { SECTION_NAMES } from '../domain/details.js'
 import type {
   ApprovalRespondResponse,
   QuestionRespondResponse,
@@ -132,7 +133,7 @@ export function applyVoiceRecordResponse(
 }
 
 export function useInputHandlers(ctx: InputHandlerContext): InputHandlerResult {
-  const { actions, composer, conversationEmpty, gateway, terminal, voice, wheelStep } = ctx
+  const { actions, composer, conversationEmpty, gateway, terminal, visibleDetailTargets, voice, wheelStep } = ctx
   const { actions: cActions, refs: cRefs, state: cState } = composer
 
   const overlay = useStore($overlayState)
@@ -354,6 +355,66 @@ export function useInputHandlers(ctx: InputHandlerContext): InputHandlerResult {
     const live = getUiState()
 
     if (isBlocked) {
+      if (overlay.detailPicker) {
+        if (key.escape || isCtrl(key, ch, 'c') || ch === 'q') {
+          return patchOverlayState({ detailPicker: null })
+        }
+
+        const move = (delta: number) =>
+          patchOverlayState(prev => {
+            if (!prev.detailPicker || prev.detailPicker.items.length === 0) {
+              return prev
+            }
+
+            const length = prev.detailPicker.items.length
+            const selected = (prev.detailPicker.selected + delta + length) % length
+
+            return { ...prev, detailPicker: { ...prev.detailPicker, selected } }
+          })
+
+        if (key.upArrow || ch === 'k') {
+          return move(-1)
+        }
+
+        if (key.downArrow || ch === 'j') {
+          return move(1)
+        }
+
+        if (key.return || ch === ' ' || isCtrl(key, ch, 'o')) {
+          const picker = $overlayState.get().detailPicker
+          const target = picker?.items[picker.selected]
+
+          if (!target) {
+            return
+          }
+
+          const expanded = !getUiState().detailExpanded[target.key]
+          patchUiState(state => ({
+            ...state,
+            detailExpanded: { ...state.detailExpanded, [target.key]: expanded }
+          }))
+          patchOverlayState(prev => {
+            if (!prev.detailPicker) {
+              return prev
+            }
+
+            return {
+              ...prev,
+              detailPicker: {
+                ...prev.detailPicker,
+                items: prev.detailPicker.items.map(item =>
+                  item.key === target.key ? { ...item, expanded } : item
+                )
+              }
+            }
+          })
+
+          return
+        }
+
+        return
+      }
+
       // When approval/clarify/confirm overlays are active, their own useInput
       // handlers must receive keystrokes (arrow keys, numbers, Enter).  Only
       // intercept Ctrl+C here so the user can deny/dismiss — all other keys
@@ -669,16 +730,44 @@ export function useInputHandlers(ctx: InputHandlerContext): InputHandlerResult {
     // available), so the keybinding can never step into "allow everything"
     // in a session that didn't opt into bypass, and never desyncs after
     // /mode. Previously it toggled an unwired `config.set{yolo}` → dead.
-    // ctrl+o — the original's "verbose output" toggle. Like the original it is
-    // GLOBAL: it drives the same detailsMode /details patches, so expanded also
-    // opens thinking/subagent sections. This coupling is intentional (matches
-    // CC's single verbose axis); a dedicated tool-only flag was considered and
-    // rejected to keep one obvious "show me everything" control.
-    if (key.ctrl && ch === 'o') {
-      const next = live.detailsMode === 'expanded' ? 'collapsed' : 'expanded'
+    // Ctrl+O is viewport-aware: if any detail is open, close details globally;
+    // otherwise expand only collapsed blocks that intersect the current view.
+    // This avoids exploding old off-screen tool output and preserves the user's
+    // reading position as closely as possible.
+    if (isCtrl(key, ch, 'o')) {
+      const current = getUiState()
+      const anyExpanded =
+        current.detailsMode === 'expanded' ||
+        Object.values(current.detailExpanded).some(Boolean) ||
+        Object.values(current.sections).includes('expanded')
 
-      patchUiState({ detailsMode: next, detailsModeCommandOverride: false })
-      actions.sys(`details: ${next}`)
+      if (anyExpanded) {
+        patchUiState(state => ({
+          ...state,
+          detailExpanded: {},
+          detailsMode: 'collapsed',
+          detailsModeCommandOverride: true,
+          sections: Object.fromEntries(SECTION_NAMES.map(section => [section, 'collapsed']))
+        }))
+        actions.sys('details: collapsed globally')
+
+        return
+      }
+
+      const targets = visibleDetailTargets().filter(target => !target.expanded)
+
+      if (!targets.length) {
+        return actions.sys('details: no collapsed reasoning or tool results in view')
+      }
+
+      patchUiState(state => ({
+        ...state,
+        detailExpanded: {
+          ...state.detailExpanded,
+          ...Object.fromEntries(targets.map(target => [target.key, true]))
+        }
+      }))
+      actions.sys(`details: expanded ${targets.length} block${targets.length === 1 ? '' : 's'} in view`)
 
       return
     }

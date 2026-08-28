@@ -24,6 +24,7 @@ interface LiveBlock {
 export const StreamingAssistant = memo(function StreamingAssistant({
   cols,
   compact,
+  detailExpanded,
   detailsMode,
   detailsModeCommandOverride,
   prevMsg,
@@ -72,6 +73,7 @@ export const StreamingAssistant = memo(function StreamingAssistant({
           <MessageLine
             cols={cols}
             compact={compact}
+            detailExpanded={detailExpanded}
             detailsMode={detailsMode}
             detailsModeCommandOverride={detailsModeCommandOverride}
             isStreaming={block.isStreaming}
@@ -130,6 +132,7 @@ export const LiveTodoPanel = memo(function LiveTodoPanel() {
 interface StreamingAssistantProps {
   cols: number
   compact?: boolean
+  detailExpanded?: Readonly<Record<string, boolean>>
   detailsMode: DetailsMode
   detailsModeCommandOverride: boolean
   prevMsg?: Msg

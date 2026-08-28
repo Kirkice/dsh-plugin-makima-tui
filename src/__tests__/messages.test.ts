@@ -81,6 +81,16 @@ describe('MessageLine', () => {
     expect(renderedLine).toContain('❯   Okay')
   })
 
+  it('vertically aligns the user pointer with the bordered message content row', () => {
+    const raw = stripAnsi(renderRaw({ role: 'user', text: '你好' }))
+    const lines = raw.split('\n')
+    const pointerRow = lines.findIndex(line => line.includes('❯'))
+    const contentRow = lines.findIndex(line => line.includes('你好'))
+
+    expect(pointerRow).toBeGreaterThanOrEqual(0)
+    expect(contentRow).toBe(pointerRow)
+  })
+
   // User inputs and slash echoes share the user pointer; neither paints a
   // full-width background band.
   const renderRaw = (msg: Record<string, unknown>) => {

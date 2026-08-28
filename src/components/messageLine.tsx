@@ -39,6 +39,8 @@ export const responseDivider = (cols: number, gutterWidth: number): { left: stri
 export const MessageLine = memo(function MessageLine({
   cols,
   compact,
+  detailExpanded,
+  detailScope,
   detailsMode = 'collapsed',
   detailsModeCommandOverride = false,
   isStreaming = false,
@@ -81,6 +83,8 @@ export const MessageLine = memo(function MessageLine({
       <Box flexDirection="column" marginTop={leadGap ? 1 : 0}>
         <ToolTrail
           commandOverride={detailsModeCommandOverride}
+          detailExpanded={detailExpanded}
+          detailScope={detailScope}
           detailsMode={detailsMode}
           reasoning={thinking}
           reasoningTokens={msg.thinkingTokens}
@@ -173,6 +177,8 @@ export const MessageLine = memo(function MessageLine({
         {toolsMode !== 'hidden' && Boolean(msg.tools?.length) && (
           <ToolTrail
             commandOverride={detailsModeCommandOverride}
+            detailExpanded={detailExpanded}
+            detailScope={detailScope}
             detailsMode={detailsMode}
             reasoning=""
             sections={sections}
@@ -278,6 +284,8 @@ export const MessageLine = memo(function MessageLine({
         <Box flexDirection="column" marginBottom={1}>
           <ToolTrail
             commandOverride={detailsModeCommandOverride}
+            detailExpanded={detailExpanded}
+            detailScope={detailScope}
             detailsMode={detailsMode}
             reasoning={thinking}
             reasoningTokens={msg.thinkingTokens}
@@ -309,7 +317,7 @@ export const MessageLine = memo(function MessageLine({
       })()}
 
       <Box>
-        <NoSelect flexShrink={0} fromLeftEdge width={gutterWidth}>
+        <NoSelect flexShrink={0} fromLeftEdge marginTop={useUserPointer ? 1 : 0} width={gutterWidth}>
           <Text color={prefix}>
             {glyph}{' '}
           </Text>
@@ -335,6 +343,8 @@ export const shouldShowResponseSeparator = (msg: Msg, _showDetails: boolean): bo
 interface MessageLineProps {
   cols: number
   compact?: boolean
+  detailExpanded?: Readonly<Record<string, boolean>>
+  detailScope?: string
   detailsMode?: DetailsMode
   detailsModeCommandOverride?: boolean
   isStreaming?: boolean

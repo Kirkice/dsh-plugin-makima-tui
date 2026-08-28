@@ -97,7 +97,12 @@ export const wrappedLines = (text: string, width: number, maxLines: number = MAX
 const CALL_GUTTER = 2
 const DETAIL_GUTTER = 5
 
-const trailEntries = (msg: Msg, trailWidth: number, toolsExpanded: boolean): number[] => {
+const trailEntries = (
+  msg: Msg,
+  trailWidth: number,
+  toolsExpanded: boolean,
+  toolExpansion: ReadonlyMap<number, boolean>
+): number[] => {
   // Keep one slot per raw trail line. ToolTrail silently routes meta lines to
   // Activity, but later grouping still needs raw-line indexes to align with the
   // matching rendered row.
@@ -107,15 +112,16 @@ const trailEntries = (msg: Msg, trailWidth: number, toolsExpanded: boolean): num
     detail ? detail.split('\n').reduce((sum, row) => sum + wrappedLines(row, trailWidth - DETAIL_GUTTER), 0) : 0
 
   for (const [i, line] of (msg.tools ?? []).entries()) {
-    // Read both the call and the drafting marker off the SAME line the
-    // renderer will draw — the verbose sibling when one is being shown.
-    const rendered = (toolsExpanded && msg.toolsVerbose?.[i]) || line
+    // An explicit per-call override wins over the global details mode in both
+    // directions, matching ToolTrail's picker behavior.
+    const expanded = toolExpansion.get(i) ?? toolsExpanded
+    const rendered = (expanded && msg.toolsVerbose?.[i]) || line
     const parsed = parseToolTrailResultLine(rendered)
 
     if (parsed) {
       // The renderer names the expand key on a body its card held part of
       // back, which can wrap the last detail row — measure what it will paint.
-      const expandable = !toolsExpanded && Boolean(msg.toolsVerbose?.[i]) && ELIDED_TAIL.test(parsed.detail)
+      const expandable = !expanded && Boolean(msg.toolsVerbose?.[i]) && ELIDED_TAIL.test(parsed.detail)
       const detail = expandable ? `${parsed.detail} (ctrl+o to expand)` : parsed.detail
 
       // The `⏺` call row, then the `⎿` detail — both of which wrap: an Edit
@@ -142,28 +148,29 @@ const trailEntries = (msg: Msg, trailWidth: number, toolsExpanded: boolean): num
  * exploration calls into one summary row while keeping failures, writes and
  * delegation rows visible.
  */
-const trailRows = (msg: Msg, trailWidth: number, toolsExpanded: boolean) => {
-  const entries = trailEntries(msg, trailWidth, toolsExpanded)
-
-  if (toolsExpanded) {
-    const renderedEntries = entries.filter(rows => rows > 0)
-
-    return renderedEntries.reduce((sum, rows) => sum + rows, 0) + Math.max(0, renderedEntries.length - 1)
-  }
+const trailRows = (
+  msg: Msg,
+  trailWidth: number,
+  toolsExpanded: boolean,
+  toolExpansion: ReadonlyMap<number, boolean>
+) => {
+  const entries = trailEntries(msg, trailWidth, toolsExpanded, toolExpansion)
 
   const renderedLines = (msg.tools ?? []).flatMap((line, index) => {
-    const parsed = parseToolTrailResultLine(line)
+    const expanded = toolExpansion.get(index) ?? toolsExpanded
+    const rendered = (expanded && msg.toolsVerbose?.[index]) || line
+    const parsed = parseToolTrailResultLine(rendered)
 
     // Meta notes do not paint in ToolTrail's tool section. Drafting rows do,
     // but remain standalone because they have no completed call to summarize.
-    if (!parsed && !line.startsWith('drafting ')) {
+    if (!parsed && !rendered.startsWith('drafting ')) {
       return []
     }
 
     return [{
-      call: parsed?.call ?? line,
+      call: parsed?.call ?? rendered,
       failed: parsed?.mark === '✗',
-      standalone: !parsed,
+      standalone: expanded || !parsed,
       rows: entries[index] ?? 0
     }]
   })
@@ -186,6 +193,10 @@ export const estimatedMsgHeight = (
   {
     compact,
     details,
+    expandedTools,
+    toolExpansion = expandedTools
+      ? new Map([...expandedTools].map(index => [index, true] as const))
+      : new Map<number, boolean>(),
     leadGap = false,
     thinkingExpanded = false,
     thinkingVisible = details,
@@ -196,7 +207,10 @@ export const estimatedMsgHeight = (
   }: {
     compact: boolean
     details: boolean
+    /** @deprecated Prefer toolExpansion, which also represents explicit collapse. */
+    expandedTools?: ReadonlySet<number>
     leadGap?: boolean
+    toolExpansion?: ReadonlyMap<number, boolean>
     thinkingExpanded?: boolean
     thinkingVisible?: boolean
     toolsExpanded?: boolean
@@ -247,7 +261,7 @@ export const estimatedMsgHeight = (
       // Tool entries can carry multi-line details (Bash 3-line summaries,
       // 10-line error caps) — count rendered rows, not entries, or off-screen
       // estimates under-count and the scrollbar/topSpacer math jumps.
-      const toolRows = hasVisibleTools ? trailRows(msg, trailWidth, toolsExpanded) : 0
+      const toolRows = hasVisibleTools ? trailRows(msg, trailWidth, toolsExpanded, toolExpansion) : 0
 
       // The reasoning panel is its `∴ Thinking…` header row plus the body,
       // which sits under a `  └─ ` rail — content starts at column 5, so

@@ -208,6 +208,13 @@ export type Role = 'assistant' | 'system' | 'tool' | 'user'
 export type DetailsMode = 'hidden' | 'collapsed' | 'expanded'
 export type ThinkingMode = 'collapsed' | 'truncated' | 'full'
 
+/** One independently expandable reasoning/tool block in the transcript. */
+export interface DetailTarget {
+  expanded: boolean
+  key: string
+  label: string
+}
+
 // Per-section overrides for the agent details accordion.  Resolution order
 // at lookup time is: explicit `display.sections.<name>` → built-in
 // SECTION_DEFAULTS → global `details_mode`.  Today the built-in defaults

@@ -259,21 +259,20 @@ const PLAN_PREVIEW_LINES = 24
 const planLinesForReview = (plan: string): string[] => plan.split('\n').filter(line => line.trim().length > 0)
 
 /**
- * Pure option builder (exported for tests) — mirrors the original's
- * buildPlanApprovalOptions (open-build arms): the elevated approve reads
- * "bypass permissions" when the session launched with bypass available,
- * "auto-accept edits" otherwise; then manual approve; then reject-with-
- * feedback ("No, keep planning").
+ * Pure option builder (exported for tests).  The manual-approval handoff is
+ * deliberately the middle, recommended path: entering execution must not
+ * silently widen the agent's authority merely because it is the first option.
+ * Elevated modes remain available, but are explicitly labelled as such.
  */
 export function planApprovalOptions(
   bypassAvailable: boolean
 ): { choice: PlanApprovalChoice; label: string }[] {
   return [
+    { choice: 'default', label: 'Execute with manual approvals (recommended)' },
     bypassAvailable
-      ? { choice: 'bypass', label: 'Yes, and bypass permissions' }
-      : { choice: 'accept-edits', label: 'Yes, auto-accept edits' },
-    { choice: 'default', label: 'Yes, manually approve edits' },
-    { choice: 'deny', label: 'No, keep planning' }
+      ? { choice: 'bypass', label: 'Execute and bypass permissions (elevated)' }
+      : { choice: 'accept-edits', label: 'Execute and auto-accept edits (elevated)' },
+    { choice: 'deny', label: 'Keep planning and provide feedback' }
   ]
 }
 
@@ -287,7 +286,9 @@ export function PlanApprovalPrompt({ cols = 80, onChoice, req, t }: PlanApproval
         { choice: 'deny', label: 'No' }
       ]
     : planApprovalOptions(req.bypassAvailable)
-  const [sel, setSel] = useState(0)
+  // For a populated plan, start on the explicit safe handoff. Empty-plan
+  // confirmation intentionally preserves its conventional Yes-first layout.
+  const [sel, setSel] = useState(() => (isEmpty ? 0 : opts.findIndex(o => o.choice === 'default')))
   const [feedback, setFeedback] = useState('')
   const [typing, setTyping] = useState(false)
 
@@ -393,8 +394,8 @@ export function PlanApprovalPrompt({ cols = 80, onChoice, req, t }: PlanApproval
         <Text bold color={t.color.planMode}>PLAN REVIEW</Text>
         <Text color={t.color.muted} dim>{planSections.length} sections · {planLines.length} lines</Text>
       </Box>
-      <Text color={t.color.text} bold>Ready to code?</Text>
-      <Text color={t.color.muted}>Review the implementation plan before execution.</Text>
+      <Text color={t.color.text} bold>Ready to hand off to execution?</Text>
+      <Text color={t.color.muted}>Confirm the execution posture before the agent can change files or environment.</Text>
 
       <Box borderColor={t.color.muted} borderStyle="single" flexDirection="column" paddingX={1} marginTop={1}>
         <Md cols={innerWidth} t={t} text={shown.join('\n')} />
@@ -403,7 +404,13 @@ export function PlanApprovalPrompt({ cols = 80, onChoice, req, t }: PlanApproval
         ) : null}
       </Box>
 
-      <Text color={t.color.muted}>Would you like to proceed?</Text>
+      <Box borderColor={t.color.frame} borderStyle="single" flexDirection="column" paddingX={1} marginTop={1}>
+        <Text color={t.color.ok}>✓ Plan reviewed</Text>
+        <Text color={t.color.planMode}>→ Default: each edit or command still asks for approval</Text>
+        <Text color={t.color.muted}>Elevated modes trade those checkpoints for speed.</Text>
+      </Box>
+
+      <Text color={t.color.muted}>Choose how execution should proceed:</Text>
 
       {optionRows}
 

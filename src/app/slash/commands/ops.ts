@@ -13,6 +13,8 @@ import type {
   SpawnTreeLoadResponse,
   ToolsConfigureResponse
 } from '../../../gatewayTypes.js'
+import { qualityGateStatusLabel, qualityGateSummary, type QualityGateCheck } from '../../../domain/qualityGate.js'
+import { inspectVcs } from '../../../lib/vcs.js'
 import type { PanelSection } from '../../../types.js'
 import { applyDelegationStatus, getDelegationState } from '../../delegationStore.js'
 import { patchOverlayState } from '../../overlayStore.js'
@@ -123,6 +125,8 @@ const runtimeEntries = (value: unknown): RuntimePlugin[] => {
     }]
   })
 }
+
+const workspaceCwd = (ctx: { ui: { info: null | { cwd?: string } } }) => ctx.ui.info?.cwd || process.cwd()
 
 export const opsCommands: SlashCommand[] = [
   {
@@ -757,6 +761,53 @@ export const opsCommands: SlashCommand[] = [
           long ? ctx.transcript.page(text, 'Memory') : ctx.transcript.sys(text)
         })
         .catch(ctx.guardedErr)
+    }
+  },
+
+  {
+    aliases: ['changes', 'vcs'],
+    help: 'inspect local changes (Git, Perforce, or Subversion)',
+    name: 'change-center',
+    run: (_arg, ctx) => {
+      void inspectVcs(workspaceCwd(ctx))
+        .then(snapshot => {
+          const rows: [string, string][] = [
+            ['Provider', snapshot.kind.toUpperCase()],
+            ['Workspace', snapshot.label],
+            ['Summary', snapshot.summary]
+          ]
+          const items = snapshot.changes.slice(0, 40).map(change => `${change.kind[0]!.toUpperCase()} ${change.path} · ${change.status}`)
+          if (snapshot.changes.length > items.length) items.push(`… +${snapshot.changes.length - items.length} more changes`)
+          if (snapshot.kind === 'none') items.push('No source-control client was detected; file changes remain visible in the transcript.')
+          ctx.transcript.panel('Change Center', [{ rows }, ...(items.length ? [{ items, title: 'Open changes' }] : [])])
+        })
+        .catch(ctx.guardedErr)
+    }
+  },
+
+  {
+    aliases: ['verify', 'quality'],
+    help: 'show the latest verification and quality-gate result',
+    name: 'quality-gate',
+    run: (_arg, ctx) => {
+      // Gateway support is optional. The UI still gives an honest empty state
+      // instead of inventing test results on older harnesses.
+      ctx.gateway.gw
+        .request<{ checks?: QualityGateCheck[] }>('quality.gate', { session_id: ctx.sid })
+        .then(raw => {
+          if (ctx.stale()) return
+          const checks = Array.isArray(raw?.checks) ? raw.checks : []
+          const summary = qualityGateSummary(checks)
+          const rows: [string, string][] = [
+            ['Gate', qualityGateStatusLabel(summary.status)],
+            ['Checks', `${summary.total} total · ${summary.passed} passed · ${summary.failed} failed`],
+            ['In flight', `${summary.running} running · ${summary.pending} pending`]
+          ]
+          const items = checks.map(check => `${qualityGateStatusLabel(check.status)} · ${check.name} · ${check.command}${check.summary ? ` — ${check.summary}` : ''}`)
+          if (!checks.length) items.push('No verification results reported yet. Run checks from the agent or workspace, then reopen this panel.')
+          ctx.transcript.panel('Quality Gate', [{ rows }, { items, title: 'Verification checks' }])
+        })
+        .catch(() => ctx.transcript.panel('Quality Gate', [{ rows: [['Gate', 'UNAVAILABLE']], items: ['This gateway does not expose quality.gate yet.'] }]))
     }
   },
 

@@ -257,6 +257,97 @@ describe('expanded rendering', () => {
     expect(expanded).not.toContain('ctrl+o to expand')
   })
 
+  it('expands only the selected tool block', () => {
+    const twoTrail = [
+      'Bash(seq 6) :: 1\n2\n3\n… +3 lines ✓',
+      'Bash(seq 9) :: alpha\nbeta\ngamma\n… +3 lines ✓'
+    ]
+    const twoVerbose = [
+      'Bash(seq 6) :: Result:\n1\n2\n3\n4\n5\n6 ✓',
+      'Bash(seq 9) :: Result:\nalpha\nbeta\ngamma\nUNIQUE_HIDDEN_RESULT\nepsilon\nzeta ✓'
+    ]
+    const out = stripAnsi(
+      renderToString(
+        React.createElement(ToolTrail, {
+          detailExpanded: { 'message:tool:0': true },
+          detailScope: 'message',
+          detailsMode: 'collapsed',
+          t: DEFAULT_THEME,
+          trail: twoTrail,
+          verboseTrail: twoVerbose
+        })
+      )
+    )
+
+    expect(out).toContain('Bash(seq 6)')
+    expect(out).toContain('4')
+    expect(out).not.toContain('Bash(seq 9)')
+    expect(out).not.toContain('UNIQUE_HIDDEN_RESULT')
+    expect(out).toContain('Ran 1 shell command')
+  })
+
+  it('estimates only the selected tool as expanded', () => {
+    const msg: Msg = {
+      kind: 'trail',
+      role: 'system',
+      text: '',
+      tools: [trail[0]!, trail[0]!],
+      toolsVerbose: [verboseTrail[0]!, verboseTrail[0]!]
+    }
+    const opts = { compact: false, details: true, leadGap: false }
+    const collapsed = estimatedMsgHeight(msg, 80, opts)
+    const oneExpanded = estimatedMsgHeight(msg, 80, { ...opts, expandedTools: new Set([0]) })
+    const allExpanded = estimatedMsgHeight(msg, 80, { ...opts, toolsExpanded: true })
+
+    expect(oneExpanded).toBeGreaterThan(collapsed)
+    expect(allExpanded).toBeGreaterThan(oneExpanded)
+  })
+
+  it('lets a local collapse override globally expanded tool details', () => {
+    const out = stripAnsi(
+      renderToString(
+        React.createElement(ToolTrail, {
+          detailExpanded: { 'message:tool:1': false },
+          detailScope: 'message',
+          detailsMode: 'expanded',
+          t: DEFAULT_THEME,
+          trail: [
+            'Bash(seq 6) :: 1\n2\n3\n… +3 lines ✓',
+            'Bash(seq 9) :: alpha\nbeta\ngamma\n… +3 lines ✓'
+          ],
+          verboseTrail: [
+            'Bash(seq 6) :: Result:\n1\n2\n3\n4\n5\n6 ✓',
+            'Bash(seq 9) :: Result:\nalpha\nbeta\ngamma\nUNIQUE_HIDDEN_RESULT\nepsilon\nzeta ✓'
+          ]
+        })
+      )
+    )
+
+    expect(out).toContain('Bash(seq 6)')
+    expect(out).toContain('4')
+    expect(out).not.toContain('Bash(seq 9)')
+    expect(out).not.toContain('UNIQUE_HIDDEN_RESULT')
+    expect(out).toContain('Ran 1 shell command')
+  })
+
+  it('estimates an explicit local collapse while tools are globally expanded', () => {
+    const msg: Msg = {
+      kind: 'trail',
+      role: 'system',
+      text: '',
+      tools: [trail[0]!, trail[0]!],
+      toolsVerbose: [verboseTrail[0]!, verboseTrail[0]!]
+    }
+    const opts = { compact: false, details: true, leadGap: false, toolsExpanded: true }
+    const allExpanded = estimatedMsgHeight(msg, 80, opts)
+    const oneCollapsed = estimatedMsgHeight(msg, 80, {
+      ...opts,
+      toolExpansion: new Map([[1, false]])
+    })
+
+    expect(oneCollapsed).toBeLessThan(allExpanded)
+  })
+
   it('the per-message hash changes with the verbose sibling (cache invalidation)', async () => {
     const { messageHeightKey } = await import('../lib/virtualHeights.js')
     const compact: Msg = { kind: 'trail', role: 'system', text: '', tools: trail }

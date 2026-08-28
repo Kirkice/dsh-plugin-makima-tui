@@ -126,7 +126,7 @@ export const TodoPanel = memo(function TodoPanel({
   }
 
   return (
-    <Box borderColor={t.color.frame} borderStyle="round" flexDirection="column" marginBottom={marginBottom} paddingX={1}>
+    <Box borderColor={t.color.frame} borderStyle="round" flexDirection="column" marginBottom={marginBottom} paddingX={1} width="100%">
       <Box onClick={handleToggle}>
         <Text color={t.color.muted}>
           <Text color={t.color.highlight}>{effectiveCollapsed ? '▸ ' : '▾ '}</Text>

@@ -14,6 +14,7 @@ const buildUiState = (): UiState => ({
   permissionMode: 'default',
   busyInputMode: 'queue',
   compact: false,
+  detailExpanded: {},
   detailsMode: 'collapsed',
   detailsModeCommandOverride: false,
   indicatorStyle: DEFAULT_INDICATOR_STYLE,

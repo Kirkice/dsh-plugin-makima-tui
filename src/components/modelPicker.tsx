@@ -2,12 +2,14 @@ import { Box, Text, useInput, useStdout } from '@makima-tui/ink'
 import { useEffect, useMemo, useState } from 'react'
 
 import { providerDisplayNames } from '../domain/providers.js'
+import { contextHealth } from '../domain/contextHealth.js'
 import { TUI_SESSION_MODEL_FLAG } from '../domain/slash.js'
 import type { GatewayClient } from '../gatewayClient.js'
 import type { EffortOptionsResponse, ModelOptionProvider, ModelOptionsResponse } from '../gatewayTypes.js'
 import { fuzzyRank } from '../lib/fuzzy.js'
 import { asRpcResult, rpcErrorMessage } from '../lib/rpc.js'
 import type { Theme } from '../theme.js'
+import type { Usage } from '../types.js'
 
 import { OverlayHint, useOverlayKeys, windowItems } from './overlayControls.js'
 
@@ -31,7 +33,8 @@ export function ModelPicker({
   onCancel,
   onSelect,
   sessionId,
-  t
+  t,
+  usage
 }: ModelPickerProps) {
   const [providers, setProviders] = useState<ModelOptionProvider[]>([])
   const [currentModel, setCurrentModel] = useState('')
@@ -94,6 +97,8 @@ export function ModelPicker({
   }, [gw, sessionId])
 
   const names = useMemo(() => providerDisplayNames(providers), [providers])
+  const health = useMemo(() => contextHealth(usage), [usage])
+  const healthColor = health.level === 'critical' ? t.color.error : health.level === 'watch' ? t.color.warn : health.level === 'healthy' ? t.color.ok : t.color.muted
 
   // Provider rows carry their display name so fuzzy filtering can match on
   // name + slug while keeping the name/provider pairing intact across ranking.
@@ -701,7 +706,10 @@ export function ModelPicker({
         </Text>
 
         <Text color={t.color.muted} wrap="truncate-end">
-          Current: {currentModel || '(unknown)'}
+          Current: {currentModel || '(unknown)'} · scope: {allowPersistGlobal ? (persistGlobal ? 'global' : 'session') : 'session'}
+        </Text>
+        <Text color={healthColor} wrap="truncate-end">
+          {health.summary}
         </Text>
         <Text color={filter ? t.color.accent : t.color.muted} wrap="truncate-end">
           {filter ? `filter: ${filter}▎` : 'type to filter · ↑/↓ select'}
@@ -768,6 +776,9 @@ export function ModelPicker({
 
       <Text color={t.color.muted} wrap="truncate-end">
         {filteredProviderRows[providerIdx]?.name || '(unknown provider)'} · Esc back
+      </Text>
+      <Text color={healthColor} wrap="truncate-end">
+        {health.summary}
       </Text>
       <Text color={filter ? t.color.accent : t.color.muted} wrap="truncate-end">
         {filter ? `filter: ${filter}▎` : 'type to filter · ↑/↓ select'}
@@ -841,4 +852,6 @@ interface ModelPickerProps {
   onSelect: (value: string, effort?: string) => void
   sessionId: string | null
   t: Theme
+  /** Latest session telemetry; absent telemetry stays explicitly unknown. */
+  usage?: Usage
 }

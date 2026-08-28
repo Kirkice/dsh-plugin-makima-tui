@@ -5,20 +5,20 @@ import { GatewayClient } from '../gatewayClient.js'
 import { planApprovalOptions } from '../components/prompts.js'
 
 describe('planApprovalOptions — ExitPlanModePermissionRequest option arms', () => {
-  it('offers auto-accept edits when bypass is unavailable', () => {
+  it('puts the manual-approval handoff first and labels elevated execution clearly', () => {
     const opts = planApprovalOptions(false)
 
-    expect(opts.map(o => o.choice)).toEqual(['accept-edits', 'default', 'deny'])
-    expect(opts[0]!.label).toBe('Yes, auto-accept edits')
-    expect(opts[1]!.label).toBe('Yes, manually approve edits')
-    expect(opts[2]!.label).toBe('No, keep planning')
+    expect(opts.map(o => o.choice)).toEqual(['default', 'accept-edits', 'deny'])
+    expect(opts[0]!.label).toBe('Execute with manual approvals (recommended)')
+    expect(opts[1]!.label).toBe('Execute and auto-accept edits (elevated)')
+    expect(opts[2]!.label).toBe('Keep planning and provide feedback')
   })
 
-  it('elevates to bypass permissions when the session launched with bypass', () => {
+  it('keeps manual approval recommended when bypass is available', () => {
     const opts = planApprovalOptions(true)
 
-    expect(opts.map(o => o.choice)).toEqual(['bypass', 'default', 'deny'])
-    expect(opts[0]!.label).toBe('Yes, and bypass permissions')
+    expect(opts.map(o => o.choice)).toEqual(['default', 'bypass', 'deny'])
+    expect(opts[1]!.label).toBe('Execute and bypass permissions (elevated)')
   })
 })
 

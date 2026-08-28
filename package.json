@@ -23,6 +23,7 @@
     "build:plugin": "node scripts/build-plugin.mjs",
     "pack:plugin": "npm run build && node scripts/pack-plugin.mjs",
     "build": "npm run build:ink && npm run build:plugin",
+    "install:windows": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/install-windows.ps1",
     "prepare": "npm run build",
     "verify:boundary": "node scripts/verify-boundary.mjs",
     "e2e": "npm run build && python3 scripts/e2e/run_core.py",

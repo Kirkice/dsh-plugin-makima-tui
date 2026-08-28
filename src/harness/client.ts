@@ -994,7 +994,9 @@ export class HarnessGatewayClient extends GatewayClient {
       }
 
       case 'turn/end': {
-        this.finishTurn()
+        const { reason } = (event as SessionEvent<'turn/end'>).data
+
+        this.finishTurn(reason)
         break
       }
 
@@ -1069,20 +1071,58 @@ export class HarnessGatewayClient extends GatewayClient {
     foldUsage(this.usageTotals, usage)
   }
 
-  private finishTurn(): void {
+  private finishTurn(reason?: SessionEvent<'turn/end'>['data']['reason']): void {
     if (!this.turnStarted) {
       return
     }
 
     this.turnStarted = false
     this.turnCount += 1
+
+    const text = this.turnText.join('')
+    const usage = { ...this.usageTotals, ...this.usageSnapshot() }
+
+    // A provider/route failure can close a turn before producing either an
+    // assistant message or token usage. Treating that edge as a normal empty
+    // completion made the transcript show a blank assistant row and hid the
+    // actionable provider error. Preserve partial output when one exists, but
+    // surface a genuinely empty failed turn through the gateway error path.
+    if (!text && !this.msgStartedHarness && reason && reason.kind !== 'completed') {
+      const message = (() => {
+        switch (reason.kind) {
+          case 'error':
+            return reason.error.message || `model request failed (${reason.error.code})`
+          case 'aborted':
+            return reason.reason.kind === 'user' ? 'model request cancelled' : `model request aborted (${reason.reason.kind})`
+          case 'blocked':
+            return 'model request was blocked before a response was generated'
+          case 'max-tokens':
+            return 'model reached its output-token limit before generating a response'
+          case 'interrupted':
+            return 'model request was interrupted before a response was generated'
+          default:
+            return `model request ended without a response (${String((reason as { kind?: unknown }).kind ?? 'unknown')})`
+        }
+      })()
+
+      this.publishLocalEvent({ payload: { message }, session_id: this.sid, type: 'error' })
+      this.publishLocalEvent({
+        payload: { session_turns: this.turnCount, usage },
+        session_id: this.sid,
+        type: 'session.stats'
+      })
+      this.msgStartedHarness = false
+
+      return
+    }
+
     this.publishLocalEvent({
       payload: {
         permission_mode: this.permissionMode,
         reasoning: this.turnReasoning.join('') || undefined,
         session_turns: this.turnCount,
-        text: this.turnText.join(''),
-        usage: { ...this.usageTotals, ...this.usageSnapshot() }
+        text,
+        usage
       },
       session_id: this.sid,
       type: 'message.complete'

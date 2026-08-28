@@ -5,7 +5,7 @@ import { useGateway } from '../app/gatewayContext.js'
 import type { AppOverlaysProps } from '../app/interfaces.js'
 import { $overlayState, patchOverlayState } from '../app/overlayStore.js'
 import { argumentHintFor } from '../app/slash/argumentHints.js'
-import { $uiLogoPalette, $uiPermissionMode, $uiSessionId, $uiTheme } from '../app/uiStore.js'
+import { $uiLogoPalette, $uiPermissionMode, $uiSessionId, $uiState, $uiTheme } from '../app/uiStore.js'
 
 import { ActiveSessionSwitcher } from './activeSessionSwitcher.js'
 import { FloatBox } from './appChrome.js'
@@ -14,7 +14,7 @@ import { LogoPicker } from './logoPicker.js'
 import { MaskedPrompt } from './maskedPrompt.js'
 import { MemoryPicker } from './memoryPicker.js'
 import { ModelPicker } from './modelPicker.js'
-import { OverlayHint } from './overlayControls.js'
+import { OverlayHint, windowItems } from './overlayControls.js'
 import { PermissionsPicker } from './permissionsPicker.js'
 import { PetPicker } from './petPicker.js'
 import { PluginsHub } from './pluginsHub.js'
@@ -24,6 +24,7 @@ import { SkillsHub } from './skillsHub.js'
 import { WorktreeExitPrompt } from './worktreeExitPrompt.js'
 
 const COMPLETION_WINDOW = 16
+const DETAIL_PICKER_WINDOW = 12
 
 export function PromptZone({
   cols,
@@ -198,8 +199,10 @@ export function FloatingOverlays({
   const theme = useStore($uiTheme)
   const logoPalette = useStore($uiLogoPalette)
   const permissionMode = useStore($uiPermissionMode)
+  const usage = useStore($uiState).usage
 
   const hasAny =
+    overlay.detailPicker ||
     overlay.logoPicker ||
     overlay.memoryPicker ||
     overlay.modelPicker ||
@@ -221,9 +224,46 @@ export function FloatingOverlays({
   const viewportSize = Math.min(COMPLETION_WINDOW, completions.length)
 
   const start = Math.max(0, Math.min(compIdx - Math.floor(COMPLETION_WINDOW / 2), completions.length - viewportSize))
+  const detailWindow = overlay.detailPicker
+    ? windowItems(overlay.detailPicker.items, overlay.detailPicker.selected, DETAIL_PICKER_WINDOW)
+    : null
 
   return (
     <Box alignItems="flex-start" bottom="100%" flexDirection="column" left={0} position="absolute" right={0}>
+      {overlay.detailPicker && (
+        <FloatBox color={theme.color.primary}>
+          <Box flexDirection="column" paddingX={1} paddingY={1} width={Math.max(20, Math.min(Math.max(20, cols - 6), 72))}>
+            <Text bold color={theme.color.primary}>Details</Text>
+            <Text color={theme.color.muted} dim>Choose one transcript block to expand or collapse</Text>
+            <Box flexDirection="column" marginTop={1}>
+              {detailWindow!.items.map((item, index) => {
+                const absoluteIndex = detailWindow!.offset + index
+                const active = absoluteIndex === overlay.detailPicker!.selected
+
+                return (
+                  <Text
+                    backgroundColor={active ? theme.color.completionCurrentBg : undefined}
+                    color={active ? theme.color.highlight : theme.color.text}
+                    key={item.key}
+                    wrap="truncate-end"
+                  >
+                    {active ? '› ' : '  '}{item.expanded ? '▾ ' : '▸ '}{item.label}
+                  </Text>
+                )
+              })}
+            </Box>
+            {overlay.detailPicker.items.length > DETAIL_PICKER_WINDOW ? (
+              <Text color={theme.color.muted} dim>
+                {overlay.detailPicker.selected + 1}/{overlay.detailPicker.items.length}
+              </Text>
+            ) : null}
+            <Box marginTop={1}>
+              <OverlayHint t={theme}>↑↓/jk select · Enter/Space/Ctrl+O toggle · Esc close</OverlayHint>
+            </Box>
+          </Box>
+        </FloatBox>
+      )}
+
       {overlay.sessions && (
         <FloatBox color={theme.color.border}>
           <ActiveSessionSwitcher
@@ -248,6 +288,7 @@ export function FloatingOverlays({
             onSelect={onModelSelect}
             sessionId={sid}
             t={theme}
+            usage={usage}
           />
         </FloatBox>
       )}
@@ -334,6 +375,12 @@ export function FloatingOverlays({
           <Box flexDirection="column" width={Math.max(28, cols - 6)}>
             {completions.slice(start, start + viewportSize).map((item, i) => {
               const active = start + i === compIdx
+              const completionWidth = Math.max(28, cols - 6)
+              // Reserve a useful description column when a command also has a
+              // long argument grammar. Without an explicit column, Yoga gives
+              // meta only the few cells left after the hint and Ink wraps it
+              // vertically at the right edge.
+              const metaWidth = Math.min(42, Math.max(24, Math.floor(completionWidth * 0.38)))
 
               // Slash rows show the command's argument grammar dim after the
               // name (original CC's argumentHint). Local registry wins over
@@ -360,21 +407,26 @@ export function FloatingOverlays({
                     </Text>
                   </Box>
                   {hint ? (
-                    <Box flexShrink={0}>
-                      <Text color={theme.color.muted}>
+                    <Box flexGrow={1} flexShrink={1} overflow="hidden" width={0}>
+                      <Text color={theme.color.muted} wrap="truncate-end">
                         {' '}
                         {hint}
                       </Text>
                     </Box>
                   ) : null}
                   {item.meta ? (
-                    <Text
+                    <Box
                       backgroundColor={active ? theme.color.completionMetaCurrentBg : theme.color.completionMetaBg}
-                      color={theme.color.muted}
+                      flexGrow={hint ? 0 : 1}
+                      flexShrink={hint ? 0 : 1}
+                      overflow="hidden"
+                      width={hint ? metaWidth : 0}
                     >
-                      {' '}
-                      {item.meta}
-                    </Text>
+                      <Text color={theme.color.muted} wrap="truncate-end">
+                        {' '}
+                        {item.meta}
+                      </Text>
+                    </Box>
                   ) : null}
                 </Box>
               )

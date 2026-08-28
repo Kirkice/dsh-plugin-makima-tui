@@ -167,6 +167,8 @@ const TranscriptPane = memo(function TranscriptPane({
                 <MessageLine
                   cols={composer.cols}
                   compact={ui.compact}
+                  detailExpanded={ui.detailExpanded}
+                  detailScope={row.detailScope}
                   detailsMode={ui.detailsMode}
                   detailsModeCommandOverride={ui.detailsModeCommandOverride}
                   msg={row.msg}
@@ -187,6 +189,7 @@ const TranscriptPane = memo(function TranscriptPane({
           <StreamingAssistant
             cols={composer.cols}
             compact={ui.compact}
+            detailExpanded={ui.detailExpanded}
             detailsMode={ui.detailsMode}
             detailsModeCommandOverride={ui.detailsModeCommandOverride}
             prevMsg={transcript.historyItems[transcript.historyItems.length - 1]}

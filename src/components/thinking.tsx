@@ -703,6 +703,8 @@ interface Group {
 export const ToolTrail = memo(function ToolTrail({
   busy = false,
   commandOverride = false,
+  detailExpanded,
+  detailScope,
   detailsMode = 'collapsed',
   outcome = '',
   reasoningActive = false,
@@ -720,6 +722,8 @@ export const ToolTrail = memo(function ToolTrail({
 }: {
   busy?: boolean
   commandOverride?: boolean
+  detailExpanded?: Readonly<Record<string, boolean>>
+  detailScope?: string
   detailsMode?: DetailsMode
   outcome?: string
   reasoningActive?: boolean
@@ -827,13 +831,32 @@ export const ToolTrail = memo(function ToolTrail({
   // reading it as "print the whole chain of thought" put a turn's entire
   // reasoning — hundreds of lines — above every answer. So it stays open by
   // default and shows a line or two, and ctrl+o is what asks for all of it.
-  const thinkingExpanded = detailsMode === 'expanded'
+  const thinkingKey = detailScope ? `${detailScope}:thinking` : ''
+  const thinkingOverride = thinkingKey && detailExpanded && Object.hasOwn(detailExpanded, thinkingKey)
+    ? detailExpanded[thinkingKey]
+    : undefined
+  const thinkingExpanded = thinkingOverride ?? detailsMode === 'expanded'
+  const resolvedExpandedTools = new Set(
+    trail.flatMap((_, index) => {
+      const key = detailScope ? `${detailScope}:tool:${index}` : ''
+      const override = key && detailExpanded && Object.hasOwn(detailExpanded, key)
+        ? detailExpanded[key]
+        : undefined
+
+      return override ?? toolsExpanded ? [index] : []
+    })
+  )
 
   for (const [i, compactLine] of trail.entries()) {
     // Expanded details render the verbose sibling (full Args/Result blocks)
     // when the gateway retained raw output; '' means the compact line is
     // already complete.
-    const line = toolsExpanded && verboseTrail[i] ? verboseTrail[i]! : compactLine
+    const toolKey = detailScope ? `${detailScope}:tool:${i}` : ''
+    const toolOverride = toolKey && detailExpanded && Object.hasOwn(detailExpanded, toolKey)
+      ? detailExpanded[toolKey]
+      : undefined
+    const toolExpanded = toolOverride ?? toolsExpanded
+    const line = toolExpanded && verboseTrail[i] ? verboseTrail[i]! : compactLine
     const parsed = parseToolTrailResultLine(line)
 
     if (parsed) {
@@ -853,7 +876,7 @@ export const ToolTrail = memo(function ToolTrail({
         // the key that shows the rest — but only when there IS a rest to show:
         // a result the gateway kept no raw copy of expands to the same text,
         // and pointing at a key that changes nothing is worse than silence.
-        const expandable = !toolsExpanded && Boolean(verboseTrail[i]) && ELIDED_TAIL.test(parsed.detail)
+        const expandable = !toolExpanded && Boolean(verboseTrail[i]) && ELIDED_TAIL.test(parsed.detail)
 
         pushDetail({
           color: parsed.mark === '✗' ? t.color.error : t.color.muted,
@@ -1149,6 +1172,7 @@ export const ToolTrail = memo(function ToolTrail({
         key={group.key}
         marginTop={gap ? 1 : 0}
         paddingX={1}
+        width="100%"
       >
         <Text color={group.color}>
           {group.live ? (
@@ -1228,11 +1252,17 @@ export const ToolTrail = memo(function ToolTrail({
       return null
     }
 
-    if (toolsExpanded) {
-      return <Box flexDirection="column">{groups.map((group, index) => renderGroup(group, index > 0))}</Box>
-    }
-
-    const runs = briefRuns(groups, group => group.label, group => Boolean(group.error || group.live))
+    // Resolve expansion per call even while the global mode is expanded. This
+    // lets a picker-selected `false` collapse one noisy result without forcing
+    // every other call back into the compact brief.
+    const runs = briefRuns(
+      groups,
+      group => group.label,
+      group => {
+        const match = /^tr-(\d+)$/.exec(group.key)
+        return Boolean(group.error || group.live || (match && resolvedExpandedTools.has(Number(match[1]))))
+      }
+    )
 
     return (
       <Box flexDirection="column">

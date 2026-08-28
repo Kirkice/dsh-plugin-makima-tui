@@ -14,6 +14,7 @@ import type { QuestionAnswers } from '../components/questionPrompt.js'
 import { STARTUP_RESUME_ID, TRANSCRIPT_COLOR } from '../config/env.js'
 import { MAX_HISTORY, WHEEL_SCROLL_STEP } from '../config/limits.js'
 import { hasLeadGap, prevRenderedMsg, showsInterTurnSeparator } from '../domain/blockLayout.js'
+import { collectDetailTargets, visibleItemIndexes } from '../domain/detailTargets.js'
 import { SECTION_NAMES, sectionMode } from '../domain/details.js'
 import { attachedImageNotice } from '../domain/messages.js'
 import { infoAfterModelSwitch, modelPickerCommands } from '../domain/modelSwitch.js'
@@ -337,8 +338,18 @@ export function useMainApp(gw: GatewayClient) {
   // off live geometry. Cost: per-row local state (e.g. systemOpen toggles)
   // resets on resize; small UX hit for a hard correctness win.
   const virtualRows = useMemo<TranscriptRow[]>(
-    () => historyItems.map((msg, index) => ({ index, key: `${messageId(msg)}:c${cols}`, msg })),
-    [cols, historyItems, messageId]
+    () =>
+      historyItems.map((msg, index) => {
+        const detailScope = messageId(msg)
+        const signaturePart = (key: string) =>
+          Object.hasOwn(ui.detailExpanded, key) ? (ui.detailExpanded[key] ? '1' : '0') : '-'
+        const detailSignature = `${signaturePart(`${detailScope}:thinking`)}:${(msg.tools ?? [])
+          .map((_, toolIndex) => signaturePart(`${detailScope}:tool:${toolIndex}`))
+          .join(',')}`
+
+        return { detailScope, index, key: `${detailScope}:c${cols}:d${detailSignature}`, msg }
+      }),
+    [cols, historyItems, messageId, ui.detailExpanded]
   )
 
   // Mirrors ToolTrail's `toolsExpanded` exactly (ctrl+o, or an explicit
@@ -399,8 +410,24 @@ export function useMainApp(gw: GatewayClient) {
   )
 
   const estimateRowHeight = useCallback(
-    (index: number) =>
-      estimatedMsgHeight(virtualRows[index]!.msg, cols, {
+    (index: number) => {
+      const row = virtualRows[index]!
+      const toolExpansion = new Map<number, boolean>()
+
+      for (let toolIndex = 0; toolIndex < (row.msg.tools?.length ?? 0); toolIndex++) {
+        const key = `${row.detailScope}:tool:${toolIndex}`
+
+        if (Object.hasOwn(ui.detailExpanded, key)) {
+          toolExpansion.set(toolIndex, ui.detailExpanded[key]!)
+        }
+      }
+
+      const thinkingKey = `${row.detailScope}:thinking`
+      const thinkingExpanded = Object.hasOwn(ui.detailExpanded, thinkingKey)
+        ? ui.detailExpanded[thinkingKey]!
+        : thinkingDetailsExpanded
+
+      return estimatedMsgHeight(row.msg, cols, {
         compact: ui.compact,
         details: detailsVisible,
         leadGap: hasLeadGap(
@@ -411,13 +438,15 @@ export function useMainApp(gw: GatewayClient) {
           }),
           virtualRows[index]!.msg
         ),
-        thinkingExpanded: thinkingDetailsExpanded,
+        thinkingExpanded,
+        toolExpansion,
         thinkingVisible: thinkingDetailsVisible,
         toolsExpanded: toolsDetailsExpanded,
         toolsVisible: toolsDetailsVisible,
         userPrompt: ui.theme.brand.prompt,
-        withSeparator: showsInterTurnSeparator(virtualRows[index]!.msg, index, firstUserIdx, TRANSCRIPT_COLOR)
-      }),
+        withSeparator: showsInterTurnSeparator(row.msg, index, firstUserIdx, TRANSCRIPT_COLOR)
+      })
+    },
     [
       cols,
       detailsVisible,
@@ -427,6 +456,7 @@ export function useMainApp(gw: GatewayClient) {
       toolsDetailsExpanded,
       toolsDetailsVisible,
       ui.compact,
+      ui.detailExpanded,
       ui.detailsMode,
       ui.detailsModeCommandOverride,
       ui.sections,
@@ -454,6 +484,27 @@ export function useMainApp(gw: GatewayClient) {
     liveTailActive: turnLiveTailActive,
     onHeightsChange: syncHeightCache
   })
+
+  const visibleDetailTargets = useCallback(() => {
+    const scroll = scrollRef.current
+
+    if (!scroll) {
+      return []
+    }
+
+    const visibleMessages = visibleItemIndexes(
+      virtualHistory.offsets,
+      scroll.getScrollTop() + scroll.getPendingDelta(),
+      scroll.getViewportHeight(),
+      virtualRows.length
+    ).flatMap(index => {
+      const row = virtualRows[index]
+
+      return row ? [row.msg] : []
+    })
+
+    return collectDetailTargets(visibleMessages, messageId, getUiState().detailExpanded)
+  }, [messageId, virtualHistory.offsets, virtualRows])
 
   const scrollWithSelection = useCallback(
     (delta: number) => scrollWithSelectionBy(delta, { scrollRef, selection }),
@@ -907,6 +958,7 @@ export function useMainApp(gw: GatewayClient) {
     composer: { actions: composerActions, refs: composerRefs, state: composerState },
     conversationEmpty: empty,
     gateway,
+    visibleDetailTargets,
     terminal: { hasSelection, scrollRef, scrollWithSelection, selection, stdout },
     voice: {
       enabled: voiceEnabled,

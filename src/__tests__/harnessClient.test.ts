@@ -339,6 +339,47 @@ describe('HarnessGatewayClient', () => {
     expect(complete.payload?.session_turns).toBe(1)
   })
 
+  it('surfaces an empty failed model turn as an error instead of a blank assistant message', async () => {
+    const w = makeWorld()
+
+    w.client.start()
+    await settle()
+    w.events.length = 0
+
+    w.fire('turn/start', { turn: 1 })
+    w.fire('turn/end', {
+      reason: {
+        error: { code: 'MODEL_NOT_FOUND', message: 'model gpt-5.6-luna is not available', status: 404 },
+        kind: 'error'
+      },
+      turn: 1
+    })
+
+    expect(w.events.map(e => e.type)).toEqual(['error', 'session.stats'])
+    expect(w.events[0]).toMatchObject({
+      payload: { message: 'model gpt-5.6-luna is not available' },
+      session_id: 'cc-test-session',
+      type: 'error'
+    })
+    expect(w.events[1]).toMatchObject({
+      payload: { session_turns: 1, usage: { calls: 0, input: 0, output: 0, total: 0 } },
+      type: 'session.stats'
+    })
+  })
+
+  it('keeps a completed empty turn compatible with intentional no-op responses', async () => {
+    const w = makeWorld()
+
+    w.client.start()
+    await settle()
+    w.events.length = 0
+
+    w.fire('turn/start', { turn: 1 })
+    w.fire('turn/end', { reason: { kind: 'completed' }, turn: 1 })
+
+    expect(w.events.map(e => e.type)).toEqual(['message.complete'])
+  })
+
   it('gives every tool.start the salient argument its row renders in parens', async () => {
     const w = makeWorld()
 

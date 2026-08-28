@@ -1,6 +1,7 @@
 // Boot wiring for the TUI inside a dsh process — the plugin-mode equivalent
 // of src/entry.tsx. Everything terminal-global (mode resets, graceful exit,
 // memory monitor) stays here; React is mounted on the real process streams.
+import { writeFileSync } from 'node:fs'
 import { createElement } from 'react'
 
 import type { Context } from '@deepseek-ai/cordis'
@@ -103,6 +104,15 @@ export async function mountCcTui(ctx: Context, config: Config): Promise<void> {
       openExternalUrl(url)
     }
   })
+
+  // Installer/e2e readiness handshake. Process liveness is insufficient: a
+  // profile can mount only background services and remain alive forever while
+  // rendering no TUI. Writing after render resolves proves this plugin was
+  // composed, loaded, and handed a mounted Ink instance.
+  const readyFile = process.env.MAKIMA_TUI_READY_FILE
+  if (readyFile) {
+    writeFileSync(readyFile, `ready ${process.pid}\n`, 'utf8')
+  }
 
   ctx.effect(() => () => {
     try {

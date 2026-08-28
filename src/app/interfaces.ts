@@ -13,6 +13,7 @@ import type {
   ApprovalReq,
   ClarifyReq,
   ConfirmReq,
+  DetailTarget,
   DetailsMode,
   Msg,
   PanelSection,
@@ -135,6 +136,11 @@ export interface BillingOverlayState {
   state: BillingStateResponse
 }
 
+export interface DetailPickerState {
+  items: DetailTarget[]
+  selected: number
+}
+
 export interface OverlayState {
   agents: boolean
   agentsInitialHistoryIndex: number
@@ -142,6 +148,7 @@ export interface OverlayState {
   billing: BillingOverlayState | null
   clarify: ClarifyReq | null
   confirm: ConfirmReq | null
+  detailPicker: DetailPickerState | null
   logoPicker: boolean
   memoryPicker: boolean
   modelPicker: boolean
@@ -165,6 +172,8 @@ export interface PagerState {
 }
 
 export interface TranscriptRow {
+  /** Width-independent identity used by per-block detail expansion. */
+  detailScope: string
   index: number
   key: string
   msg: Msg
@@ -179,6 +188,8 @@ export interface UiState {
   permissionMode: string
   busyInputMode: BusyInputMode
   compact: boolean
+  /** Per-transcript-block overrides used by viewport-aware detail expansion. */
+  detailExpanded: Record<string, boolean>
   detailsMode: DetailsMode
   detailsModeCommandOverride: boolean
   info: null | SessionInfo
@@ -295,6 +306,8 @@ export interface InputHandlerActions {
 
 export interface InputHandlerContext {
   actions: InputHandlerActions
+  /** Expandable settled blocks whose transcript rows currently intersect the viewport. */
+  visibleDetailTargets: () => DetailTarget[]
   composer: {
     actions: ComposerActions
     refs: ComposerRefs
