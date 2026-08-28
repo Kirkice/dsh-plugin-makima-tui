@@ -825,6 +825,8 @@ export const SLASHES: ReadonlyArray<{ desc: string; hint?: string; name: string 
     name: '/memory'
   },
   { desc: 'Browse and inspect available skills', hint: '[list | inspect <name> | search <query>]', name: '/skills' },
+  { desc: 'Open the installed plugins manager or inspect runtime plugin status', hint: '[runtime]', name: '/plugins' },
+  { desc: 'Alias for /plugins', hint: '[runtime]', name: '/plugin' },
   { desc: 'Enable plan mode or view the current session plan', hint: '[<description>]', name: '/plan' },
   {
     desc: 'Set a completion condition Claude keeps working toward',

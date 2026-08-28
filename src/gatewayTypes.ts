@@ -340,11 +340,16 @@ export interface SessionListItem {
   /** Persisted workspace where this session was created, when available. */
   cwd?: string
   id: string
+  /** Timestamp of the newest durable event, when the summary could inspect it. */
+  last_active?: number
   message_count: number
+  /** Last human prompt, suitable for a compact secondary line in the browser. */
   preview: string
   source?: string
   started_at: number
   title: string
+  /** Whether title was explicitly named, projected by Harness, or derived from a prompt. */
+  title_source?: 'auto' | 'manual' | 'projected'
 }
 
 export interface SessionListResponse {
@@ -366,6 +371,11 @@ export interface SessionTitleResponse {
   pending?: boolean
   session_key?: string
   title?: string
+}
+
+export interface SessionRenameResponse {
+  session_id: string
+  title: string
 }
 
 export interface SessionSaveResponse {

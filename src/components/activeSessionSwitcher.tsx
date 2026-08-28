@@ -10,7 +10,8 @@ import type {
   SessionCloseResponse,
   SessionDeleteResponse,
   SessionListItem,
-  SessionListResponse
+  SessionListResponse,
+  SessionRenameResponse
 } from '../gatewayTypes.js'
 import { asRpcResult, rpcErrorMessage } from '../lib/rpc.js'
 import type { Theme } from '../theme.js'
@@ -106,12 +107,10 @@ export const resumableHistory = (history: readonly SessionListItem[], live: read
 }
 
 export const resumeRowContextHintSegments: OrchestratorHintSegment[] = [
-  { role: 'label', text: 'Resumable:' },
+  { role: 'label', text: 'Saved session:' },
   { role: 'text', text: ' ' },
   { role: 'hotkey', text: 'Enter' },
-  { role: 'text', text: ' resume · ' },
-  { role: 'hotkey', text: 'd' },
-  { role: 'text', text: ' delete' }
+  { role: 'text', text: ' details' }
 ]
 
 export type OrchestratorHintRole = 'hotkey' | 'label' | 'text'
@@ -333,6 +332,9 @@ export function ActiveSessionSwitcher({
   // different session. Any other key cancels the prompt.
   const [confirmDelete, setConfirmDelete] = useState<null | string>(null)
   const [deleting, setDeleting] = useState(false)
+  const [historyDetailsId, setHistoryDetailsId] = useState<null | string>(null)
+  const [renaming, setRenaming] = useState(false)
+  const [renameDraft, setRenameDraft] = useState('')
   const initialSelectionAppliedRef = useRef(false)
   // Holds the RAW `session.list` results (pre-dedupe). The quiet 1.5s poll
   // re-derives the resumable list from this against the latest live set, so a
@@ -569,7 +571,7 @@ export function ActiveSessionSwitcher({
 
       if (kind === 'history') {
         setSel(clamped)
-        onResume(history[index - 1 - items.length]!.id)
+        setHistoryDetailsId(history[index - 1 - items.length]!.id)
 
         return
       }
@@ -583,8 +585,50 @@ export function ActiveSessionSwitcher({
   const newSelected = selectedKind === 'new'
   const draftHasText = Boolean(draft.trim())
 
+  const saveRename = useCallback(() => {
+    const id = historyDetailsId
+    const title = renameDraft.trim()
+    if (!id || !title || deleting) return
+    setDeleting(true)
+    gw.request<SessionRenameResponse>('session.rename', { session_id: id, title })
+      .then(raw => {
+        const result = asRpcResult<SessionRenameResponse>(raw)
+        if (!result || result.session_id !== id) throw new Error('invalid response: session.rename')
+        setHistory(prev => prev.map(item => item.id === id ? { ...item, title: result.title, title_source: 'manual' } : item))
+        rawHistoryRef.current = rawHistoryRef.current.map(item => item.id === id ? { ...item, title: result.title, title_source: 'manual' } : item)
+        setRenaming(false)
+        setErr('')
+      })
+      .catch((e: unknown) => setErr(rpcErrorMessage(e)))
+      .finally(() => setDeleting(false))
+  }, [deleting, gw, historyDetailsId, renameDraft])
+
   useInput((ch, key) => {
     if (pickingModel || deleting) {
+      return
+    }
+
+    const lower = ch?.toLowerCase() ?? ''
+    if (renaming) {
+      if (key.escape) {
+        setRenaming(false)
+      }
+      return
+    }
+
+    if (historyDetailsId) {
+      const selectedHistory = history.find(h => h.id === historyDetailsId)
+      if (key.escape || lower === 'b') {
+        setHistoryDetailsId(null)
+      } else if (key.return) {
+        if (selectedHistory) onResume(selectedHistory.id)
+      } else if (lower === 'r' && selectedHistory) {
+        setRenameDraft(selectedHistory.title)
+        setRenaming(true)
+      } else if (lower === 'd' && selectedHistory) {
+        setHistoryDetailsId(null)
+        setConfirmDelete(selectedHistory.id)
+      }
       return
     }
 
@@ -602,7 +646,6 @@ export function ActiveSessionSwitcher({
       return
     }
 
-    const lower = ch?.toLowerCase() ?? ''
     const isCtrl = (letter: string) => key.ctrl && (lower === letter || ch === ctrlChar(letter))
 
     if (key.escape) {
@@ -669,7 +712,7 @@ export function ActiveSessionSwitcher({
       }
 
       if (selectedKind === 'history' && history[sel - 1 - items.length]) {
-        return onResume(history[sel - 1 - items.length]!.id)
+        return setHistoryDetailsId(history[sel - 1 - items.length]!.id)
       }
     }
   })
@@ -695,6 +738,29 @@ export function ActiveSessionSwitcher({
 
   if (loading) {
     return <Text color={t.color.muted}>loading sessions…</Text>
+  }
+
+  const detail = historyDetailsId ? history.find(item => item.id === historyDetailsId) : undefined
+  if (detail) {
+    return (
+      <Box flexDirection="column" width={width}>
+        <Text bold color={t.color.accent}>Saved session</Text>
+        {renaming ? (
+          <Box><Text color={t.color.label}>title › </Text><TextInput columns={Math.max(20, width - 9)} onChange={setRenameDraft} onSubmit={saveRename} value={renameDraft} /></Box>
+        ) : (
+          <Text bold wrap="wrap">{detail.title}</Text>
+        )}
+        {detail.preview && <Text color={t.color.muted} wrap="wrap">last prompt: {detail.preview}</Text>}
+        <Text color={t.color.muted}>{detail.message_count} user messages · {relativeSessionAge(detail.last_active ?? detail.started_at)}</Text>
+        <SessionWorkspace cwd={detail.cwd} t={t} />
+        <Box marginTop={1} flexDirection="column">
+          <Text color={t.color.muted}>Session ID is intentionally hidden here.</Text>
+          {renaming
+            ? <Text color={t.color.muted}><Text color={t.color.accent}>Enter</Text> save · <Text color={t.color.accent}>Esc</Text> cancel</Text>
+            : <Text color={t.color.muted}><Text color={t.color.accent}>Enter</Text> resume · <Text color={t.color.accent}>r</Text> rename · <Text color={t.color.accent}>d</Text> request delete · <Text color={t.color.accent}>Esc/b</Text> back</Text>}
+        </Box>
+      </Box>
+    )
   }
 
   // The "+ new" row (sel 0) is pinned at the top so it's always visible; the
@@ -769,7 +835,7 @@ export function ActiveSessionSwitcher({
           const pendingDelete = confirmDelete === h.id
 
           const title = pendingDelete
-            ? 'press d again to delete'
+            ? 'press d again to permanently delete'
             : deleting && selected
               ? 'deleting…'
               : h.title || h.preview || '(untitled)'
@@ -792,21 +858,15 @@ export function ActiveSessionSwitcher({
                 </Text>
               </Box>
 
-              <Box {...fixedSessionColumnStyle()} width={11}>
-                <Text bold={selected} color={t.color.accent} wrap="truncate-end">
-                  {h.id}
-                </Text>
-              </Box>
-
-              <Box {...fixedSessionColumnStyle()} width={11}>
+              <Box {...fixedSessionColumnStyle()} width={14}>
                 <Text color={rowTextColor ?? t.color.muted} wrap="truncate-end">
-                  {relativeSessionAge(h.started_at)}
+                  {relativeSessionAge(h.last_active ?? h.started_at)}
                 </Text>
               </Box>
 
               <Box {...fixedSessionColumnStyle()} width={18}>
                 <Text color={rowTextColor ?? t.color.muted} wrap="truncate-end">
-                  {h.message_count} msgs
+                  {h.message_count} messages
                 </Text>
               </Box>
 
@@ -818,7 +878,11 @@ export function ActiveSessionSwitcher({
                 >
                   {title}
                 </Text>
-                {!pendingDelete && <SessionWorkspace cwd={h.cwd} t={t} />}
+                {!pendingDelete && (
+                  <Text color={t.color.muted} wrap="truncate-end">
+                    {h.preview ? `${h.preview} · ${sessionWorkspaceLabel(h.cwd)}` : sessionWorkspaceLabel(h.cwd)}
+                  </Text>
+                )}
               </Box>
             </Box>
           )
@@ -849,7 +913,7 @@ export function ActiveSessionSwitcher({
 
             <Box {...fixedSessionColumnStyle()} width={11}>
               <Text bold={selected} color={t.color.accent} wrap="truncate-end">
-                {current ? 'current' : s.id}
+                {current ? 'current' : 'live'}
               </Text>
             </Box>
 

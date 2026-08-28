@@ -67,6 +67,7 @@ const TOOL_CARDS: Record<string, unknown> = {
 function makeWorld() {
   const listeners = new Map<string, Listener[]>()
   const deleted: string[] = []
+  const appended: Array<{ events: readonly unknown[]; id: string }> = []
   const followups: unknown[] = []
   const steers: unknown[] = []
   const cancels: unknown[] = []
@@ -172,7 +173,16 @@ function makeWorld() {
 
       if (name === 'sessionPersistence') {
         return {
+          append: async (id: string, events: readonly unknown[]) => { appended.push({ events, id }) },
           delete: async (id: string) => { deleted.push(id) },
+          inspect: async (id: string) => ({
+            events: id === 'cc-old-2'
+              ? [
+                  { data: { content: [{ text: 'first persisted prompt', type: 'text' }], source: { kind: 'user' } }, seq: 0, time: 1, type: 'user/message' },
+                  { data: { content: [{ text: 'latest persisted prompt', type: 'text' }], source: { kind: 'user' } }, seq: 1, time: 2, type: 'user/message' }
+                ]
+              : storedEvents
+          }),
           list: async () => [
             { createdAt: 50, cwd: '/workspaces/first', id: 'cc-old-1', version: 1 },
             { createdAt: 90, cwd: '/workspaces/second', id: 'cc-old-2', version: 1 }
@@ -225,7 +235,7 @@ function makeWorld() {
     }
   }
 
-  return { agent, cancels, client, ctx, deleted, emit, events, fire, fireFrom, followups, listeners, planSets, policies, providers, resumedAgent, resumedHandle, steers }
+  return { agent, appended, cancels, client, ctx, deleted, emit, events, fire, fireFrom, followups, listeners, planSets, policies, providers, resumedAgent, resumedHandle, steers }
 }
 
 const settle = () => new Promise(resolve => setTimeout(resolve, 0))
@@ -1064,17 +1074,49 @@ describe('HarnessGatewayClient', () => {
     expect(res.sessions.find(s => s.id === 'cc-resumed-1')?.current).toBe(true)
   })
 
-  it('session.list serves persisted headers with their workspace and honors its requested limit', async () => {
+  it('session.list serves human-readable persisted summaries with actual user-message counts', async () => {
     const w = makeWorld()
 
     w.client.start()
     await settle()
 
-    const res = await w.client.request<{ sessions: Array<{ cwd?: string; id: string; started_at: number }> }>('session.list', { limit: 1 })
+    const res = await w.client.request<{ sessions: Array<{ cwd?: string; id: string; message_count: number; preview: string; title: string }> }>('session.list', { limit: 1 })
 
     expect(res.sessions).toEqual([
-      expect.objectContaining({ cwd: '/workspaces/second', id: 'cc-old-2' })
+      expect.objectContaining({
+        cwd: '/workspaces/second',
+        id: 'cc-old-2',
+        message_count: 2,
+        preview: 'latest persisted prompt',
+        title: 'first persisted prompt'
+      })
     ])
+  })
+
+  it('session.rename persists a user-pinned title for inactive history', async () => {
+    const w = makeWorld()
+
+    w.client.start()
+    await settle()
+
+    await expect(w.client.request('session.rename', { session_id: 'cc-old-2', title: '  Release checklist  ' })).resolves.toEqual({
+      session_id: 'cc-old-2',
+      title: 'Release checklist'
+    })
+    expect(w.appended).toEqual([
+      expect.objectContaining({
+        id: 'cc-old-2',
+        events: [expect.objectContaining({
+          data: expect.objectContaining({ source: { kind: 'user' }, title: 'Release checklist' }),
+          seq: 2,
+          type: 'session/title'
+        })]
+      })
+    ])
+    await expect(w.client.request('session.rename', { session_id: 'cc-old-1', title: '   ' })).rejects.toThrow('session title must contain visible characters')
+
+    const activeId = String((w.ctx.agents.create as ReturnType<typeof vi.fn>).mock.calls[0]![0].sessionId)
+    await expect(w.client.request('session.rename', { session_id: activeId, title: 'Nope' })).rejects.toThrow('rename the active session with /title')
   })
 
   it('session.delete delegates persisted-history removal and refuses active sessions', async () => {

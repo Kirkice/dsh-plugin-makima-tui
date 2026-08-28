@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { SLASHES } from '../gatewayClient.js'
 import { highlightLine, isHighlightable } from '../lib/syntax.js'
 import { DEFAULT_THEME } from '../theme.js'
 
@@ -53,5 +54,15 @@ describe('syntax highlighter', () => {
     const tokens = highlightLine('# comment', 'py', t)
 
     expect(tokens).toEqual([['#676E98', '# comment']])
+  })
+})
+
+describe('plugin slash commands', () => {
+  it('advertises /plugins and its singular alias as an interactive manager with runtime status mode', () => {
+    const byName = new Map(SLASHES.map(command => [command.name, command]))
+
+    expect([...byName.keys()]).toEqual(expect.arrayContaining(['/plugin', '/plugins']))
+    expect(byName.get('/plugins')?.hint).toBe('[runtime]')
+    expect(byName.get('/plugin')?.hint).toBe('[runtime]')
   })
 })

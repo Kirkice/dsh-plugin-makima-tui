@@ -61,41 +61,67 @@ interface SkillsReloadResponse {
   output?: string
 }
 
-interface PluginManageResponse {
-  bundled_count?: number
-  message?: string
-  ok?: boolean
-  plugin?: {
-    name?: string
-    status?: string
-  }
-  plugins?: Array<{
-    name?: string
-    source?: string
-    status?: string
-    version?: string
-  }>
-  user_count?: number
+interface ManagedPlugin {
+  builtIn: boolean
+  bundle: boolean
+  dependency: boolean
+  packageName: string
+  specifier: string
 }
 
-interface ManagedPlugin {
-  packageName?: string
-  moduleName?: string
-  fiberPhase?: string
-  specifier: string
-  bundle: boolean
-  builtIn: boolean
+interface RuntimePlugin {
+  enabled: boolean
+  entryId: string
+  fiberPhase: 'active' | 'failed' | 'loading' | 'pending' | 'unloading' | null
+  moduleName: string
 }
 
 interface ManagedPluginListResponse {
-  profile?: string
-  entries?: ManagedPlugin[]
+  entries?: unknown
+  profile?: unknown
 }
 
-interface ManagedPluginMutationResponse {
-  operation?: 'install' | 'remove'
-  packageName?: string | null
-  restartRequired?: boolean
+interface RuntimePluginListResponse {
+  entries?: unknown
+}
+
+const asRecord = (value: unknown): Record<string, unknown> | null =>
+  typeof value === 'object' && value !== null ? value as Record<string, unknown> : null
+
+const profileEntries = (value: unknown): ManagedPlugin[] => {
+  if (!Array.isArray(value)) return []
+
+  return value.flatMap(entry => {
+    const row = asRecord(entry)
+    if (!row || typeof row.packageName !== 'string' || typeof row.specifier !== 'string') return []
+
+    return [{
+      builtIn: row.builtIn === true,
+      bundle: row.bundle === true,
+      dependency: row.dependency === true,
+      packageName: row.packageName,
+      specifier: row.specifier
+    }]
+  })
+}
+
+const runtimeEntries = (value: unknown): RuntimePlugin[] => {
+  if (!Array.isArray(value)) return []
+
+  return value.flatMap(entry => {
+    const row = asRecord(entry)
+    if (!row || typeof row.entryId !== 'string' || typeof row.moduleName !== 'string') return []
+
+    const fiberPhase = row.fiberPhase
+    if (fiberPhase !== null && !['active', 'failed', 'loading', 'pending', 'unloading'].includes(String(fiberPhase))) return []
+
+    return [{
+      enabled: row.enabled === true,
+      entryId: row.entryId,
+      fiberPhase: fiberPhase as RuntimePlugin['fiberPhase'],
+      moduleName: row.moduleName
+    }]
+  })
 }
 
 export const opsCommands: SlashCommand[] = [
@@ -736,47 +762,40 @@ export const opsCommands: SlashCommand[] = [
 
   {
     aliases: ['plugin'],
-    argumentHint: '[list|enable <name>|disable <name>]',
-    help: 'list or enable/disable loaded Harness plugins',
+    argumentHint: '[runtime]',
+    help: 'open installed plugins manager or inspect current runtime plugin status',
     name: 'plugins',
-    run: (arg, ctx, cmd) => {
-      const [subcommand = 'list', ...rest] = arg.trim().split(/\s+/).filter(Boolean)
-      const action = subcommand.toLowerCase()
+    run: (arg, ctx) => {
+      const action = arg.trim().toLowerCase()
 
-      if (!['list', 'ls', 'enable', 'disable'].includes(action)) {
-        return ctx.transcript.sys('usage: /plugin [list|enable <name>|disable <name>]')
+      if (!action || action === 'list' || action === 'ls') {
+        return patchOverlayState({ pluginsHub: true })
       }
 
-      const name = rest.join(' ').trim()
-      if ((action === 'enable' || action === 'disable') && !name) {
-        return ctx.transcript.sys(`usage: /plugin ${action} <name>`)
+      if (!['runtime', 'status'].includes(action)) {
+        return ctx.transcript.sys('usage: /plugins [runtime]')
       }
 
-      const params: Record<string, unknown> = action === 'list' || action === 'ls'
-        ? { action: 'list' }
-        : { action: 'toggle', enable: action === 'enable', name }
+      if (action === 'runtime' || action === 'status') {
+        ctx.gateway.gw
+          .request<RuntimePluginListResponse>('plugins.runtime', {})
+          .then(r => {
+            if (ctx.stale()) return
 
-      ctx.gateway.gw
-        .request<PluginManageResponse>('plugins.manage', params)
-        .then(r => {
-          if (ctx.stale() || !r) return
+            const entries = runtimeEntries(r?.entries)
+            if (!entries.length) return ctx.transcript.sys('no runtime plugin entries reported by the Harness loader')
 
-          if (action === 'list' || action === 'ls') {
-            const plugins = r.plugins ?? []
-            if (!plugins.length) return ctx.transcript.sys('no loaded plugins found')
-            const lines = plugins.map(plugin => {
-              const source = plugin.source === 'bundled' ? ' [bundled]' : ''
-              const version = plugin.version ? ` v${plugin.version}` : ''
-              return `${plugin.status === 'enabled' ? '✓' : '○'} ${plugin.name ?? '(unknown)'}${version}${source} (${plugin.status ?? 'unknown'})`
+            const lines = entries.map(plugin => {
+              const state = plugin.fiberPhase ?? 'inactive'
+              const enabled = plugin.enabled ? 'enabled' : 'disabled'
+              return `${plugin.enabled && state === 'active' ? '✓' : '!'} ${plugin.moduleName} [${enabled}, ${state}] · ${plugin.entryId}`
             })
-            return ctx.transcript.page(lines.join('\n'), `Plugins (${r.user_count ?? 0} user · ${r.bundled_count ?? 0} bundled)`)
-          }
+            ctx.transcript.page(lines.join('\n'), 'Runtime Plugins')
+          })
+          .catch(ctx.guardedErr)
+        return
+      }
 
-          const plugin = r.plugin?.name ?? name
-          const status = r.plugin?.status ?? (action === 'enable' ? 'enabled' : 'disabled')
-          ctx.transcript.sys(r.message ?? `${plugin} ${status}`)
-        })
-        .catch(ctx.guardedErr)
     }
   },
 

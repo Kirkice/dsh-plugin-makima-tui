@@ -224,20 +224,25 @@ export const MessageLine = memo(function MessageLine({
       )
     }
 
-    if (msg.role !== 'user' && hasAnsi(msg.text)) {
+    // Assistant replies may carry ANSI sequences from the provider. Rendering
+    // the entire message as <Ansi> would bypass Md and leave fenced code
+    // blocks un-tokenized, so strip the provider formatting and preserve the
+    // Markdown renderer's own syntax colors instead.
+    if (msg.role !== 'user' && hasAnsi(msg.text) && msg.role !== 'assistant') {
       return <Ansi>{sanitizeAnsiForRender(msg.text)}</Ansi>
     }
 
     if (msg.role === 'assistant') {
       const bodyWidth = transcriptBodyWidth(cols, msg.role, t.brand.prompt, TERMUX_TUI_MODE)
+      const markdownText = hasAnsi(msg.text) ? stripAnsi(msg.text) : msg.text
 
       return isStreaming ? (
         // Incremental markdown: split at the last stable block boundary so
         // only the in-flight tail re-tokenizes per delta. See
         // streamingMarkdown.tsx for the cost model.
-        <StreamingMd cols={bodyWidth} compact={compact} t={t} text={boundedLiveRenderText(msg.text)} />
+        <StreamingMd cols={bodyWidth} compact={compact} t={t} text={boundedLiveRenderText(markdownText)} />
       ) : (
-        <Md cols={bodyWidth} compact={compact} t={t} text={msg.text} />
+        <Md cols={bodyWidth} compact={compact} t={t} text={markdownText} />
       )
     }
 

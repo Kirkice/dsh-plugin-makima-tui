@@ -25,4 +25,6 @@
     - id: makima-tui
       name: makima-tui
       config:
-        profile: !!js process.env.MAKIMA_TUI_PROFILE ?? 'makima'
+        # An explicit environment override is supported, but otherwise the TUI
+        # resolves the actual `dsh --profile <name>` argument at runtime.
+        profile: !!js process.env.MAKIMA_TUI_PROFILE

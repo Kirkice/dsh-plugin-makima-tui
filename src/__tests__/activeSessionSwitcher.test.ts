@@ -21,6 +21,7 @@ import {
   orchestratorRowClickAction,
   orchestratorVisibleRowIndexes,
   relativeSessionAge,
+  resumeRowContextHintSegments,
   resumableHistory,
   selectedSessionRowStyle,
   sessionWorkspaceLabel,
@@ -179,6 +180,15 @@ describe('unified Sessions overlay helpers', () => {
     // No live sessions: row 0 is new, everything after is history.
     expect(sessionRowKindAt(0, 0)).toBe('new')
     expect(sessionRowKindAt(1, 0)).toBe('history')
+  })
+
+  it('opens saved sessions in a detail view before any resume action', () => {
+    expect(resumeRowContextHintSegments).toEqual([
+      { role: 'label', text: 'Saved session:' },
+      { role: 'text', text: ' ' },
+      { role: 'hotkey', text: 'Enter' },
+      { role: 'text', text: ' details' }
+    ])
   })
 
   it('drops already-live sessions from the resumable history (dedupe by id)', () => {

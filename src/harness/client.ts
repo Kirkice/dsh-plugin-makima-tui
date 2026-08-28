@@ -22,6 +22,8 @@ import type {} from '@deepseek-ai/dsh-plan-mode'
 // Type-only: activates the subagent lifecycle Events and the
 // 'subagent/descriptor' SessionEventMap augmentation.
 import type {} from '@deepseek-ai/dsh-subagent'
+// Type-only: activates the persisted `session/title` SessionEventMap entry.
+import type {} from '@deepseek-ai/dsh-session-title'
 
 import { toolArgsPreview } from '../domain/toolArgs.js'
 import { isDelegationCall } from '../domain/toolBrief.js'
@@ -31,6 +33,7 @@ import { compactPreview, fmtK, toolTrailLabel } from '../lib/text.js'
 import { structuredPatch } from 'diff'
 
 import type { GatewayEvent, GatewayTranscriptMessage, StructuredDiffPayload } from '../gatewayTypes.js'
+import { resolveManagedProfile } from './profile.js'
 import type { SessionInfo, Usage } from '../types.js'
 
 const PLUGIN_VERSION = (() => {
@@ -1408,6 +1411,83 @@ export class HarnessGatewayClient extends GatewayClient {
     return [...headers].sort((a, b) => b.createdAt - a.createdAt)
   }
 
+  /**
+   * Build the small human-facing projection missing from SessionHeader.  The
+   * persistence API deliberately lists headers only, so this reads a bounded
+   * set of selected logs rather than pretending every stored session has zero
+   * messages or using the opaque identity as its label.
+   */
+  private async persistedSummary(header: SessionHeader): Promise<{
+    message_count: number
+    preview: string
+    title: string
+    title_source: 'auto' | 'manual' | 'projected'
+  }> {
+    const projected = this.cachedTitle(header)?.trim()
+    const persistence = this.ctx.get('sessionPersistence') as
+      | { inspect?: (id: SessionId, signal?: AbortSignal) => Promise<{ events: readonly SessionEvent[] }> }
+      | undefined
+
+    if (!persistence?.inspect) {
+      const fallback = `Conversation · ${new Date(header.createdAt * 1000).toLocaleDateString()}`
+      return { message_count: 0, preview: '', title: projected || fallback, title_source: projected ? 'projected' : 'auto' }
+    }
+
+    try {
+      const inspected = await persistence.inspect(header.id)
+      const prompts: string[] = []
+      let manualTitle: string | undefined
+
+      for (const event of inspected.events) {
+        if (event.type === 'user/message') {
+          const message = (event as SessionEvent<'user/message'>).data
+          if (message.source.kind !== 'user') continue
+          const text = textOf(message.content, ['text']).replace(/\s+/g, ' ').trim()
+          if (text) prompts.push(text)
+        } else if (event.type === 'session/title') {
+          const data = (event as SessionEvent<'session/title'>).data
+          if (data.source.kind === 'user' && data.title.trim()) manualTitle = data.title.trim()
+        }
+      }
+
+      const automatic = prompts[0] ? compactPreview(prompts[0], 72) : `Conversation · ${new Date(header.createdAt * 1000).toLocaleDateString()}`
+      return {
+        message_count: prompts.length,
+        preview: prompts.at(-1) ? compactPreview(prompts.at(-1)!, 120) : '',
+        title: manualTitle || projected || automatic,
+        title_source: manualTitle ? 'manual' : projected ? 'projected' : 'auto'
+      }
+    } catch {
+      const fallback = `Conversation · ${new Date(header.createdAt * 1000).toLocaleDateString()}`
+      return { message_count: 0, preview: '', title: projected || fallback, title_source: projected ? 'projected' : 'auto' }
+    }
+  }
+
+  private async renamePersisted(id: string, title: string): Promise<string> {
+    const normalized = title.replace(/\s+/g, ' ').trim()
+    if (!normalized) throw new Error('session title must contain visible characters')
+    const persistence = this.ctx.get('sessionPersistence') as
+      | {
+          append?: (sessionId: SessionId, events: readonly SessionEvent[]) => Promise<void>
+          inspect?: (sessionId: SessionId, signal?: AbortSignal) => Promise<{ events: readonly SessionEvent[] }>
+        }
+      | undefined
+    if (!persistence?.append || !persistence.inspect) {
+      throw new Error('session rename is unavailable: session persistence does not support event updates')
+    }
+    if (this.live.has(id)) throw new Error('rename the active session with /title')
+
+    const inspected = await persistence.inspect(SessionId(id))
+    const event = {
+      data: { messageSeqs: [], source: { kind: 'user' }, title: normalized },
+      seq: (inspected.events.at(-1)?.seq ?? -1) + 1,
+      time: Math.floor(Date.now() / 1000),
+      type: 'session/title'
+    } as SessionEvent<'session/title'>
+    await persistence.append(SessionId(id), [event])
+    return normalized
+  }
+
   private async deletePersisted(id: string): Promise<void> {
     const persistence = this.ctx.get('sessionPersistence') as
       | { delete?: (sessionId: string, signal?: AbortSignal) => Promise<void> }
@@ -1589,34 +1669,6 @@ export class HarnessGatewayClient extends GatewayClient {
       case 'setup.status':
         return Promise.resolve({ provider_configured: true } as T)
 
-      case 'plugins.manage': {
-        const inventory = this.ctx.get('pluginInventory') as {
-          listProfile?: (profile: string) => unknown
-          toggle?: (profile: string, name: string, enable: boolean) => unknown
-        } | undefined
-        const profile = typeof p.profile === 'string' && p.profile.trim()
-          ? p.profile.trim()
-          : this.opts.profile ?? process.env.MAKIMA_TUI_PROFILE ?? 'makima'
-        const action = typeof p.action === 'string' ? p.action : 'list'
-
-        if (!inventory) {
-          return Promise.reject(new Error('plugin management is unavailable: the profile does not mount pluginInventory'))
-        }
-
-        if (action === 'list') {
-          return Promise.resolve(inventory.listProfile?.(profile) ?? {}) as Promise<T>
-        }
-
-        if (action === 'toggle') {
-          const name = typeof p.name === 'string' ? p.name.trim() : ''
-          if (!name) return Promise.reject(new Error('plugin management requires a plugin name'))
-          if (typeof p.enable !== 'boolean') return Promise.reject(new Error('plugin management requires enable=true or false'))
-          return Promise.resolve(inventory.toggle?.(profile, name, p.enable) ?? {}) as Promise<T>
-        }
-
-        return Promise.reject(new Error(`unsupported plugin management action: ${action}`))
-      }
-
       case 'plugins.list':
       case 'plugins.install':
       case 'plugins.remove':
@@ -1627,33 +1679,36 @@ export class HarnessGatewayClient extends GatewayClient {
           install?: (profile: string, specifier: string) => unknown
           remove?: (profile: string, packageName: string) => unknown
         } | undefined
-        const profile = typeof p.profile === 'string' && p.profile.trim()
-          ? p.profile.trim()
-          : this.opts.profile ?? process.env.MAKIMA_TUI_PROFILE ?? 'makima'
+        const requestedProfile = typeof p.profile === 'string' && p.profile.trim() ? p.profile : undefined
+        const profile = resolveManagedProfile({ configured: requestedProfile ?? this.opts.profile })
 
         if (!inventory) {
           return Promise.reject(new Error('plugin management is unavailable: the profile does not mount pluginInventory'))
         }
 
         if (method === 'plugins.runtime') {
-          return Promise.resolve(inventory.list?.() ?? {}) as Promise<T>
+          if (!inventory.list) return Promise.reject(new Error('plugin management is unavailable: pluginInventory.list is not mounted'))
+          return Promise.resolve(inventory.list()) as Promise<T>
         }
 
         if (method === 'plugins.list') {
-          return Promise.resolve(inventory.listProfile?.(profile) ?? {}) as Promise<T>
+          if (!inventory.listProfile) return Promise.reject(new Error('plugin management is unavailable: pluginInventory.listProfile is not mounted'))
+          return Promise.resolve(inventory.listProfile(profile)) as Promise<T>
         }
 
         if (method === 'plugins.install') {
           const specifier = typeof p.specifier === 'string' ? p.specifier.trim() : ''
 
           if (!specifier) return Promise.reject(new Error('plugin install requires a package specifier'))
-          return Promise.resolve(inventory.install?.(profile, specifier) ?? {}) as Promise<T>
+          if (!inventory.install) return Promise.reject(new Error('plugin management is unavailable: pluginInventory.install is not mounted'))
+          return Promise.resolve(inventory.install(profile, specifier)) as Promise<T>
         }
 
         const packageName = typeof p.package_name === 'string' ? p.package_name.trim() : ''
 
         if (!packageName) return Promise.reject(new Error('plugin remove requires a package name'))
-        return Promise.resolve(inventory.remove?.(profile, packageName) ?? {}) as Promise<T>
+        if (!inventory.remove) return Promise.reject(new Error('plugin management is unavailable: pluginInventory.remove is not mounted'))
+        return Promise.resolve(inventory.remove(profile, packageName)) as Promise<T>
       }
 
       case 'session.create':
@@ -1749,6 +1804,13 @@ export class HarnessGatewayClient extends GatewayClient {
         })
       }
 
+      case 'session.rename': {
+        const id = String(p.session_id ?? '')
+        const title = typeof p.title === 'string' ? p.title : ''
+        if (!id) return Promise.reject(new Error('session_id is required'))
+        return this.renamePersisted(id, title).then(accepted => ({ session_id: id, title: accepted }) as T)
+      }
+
       case 'session.title': {
         const agent = this.agent
         const titles = this.ctx.get('sessionTitle') as
@@ -1812,23 +1874,25 @@ export class HarnessGatewayClient extends GatewayClient {
       }
 
       case 'session.list':
-        return this.listPersisted().then(headers => {
+        return this.listPersisted().then(async headers => {
           const limit = typeof p.limit === 'number' && Number.isSafeInteger(p.limit) && p.limit >= 0
             ? p.limit
             : 50
-          const sessions = headers.slice(0, limit).map(header => {
-            const title = this.cachedTitle(header)
-
-            return {
-              cwd: header.cwd,
-              id: String(header.id),
-              message_count: 0,
-              preview: title ?? '',
-              source: 'harness',
-              started_at: header.createdAt,
-              title: title ?? String(header.id)
-            }
-          })
+          const selected = headers.slice(0, limit)
+          // Do not fan out unbounded disk work for a large history list. Eight
+          // concurrent inspections keep the browser responsive on JSONL and
+          // SQLite persistence alike.
+          const summaries: Array<Awaited<ReturnType<typeof this.persistedSummary>>> = []
+          for (let start = 0; start < selected.length; start += 8) {
+            summaries.push(...await Promise.all(selected.slice(start, start + 8).map(header => this.persistedSummary(header))))
+          }
+          const sessions = selected.map((header, index) => ({
+            cwd: header.cwd,
+            id: String(header.id),
+            ...summaries[index]!,
+            source: 'harness',
+            started_at: header.createdAt
+          }))
 
           return { sessions } as T
         })

@@ -302,6 +302,27 @@ describe('createSlashHandler', () => {
     })
   })
 
+  it('opens the plugins hub locally for bare /plugins and its singular alias', () => {
+    const ctx = buildCtx()
+    const handle = createSlashHandler(ctx)
+
+    expect(handle('/plugins')).toBe(true)
+    expect(getOverlayState().pluginsHub).toBe(true)
+    expect(ctx.gateway.gw.request).not.toHaveBeenCalled()
+
+    resetOverlayState()
+    expect(handle('/plugin list')).toBe(true)
+    expect(getOverlayState().pluginsHub).toBe(true)
+  })
+
+  it('keeps /plugins runtime as a native runtime status query', () => {
+    const ctx = buildCtx()
+
+    expect(createSlashHandler(ctx)('/plugins runtime')).toBe(true)
+    expect(ctx.gateway.gw.request).toHaveBeenCalledWith('plugins.runtime', {})
+    expect(getOverlayState().pluginsHub).toBe(false)
+  })
+
   it('opens the skills hub locally for bare /skills', () => {
     const ctx = buildCtx()
 
