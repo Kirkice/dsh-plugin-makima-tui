@@ -25,6 +25,41 @@ const LABELS: Record<ApprovalChoice, string> = {
 }
 const CMD_PREVIEW_LINES = 10
 
+export type ApprovalRisk = 'elevated' | 'high' | 'standard'
+
+/**
+ * Classify the action being approved from signals already supplied by the
+ * backend. This is presentation-only: it never changes the permission engine
+ * or invents a policy decision on the client's behalf.
+ */
+export function approvalRisk(req: Pick<ApprovalReq, 'command' | 'toolName' | 'warning'>): ApprovalRisk {
+  const action = `${req.toolName} ${req.command}`.toLowerCase()
+
+  if (
+    req.warning ||
+    /\b(rm\s+-[a-z]*r|git\s+push\s+--force|reset\s+--hard|drop\s+(table|database)|truncate\b|mkfs\b|shutdown\b|reboot\b)/.test(action)
+  ) {
+    return 'high'
+  }
+
+  if (/\b(write|edit|patch|delete|move|rename|chmod|curl|wget|npm\s+(install|publish)|pip\s+install)\b/.test(action)) {
+    return 'elevated'
+  }
+
+  return 'standard'
+}
+
+export function approvalRiskLabel(risk: ApprovalRisk): string {
+  switch (risk) {
+    case 'high':
+      return 'HIGH RISK · review before allowing'
+    case 'elevated':
+      return 'ELEVATED RISK · changes files or environment'
+    default:
+      return 'STANDARD RISK · scoped action'
+  }
+}
+
 type ApprovalKey = {
   downArrow?: boolean
   escape?: boolean
@@ -98,7 +133,12 @@ export function approvalOptions(
 
 export function ApprovalPrompt({ cols = 80, onChoice, req, t }: ApprovalPromptProps) {
   const { editable, opts } = approvalOptions(req)
-  const [sel, setSel] = useState(0)
+  const risk = approvalRisk(req)
+  const riskColor = risk === 'high' ? t.color.error : risk === 'elevated' ? t.color.warn : t.color.ok
+  // High-risk requests fail closed at the interaction layer: Enter selects
+  // "No" until the user intentionally chooses an allow option. Lower-risk
+  // actions retain the fast one-time approval path.
+  const [sel, setSel] = useState(() => (risk === 'high' ? opts.indexOf('deny') : 0))
   // The editable grant rule (e.g. "git status:*"), which the user can widen to
   // "git:*" so one grant covers the family. Seeded from the backend suggestion.
   const [ruleText, setRuleText] = useState(req.rule ?? '')
@@ -140,6 +180,10 @@ export function ApprovalPrompt({ cols = 80, onChoice, req, t }: ApprovalPromptPr
         <Text color={t.color.highlight}>APPROVAL</Text>
         <Text color={t.color.command}> · {toolTrailLabel(req.toolName)} command</Text>
       </Text>
+      <Text color={riskColor} bold>
+        {risk === 'high' ? '⚠ ' : '● '}
+        {approvalRiskLabel(risk)}
+      </Text>
 
       <Box borderColor={t.color.frame} borderTop />
       <Box borderColor={t.color.frame} borderStyle="single" flexDirection="column" paddingX={1}>
@@ -159,7 +203,9 @@ export function ApprovalPrompt({ cols = 80, onChoice, req, t }: ApprovalPromptPr
         <Text bold color={t.color.warn}>⚠ {req.warning}</Text>
       ) : null}
 
-      <Text color={t.color.thinking}>Proceed with this command?</Text>
+      <Text color={t.color.thinking}>
+        {risk === 'high' ? 'This action can be hard to reverse. Allow it?' : 'Proceed with this scoped action?'}
+      </Text>
 
       {opts.map((o, i) => {
         const isSel = sel === i

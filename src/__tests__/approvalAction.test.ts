@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { approvalAction, approvalOptions } from '../components/prompts.js'
+import { approvalAction, approvalOptions, approvalRisk, approvalRiskLabel } from '../components/prompts.js'
 
 describe('approvalAction — pure key dispatch for ApprovalPrompt', () => {
   it('maps Esc to deny — parity with global Ctrl+C cancellation', () => {
@@ -46,6 +46,14 @@ describe('approvalAction — pure key dispatch for ApprovalPrompt', () => {
   it('returns noop for unrelated keystrokes (printable letters etc.)', () => {
     expect(approvalAction('a', {}, 0)).toEqual({ kind: 'noop' })
     expect(approvalAction(' ', {}, 0)).toEqual({ kind: 'noop' })
+  })
+
+  it('classifies approvals from existing risk signals without changing backend policy', () => {
+    expect(approvalRisk({ command: 'git status --short', toolName: 'Bash' })).toBe('standard')
+    expect(approvalRisk({ command: 'src/config.ts', toolName: 'Write' })).toBe('elevated')
+    expect(approvalRisk({ command: 'git push --force origin main', toolName: 'Bash' })).toBe('high')
+    expect(approvalRisk({ command: 'echo hello', toolName: 'Bash', warning: 'May overwrite remote history' })).toBe('high')
+    expect(approvalRiskLabel('high')).toContain('HIGH RISK')
   })
 
   it('offers the persist option for EVERY tool with a suggestion, editable only for Bash', () => {

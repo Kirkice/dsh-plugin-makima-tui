@@ -3,7 +3,7 @@
 Makima TUI 是运行在 DeepSeek Harness / dsh 中的终端智能体界面插件。
 它基于 React + Ink，提供流式对话、工具调用、审批确认、问题询问、计划模式、会话恢复、模型选择和子代理状态展示。
 
-默认视觉主题采用 AgentProject JellyFish 风格：黑色画布、粉色主色、紫色边框、青色信息色，以及霓虹绿/红/黄状态色。
+默认视觉主题采用深色编辑器风格：石墨黑背景，粉色作为品牌主色，青色用于导航与信息，紫色用于边框和推理元数据，绿色/红色/黄色分别表达成功、失败和警告状态。界面同时适配亮色终端、ANSI 256 色终端和 `NO_COLOR` 环境。
 
 ## 功能
 
@@ -86,7 +86,7 @@ npm run build
 src/harness/              dsh / Harness 适配层
 src/components/           TUI 组件
 src/app/                  应用状态和交互控制
-src/theme.ts              Makima JellyFish 主题
+src/theme.ts              Makima 主题与终端色彩兼容层
 packages/makima-tui-ink/  vendored Ink 渲染器
 ```
 

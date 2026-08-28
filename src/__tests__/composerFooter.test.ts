@@ -54,8 +54,11 @@ const footer = (props: Partial<Parameters<typeof ComposerFooter>[0]> = {}) =>
   )
 
 describe('ComposerFooter', () => {
-  it('shows the idle shortcuts hint in default mode', () => {
-    expect(stripAnsi(footer())).toContain('? for shortcuts')
+  it('surfaces help and permission safety discovery while idle', () => {
+    const out = stripAnsi(footer())
+
+    expect(out).toContain('? help')
+    expect(out).toContain('/permissions safety')
   })
 
   it('suppresses everything while the input has text (suppressHint parity)', () => {
@@ -72,22 +75,23 @@ describe('ComposerFooter', () => {
   it('renders each permission-mode badge with its color and the cycle hint', () => {
     const plan = footer({ mode: 'plan' })
 
-    expect(stripAnsi(plan)).toContain('⏸ plan mode on (shift+tab to cycle)')
-    expect(plan).toContain('0;229;255') // JellyFish cyan plan mode
+    const planPlain = stripAnsi(plan).replace(/\s+/g, ' ')
+    expect(planPlain).toContain('⏸ plan mode on (shift+tab to cycle)')
+    expect(plan).toContain('248;228;92') // current theme plan-mode yellow
     // hint coexists with the badge
-    expect(stripAnsi(plan)).toContain('? for shortcuts')
+    expect(stripAnsi(plan)).toContain('? help')
 
     // Labels track the /permissions level vocabulary (lib/permissionLevels.ts)
     // so the badge and the picker never name the same mode two ways.
     const accept = footer({ mode: 'acceptEdits' })
 
     expect(stripAnsi(accept)).toContain('▶▶ approve for me on')
-    expect(accept).toContain('191;127;255') // JellyFish violet autoAccept
+    expect(accept).toContain('99;230;163') // current theme autoAccept green
 
     const bypass = footer({ mode: 'bypassPermissions' })
 
     expect(stripAnsi(bypass)).toContain('▶▶ full access on')
-    expect(bypass).toContain('255;59;107') // JellyFish error red
+    expect(bypass).toContain('255;113;141') // current theme error red
   })
 
   it('names badges with the same labels the /permissions picker shows', () => {
@@ -111,7 +115,7 @@ describe('ComposerFooter', () => {
     const out = footer({ sh: true })
 
     expect(stripAnsi(out)).toContain('! for bash mode')
-    expect(out).toContain('232;67;147')
+    expect(out).toContain('167;139;250')
   })
 
   it('shows the voice label only while voice is actually active', () => {

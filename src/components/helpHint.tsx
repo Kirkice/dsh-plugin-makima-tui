@@ -5,10 +5,11 @@ import type { Theme } from '../theme.js'
 
 const COMMON_COMMANDS: [string, string][] = [
   ['/help', 'full list of commands + hotkeys'],
+  ['/model', 'choose the model for this session'],
+  ['/permissions', 'choose approval safety level'],
   ['/clear', 'start a new session'],
-  ['/resume', 'switch live or resume past sessions'],
   ['/details', 'control transcript detail level'],
-  ['/copy', 'copy selection or last assistant message'],
+  ['/sessions', 'switch live or resume past sessions'],
   ['/exit', 'exit makima tui']
 ]
 
@@ -36,7 +37,7 @@ export function HelpHint({ t }: { t: Theme }) {
           <Text bold color={t.color.primary}>
             ? quick help
           </Text>
-          <Text color={t.color.muted}>{'  ·  type /help for the full panel  ·  backspace to dismiss'}</Text>
+          <Text color={t.color.muted}>{'  ·  start with /model or /permissions  ·  backspace to dismiss'}</Text>
         </Text>
 
         <Box marginTop={1}>

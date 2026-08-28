@@ -4,7 +4,7 @@ import spinners, { type BrailleSpinnerName } from 'unicode-animations'
 
 import { THINKING_COT_MAX } from '../config/limits.js'
 import { sectionMode } from '../domain/details.js'
-import { isDelegationCall } from '../domain/toolBrief.js'
+import { briefRuns, briefText, countBriefTools, isDelegationCall } from '../domain/toolBrief.js'
 import { toolVisual } from '../domain/toolVisual.js'
 import {
   buildSubagentTree,
@@ -1203,15 +1203,47 @@ export const ToolTrail = memo(function ToolTrail({
     )
   }
 
-  // Every call keeps its own `› Tool(args)` block, in both views: the path a
-  // read opened and the command a shell ran are the transcript's whole point,
-  // and a tally that replaced them ("Ran 1 shell command") took the one thing
-  // worth reading. ctrl+o changes how much of each RESULT shows, not whether
-  // the calls do. A blank line separates consecutive blocks.
-  const toolsFlat =
-    hasTools && visible.tools !== 'hidden' ? (
-      <Box flexDirection="column">{groups.map((group, index) => renderGroup(group, index > 0))}</Box>
-    ) : null
+  // The compact reading model groups consecutive low-risk exploration calls
+  // (read/search/list/shell) into one intent summary. Writes, delegated work,
+  // prompts, live calls, and failures always remain standalone: their target or
+  // result is the information the user needs to audit at a glance. ctrl+o (or
+  // an explicit tools=expanded setting) restores the complete per-call trail.
+  const renderBrief = (run: Group[], key: string) => {
+    const summary = briefText(countBriefTools(run.map(group => group.label)))
+
+    return (
+      <Text color={t.color.muted} dim key={key} wrap="wrap-trim">
+        <Text color={t.color.accent}>▸ </Text>
+        {summary}
+        <Text color={t.color.muted} dim>
+          {'  '}
+          (ctrl+o to expand)
+        </Text>
+      </Text>
+    )
+  }
+
+  const toolsFlat = (() => {
+    if (!hasTools || visible.tools === 'hidden') {
+      return null
+    }
+
+    if (toolsExpanded) {
+      return <Box flexDirection="column">{groups.map((group, index) => renderGroup(group, index > 0))}</Box>
+    }
+
+    const runs = briefRuns(groups, group => group.label, group => Boolean(group.error || group.live))
+
+    return (
+      <Box flexDirection="column">
+        {runs.map((run, index) => (
+          <Box flexDirection="column" key={`tool-run-${index}`} marginTop={index > 0 ? 1 : 0}>
+            {run.kind === 'brief' ? renderBrief(run.items, `tool-brief-${index}`) : renderGroup(run.items[0]!, false)}
+          </Box>
+        ))}
+      </Box>
+    )
+  })()
 
   if (hasSubagents && !inlineDelegateKey && visible.subagents !== 'hidden') {
     // Spark + summary give a one-line read on the branch shape before

@@ -210,7 +210,7 @@ const renderToString = (element: React.ReactElement, columns = 100): string => {
   return lastFrame(output)
 }
 
-describe('ToolTrail flat render', () => {
+describe('ToolTrail compact reading model', () => {
   const trail = [
     buildToolTrailLine('Read', 'src/alpha.py', false, ' 1  import os'),
     buildToolTrailLine('Read', 'src/beta.py', false, ' 1  import sys'),
@@ -218,11 +218,20 @@ describe('ToolTrail flat render', () => {
     buildToolTrailLine('Bash', 'echo hello', false, 'hello')
   ]
 
-  it('keeps every call on its own row, with what it opened and what came back', () => {
-    // the path a read opened and the command a shell ran are the transcript's
-    // whole point; a tally in their place takes the one thing worth reading
+  it('summarizes consecutive exploration calls in collapsed mode', () => {
     const out = stripAnsi(
       renderToString(React.createElement(ToolTrail, { detailsMode: 'collapsed', t: DEFAULT_THEME, trail }))
+    )
+
+    expect(out).toContain('Read 2 files, listed 1 directory, ran 1 shell command')
+    expect(out).toContain('(ctrl+o to expand)')
+    expect(out).not.toContain('Read(src/alpha.py)')
+    expect(out).not.toContain('Bash(echo hello)')
+  })
+
+  it('restores every tool call and its result in expanded mode', () => {
+    const out = stripAnsi(
+      renderToString(React.createElement(ToolTrail, { detailsMode: 'expanded', t: DEFAULT_THEME, trail }))
     )
 
     expect(out).toContain('Read(src/alpha.py)')
@@ -307,7 +316,7 @@ describe('ToolTrail flat render', () => {
     expect(out).not.toContain('(ctrl+o to expand)')
   })
 
-  it('shows an edit and a failed call alongside the reads', () => {
+  it('keeps an edit and a failed call visible alongside folded reads', () => {
     const mixed = [
       trail[0]!,
       buildToolTrailLine('Edit', 'src/gamma.py', false, 'Updated src/gamma.py'),
@@ -318,7 +327,8 @@ describe('ToolTrail flat render', () => {
       renderToString(React.createElement(ToolTrail, { detailsMode: 'collapsed', t: DEFAULT_THEME, trail: mixed }))
     )
 
-    expect(out).toContain('Read(src/alpha.py)')
+    expect(out).toContain('Read 1 file')
+    expect(out).not.toContain('Read(src/alpha.py)')
     expect(out).toContain('Edit(src/gamma.py)')
     expect(out).toContain('Bash(cat missing.txt)')
     expect(out).toContain('Error: No such file or directory')

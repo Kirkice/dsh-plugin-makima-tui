@@ -240,10 +240,11 @@ describe('expanded rendering', () => {
       )
     )
 
-    // The call keeps its row and the head of what it returned, and names the
-    // key that shows the rest — but none of the verbose-only content.
-    expect(collapsed).toContain('Bash(seq 6)')
-    expect(collapsed).toContain('… +3 lines (ctrl+o to expand)')
+    // Compact mode groups successful shell/read/search exploration into an
+    // intent summary. The detailed result remains reachable through ctrl+o.
+    expect(collapsed).toContain('Ran 1 shell command')
+    expect(collapsed).toContain('(ctrl+o to expand)')
+    expect(collapsed).not.toContain('Bash(seq 6)')
     expect(collapsed).not.toContain('Result:')
     expect(collapsed).not.toContain('4')
 

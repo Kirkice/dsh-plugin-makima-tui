@@ -52,7 +52,6 @@ export const ComposerFooter = memo(function ComposerFooter({
     return null
   }
 
-  const badge = MODE_BADGES[mode]
   // Voice shows only when actually active — the StatusRule's label starts
   // with ●/◉ while recording/transcribing and reads "voice off" otherwise.
   const voiceActive = /^[●◉]/.test(voiceLabel)
@@ -64,6 +63,12 @@ export const ComposerFooter = memo(function ComposerFooter({
   // user stares at the panel wanting to know how to hide it.
   const todoHint = todoCount > 0 ? ` · ctrl+t to ${todoCollapsed ? 'show' : 'hide'} tasks` : ''
 
+  const badge = MODE_BADGES[mode]
+  // Keep the active safety indicator readable on narrow terminals. The richer
+  // first-run discovery hint is shown in the base mode; modes with a right-side
+  // badge use the compact help cue rather than wrapping the decision state.
+  const idleHint = badge ? '? help' : '? help · /permissions safety'
+
   // Left hint is independent of the badge (both render, like the original's
   // byline; the badge just lives on the right here).
   const left = sh ? (
@@ -74,7 +79,7 @@ export const ComposerFooter = memo(function ComposerFooter({
     </Text>
   ) : (
     <Text color={t.color.muted} dim>
-      ? for shortcuts{todoHint} · Enter send · Shift+Enter newline
+      {idleHint}{todoHint} · Enter send · Shift+Enter newline
     </Text>
   )
 
