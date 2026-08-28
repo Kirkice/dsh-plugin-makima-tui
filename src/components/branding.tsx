@@ -456,7 +456,9 @@ export function SessionPanel({ info, logoPalette, maxWidth, sid, t }: SessionPan
     : null
 
   // ── Local collapse state for each section ──
-  const [toolsOpen, setToolsOpen] = useState(true)
+  // Keep the raw inventory available on demand. The landing view should lead
+  // with an operational summary rather than a single, terminal-wide tool list.
+  const [toolsOpen, setToolsOpen] = useState(false)
   const [skillsOpen, setSkillsOpen] = useState(false)
   const [systemOpen, setSystemOpen] = useState(false)
   const [mcpOpen, setMcpOpen] = useState(false)
@@ -560,6 +562,75 @@ export function SessionPanel({ info, logoPalette, maxWidth, sid, t }: SessionPan
         </Text>
       ))}
     </>
+  )
+
+  // ── Session overview ────────────────────────────────────────────────
+  // The portrait intentionally makes the left rail tall. Give the matching
+  // right rail a useful landing dashboard so the opening screen reads as a
+  // composed workspace instead of a sparse capability list beside artwork.
+  const overview = (
+    <Box flexDirection="column" marginBottom={1}>
+      <Text wrap="truncate-end">
+        <Text bold color={t.color.primary}>SESSION READY</Text>
+        <Text color={t.color.muted}> · workspace initialized</Text>
+      </Text>
+      <Text color={t.color.muted} wrap="truncate-end">
+        {modelLine}
+        {info.reasoning_effort ? ` · ${info.reasoning_effort} reasoning` : ''}
+        {info.fast ? ' · fast' : ''}
+        {info.nano ? ' · nano' : ''}
+      </Text>
+
+      <Box
+        borderBottom={false}
+        borderColor={t.color.frame}
+        borderLeft={false}
+        borderRight={false}
+        borderStyle="single"
+        borderTop
+        marginY={1}
+      />
+
+      <Text wrap="truncate-end">
+        <Text color={t.color.muted}>CAPABILITIES  </Text>
+        <Text bold color={t.color.accent}>{toolsTotal}</Text>
+        <Text color={t.color.muted}> tools   </Text>
+        <Text bold color={t.color.accent}>{skillsTotal}</Text>
+        <Text color={t.color.muted}> skills</Text>
+        {mcpServers.length > 0 && (
+          <>
+            <Text color={t.color.muted}>   </Text>
+            <Text bold color={mcpConnected > 0 ? t.color.ok : t.color.muted}>{mcpConnected}</Text>
+            <Text color={t.color.muted}> MCP online</Text>
+          </>
+        )}
+      </Text>
+      <Text wrap="truncate-end">
+        <Text color={t.color.ok}>● ONLINE</Text>
+        <Text color={t.color.muted}> · ready for your next task</Text>
+        <Text color={t.color.muted}> · </Text>
+        <Text color={t.color.command}>/help</Text>
+        <Text color={t.color.muted}> to explore commands</Text>
+      </Text>
+
+      <Box
+        borderBottom={false}
+        borderColor={t.color.frame}
+        borderLeft={false}
+        borderRight={false}
+        borderStyle="single"
+        borderTop
+        marginY={1}
+      />
+
+      <Text wrap="truncate-end">
+        <Text bold color={t.color.accent}>QUICK START  </Text>
+        <Text color={t.color.command}>/model</Text>
+        <Text color={t.color.muted}> switch model   </Text>
+        <Text color={t.color.command}>/permissions</Text>
+        <Text color={t.color.muted}> review access</Text>
+      </Text>
+    </Box>
   )
 
   // ── System prompt body ──
@@ -762,6 +833,8 @@ export function SessionPanel({ info, logoPalette, maxWidth, sid, t }: SessionPan
         {/* Narrow layout drops the column split; keep the identity block above
             the feed so nothing is lost. */}
         {!wide && <Box flexDirection="column" marginBottom={1}>{identity}</Box>}
+
+        {overview}
 
         {/* Built as a list so a hidden section takes its spacing with it — an
             inline `&&` leaves a dangling gap. The first section sits flush with

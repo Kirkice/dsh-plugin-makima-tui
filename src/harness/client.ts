@@ -437,6 +437,7 @@ export class HarnessGatewayClient extends GatewayClient {
     const loader = this.ctx.get('loader') as { await?: () => Promise<unknown> } | undefined
 
     await loader?.await?.()
+    await this.removeEmptyPersistedSessions()
 
     const handle = await this.createAgent(this.opts.sessionId)
 
@@ -1451,6 +1452,45 @@ export class HarnessGatewayClient extends GatewayClient {
     return [...headers].sort((a, b) => b.createdAt - a.createdAt)
   }
 
+  /** Remove stale records that never received a user-originated message.
+   *
+   * This runs before the first live agent is created, providing a second line
+   * of defence for records that survived an interrupted close or a persistence
+   * flush race. Any unavailable/corrupt record is retained for manual review. */
+  private async removeEmptyPersistedSessions(): Promise<void> {
+    const persistence = this.ctx.get('sessionPersistence') as
+      | {
+          delete?: (sessionId: string, signal?: AbortSignal) => Promise<void>
+          inspect?: (sessionId: SessionId, signal?: AbortSignal) => Promise<{ events: readonly SessionEvent[] }>
+          list?: (signal?: AbortSignal) => Promise<SessionHeader[]>
+        }
+      | undefined
+
+    if (!persistence?.delete || !persistence.inspect || !persistence.list) {
+      return
+    }
+
+    let headers: SessionHeader[]
+
+    try {
+      headers = await persistence.list()
+    } catch {
+      return
+    }
+
+    for (const header of headers) {
+      try {
+        const { events } = await persistence.inspect(header.id)
+
+        if (!this.hasUserConversation(events)) {
+          await persistence.delete(String(header.id))
+        }
+      } catch {
+        // Keep entries that cannot be inspected/deleted visible for manual cleanup.
+      }
+    }
+  }
+
   /**
    * Build the small human-facing projection missing from SessionHeader.  The
    * persistence API deliberately lists headers only, so this reads a bounded
@@ -1526,6 +1566,19 @@ export class HarnessGatewayClient extends GatewayClient {
     } as SessionEvent<'session/title'>
     await persistence.append(SessionId(id), [event])
     return normalized
+  }
+
+  /** A session becomes resumable only after the user has actually contributed a
+   * prompt. Agent setup events, titles, and tool metadata alone are disposable
+   * scaffolding and must not turn an unopened tab into permanent history. */
+  private hasUserConversation(events: readonly SessionEvent[]): boolean {
+    return events.some(event => {
+      if (event.type !== 'user/message') {
+        return false
+      }
+
+      return (event as SessionEvent<'user/message'>).data.source.kind === 'user'
+    })
   }
 
   private async deletePersisted(id: string): Promise<void> {
@@ -1776,27 +1829,48 @@ export class HarnessGatewayClient extends GatewayClient {
       case 'session.close': {
         const id = String(p.session_id ?? '')
         const handle = this.live.get(id)
+        const discardEmpty = Boolean(handle && !this.hasUserConversation(handle.agent.session.events))
 
-        if (handle) {
-          this.live.delete(id)
+        return (async () => {
+          if (handle) {
+            this.live.delete(id)
 
-          if (this.handle === handle) {
-            for (const dispose of this.agentDisposers.splice(0)) {
-              try {
-                dispose()
-              } catch {
-                // best effort
+            if (this.handle === handle) {
+              for (const dispose of this.agentDisposers.splice(0)) {
+                try {
+                  dispose()
+                } catch {
+                  // best effort
+                }
               }
+
+              this.handle = null
+              this.agent = null
             }
 
-            this.handle = null
-            this.agent = null
+            // Session disposal may flush its creation/header events to durable
+            // storage. Wait for it before deleting an untouched session, or a
+            // delayed flush can recreate the record after deletion.
+            try {
+              await handle.dispose()
+            } catch {
+              // Releasing the live handle remains best effort.
+            }
           }
 
-          void handle.dispose().catch(() => {})
-        }
+          // Deletion follows disposal deliberately: persistence can receive a
+          // final flush while dispose() settles. Failure leaves the 0-message
+          // row visible for the user to remove manually, but never blocks close.
+          if (discardEmpty) {
+            try {
+              await this.deletePersisted(id)
+            } catch {
+              // best effort
+            }
+          }
 
-        return Promise.resolve({ ok: true } as T)
+          return { discarded_empty: discardEmpty, ok: true } as T
+        })()
       }
 
       case 'session.resume':

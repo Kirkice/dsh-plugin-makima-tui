@@ -271,6 +271,31 @@ describe('HarnessGatewayClient', () => {
     }
   })
 
+  it('removes stale empty persisted sessions before creating the startup agent', async () => {
+    const w = makeWorld()
+    const staleId = 'cc-stale-empty'
+    const ctx = w.ctx as { get: (name: string) => unknown }
+    const get = ctx.get
+
+    ctx.get = (name: string) => {
+      if (name === 'sessionPersistence') {
+        return {
+          delete: async (id: string) => { w.deleted.push(id) },
+          inspect: async () => ({ events: [] }),
+          list: async () => [{ createdAt: 1, cwd: '/tmp/w', id: staleId, version: 1 }]
+        }
+      }
+
+      return get(name)
+    }
+
+    w.client.start()
+    await settle()
+
+    expect(w.deleted).toEqual([staleId])
+    expect(w.ctx.agents.create).toHaveBeenCalledTimes(1)
+  })
+
   it('start() creates the agent and emits gateway.ready + session.info', async () => {
     const w = makeWorld()
 
@@ -1173,16 +1198,29 @@ describe('HarnessGatewayClient', () => {
     await expect(w.client.request('session.delete', { session_id: activeId })).rejects.toThrow('cannot delete active session')
   })
 
-  it('session.close disposes the live handle and session.title renames', async () => {
+  it('session.close removes an untouched live session from persisted history', async () => {
+    const w = makeWorld()
+
+    w.client.start()
+    await settle()
+    const id = String((w.ctx.agents.create as ReturnType<typeof vi.fn>).mock.calls[0]![0].sessionId)
+
+    await expect(w.client.request('session.close', { session_id: id })).resolves.toEqual({ discarded_empty: true, ok: true })
+    expect(w.deleted).toContain(id)
+  })
+
+  it('session.close retains sessions that contain a user conversation', async () => {
     const w = makeWorld()
 
     w.client.start()
     await settle()
     await w.client.request('session.resume', { session_id: 'cc-resumed-1' })
-    await w.client.request('session.close', { session_id: 'cc-resumed-1' })
+    await expect(w.client.request('session.close', { session_id: 'cc-resumed-1' })).resolves.toEqual({ discarded_empty: false, ok: true })
+    await settle()
     expect(w.resumedHandle.dispose).toHaveBeenCalledTimes(1)
+    expect(w.deleted).not.toContain('cc-resumed-1')
 
-    // rebind to the original agent for the title call
+    // Rebind to the original agent for the title call.
     const first = String((w.ctx.agents.create as ReturnType<typeof vi.fn>).mock.calls[0]![0].sessionId)
 
     await w.client.request('session.activate', { session_id: first })

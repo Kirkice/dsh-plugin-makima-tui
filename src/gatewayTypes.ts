@@ -455,6 +455,8 @@ export interface SessionBranchResponse {
 
 export interface SessionCloseResponse {
   closed?: boolean
+  /** True when closing an untouched live session removed its persisted record. */
+  discarded_empty?: boolean
   ok?: boolean
 }
 
