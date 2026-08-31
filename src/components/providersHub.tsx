@@ -42,6 +42,7 @@ export function ProvidersHub({ gw, onClose, t }: ProvidersHubProps) {
   const [baseUrl, setBaseUrl] = useState('')
   const [apiKey, setApiKey] = useState('')
   const [models, setModels] = useState('')
+  const [imageModels, setImageModels] = useState('')
   const [protocolIndex, setProtocolIndex] = useState(0)
   const [field, setField] = useState(0)
   const [oauth, setOauth] = useState<OAuthStatus>({})
@@ -82,8 +83,9 @@ export function ProvidersHub({ gw, onClose, t }: ProvidersHubProps) {
     ['Base URL', baseUrl],
     ['API key', apiKey ? '••••••••' : selected?.credential_configured ? '(stored; leave blank to keep)' : ''],
     ['Models (comma-separated)', models],
+    ['Image-capable models', imageModels],
     ['Protocol', protocol]
-  ], [apiKey, baseUrl, models, name, protocol, selected?.credential_configured])
+  ], [apiKey, baseUrl, imageModels, models, name, protocol, selected?.credential_configured])
 
   const beginAdd = () => {
     setSelected(null)
@@ -91,6 +93,7 @@ export function ProvidersHub({ gw, onClose, t }: ProvidersHubProps) {
     setBaseUrl('')
     setApiKey('')
     setModels('')
+    setImageModels('')
     setProtocolIndex(0)
     setField(0)
     setError('')
@@ -104,6 +107,7 @@ export function ProvidersHub({ gw, onClose, t }: ProvidersHubProps) {
     setBaseUrl(item.base_url ?? '')
     setApiKey('')
     setModels((item.models ?? []).join(', '))
+    setImageModels((item.image_models ?? []).join(', '))
     setProtocolIndex(Math.max(0, protocols.indexOf(item.api ?? 'openai-completions')))
     setField(0)
     setError('')
@@ -121,6 +125,7 @@ export function ProvidersHub({ gw, onClose, t }: ProvidersHubProps) {
       api_key: apiKey,
       base_url: baseUrl,
       display_name: name,
+      image_models: modelIds(imageModels),
       models: modelIds(models)
     })
       .then(result => {
@@ -199,10 +204,10 @@ export function ProvidersHub({ gw, onClose, t }: ProvidersHubProps) {
     if (key.tab) return setField(current => Math.min(formRows.length - 1, Math.max(0, current + (key.shift ? -1 : 1))))
     if (key.upArrow) return setField(current => Math.max(0, current - 1))
     if (key.downArrow) return setField(current => Math.min(formRows.length - 1, current + 1))
-    if (field === 4 && (key.leftArrow || key.rightArrow)) {
+    if (field === 5 && (key.leftArrow || key.rightArrow)) {
       return setProtocolIndex(current => (current + (key.rightArrow ? 1 : -1) + protocols.length) % protocols.length)
     }
-    if (key.return && field === 4) return save()
+    if (key.return && field === 5) return save()
     if (ch.toLowerCase() === 's') return save()
     if (ch.toLowerCase() === 'x' && selected?.removable) return setView('confirm-remove')
   })
@@ -237,17 +242,18 @@ export function ProvidersHub({ gw, onClose, t }: ProvidersHubProps) {
 
   if (view === 'edit') {
     const inputWidth = Math.max(24, width - 22)
-    const labels = ['name', 'base URL', 'API key', 'models']
-    const setters = [setName, setBaseUrl, setApiKey, setModels]
-    const values = [name, baseUrl, apiKey, models]
+    const labels = ['name', 'base URL', 'API key', 'models', 'image-capable models']
+    const setters = [setName, setBaseUrl, setApiKey, setModels, setImageModels]
+    const values = [name, baseUrl, apiKey, models, imageModels]
     return (
       <Box flexDirection="column" width={width}>
         <Text bold color={t.color.accent}>{selected ? 'Edit OpenAI-compatible provider' : 'Add OpenAI-compatible provider'}</Text>
+        <Text color={t.color.muted}>List image-capable models explicitly; this enables screenshot attachments only for those models.</Text>
         <Text color={t.color.muted}>Tab/↑/↓ select fields; Enter on protocol or s saves.</Text>
         {formRows.map(([label, value], row) => (
           <Box key={label}>
             <Text bold={field === row} color={field === row ? t.color.accent : t.color.muted}>{field === row ? '▸ ' : '  '}{label}: </Text>
-            {row < 4 && field === row ? (
+            {row < 5 && field === row ? (
               <TextInput columns={inputWidth} mask={row === 2 ? '*' : undefined} onChange={setters[row]!} value={values[row]!} />
             ) : <Text color={t.color.text}>{value || (row === 2 ? '(required for new provider)' : '(empty)')}</Text>}
           </Box>

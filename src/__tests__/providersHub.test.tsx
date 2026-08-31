@@ -147,8 +147,25 @@ describe('ProvidersHub', () => {
       base_url: 'https://api.example.test/v1',
       display_name: 'Demo API',
       id: 'makima-demo',
+      image_models: [],
       models: ['demo-1']
     })
+    hub.unmount()
+  })
+
+  it('saves an explicit image-capable model declaration', async () => {
+    const hub = mount()
+    await delay(40)
+    await hub.press(ENTER)
+    await hub.press('\t')
+    await hub.press('\t')
+    await hub.press('\t')
+    await hub.press('\t')
+    await hub.press('demo-1')
+    await hub.press('s')
+
+    const save = hub.requests.find(request => request.method === 'providers.saveOpenAiCompatible')
+    expect(save?.params).toMatchObject({ image_models: ['demo-1'], models: ['demo-1'] })
     hub.unmount()
   })
 

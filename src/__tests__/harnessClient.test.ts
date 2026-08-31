@@ -210,7 +210,19 @@ function makeWorld() {
         }
       }
 
+      if (name === 'settings') {
+        return {
+          get: () => ({ providers: {} }),
+          mutate: async () => {}
+        }
+      }
+
       return undefined
+    },
+    credentials: {
+      describe: async () => ({ configured: true }),
+      set: async () => {},
+      unset: async () => {}
     },
     on: (name: string, fn: Listener) => {
       const arr = listeners.get(name) ?? []
@@ -311,6 +323,40 @@ describe('HarnessGatewayClient', () => {
     await expect(w.client.request('input.detect_drop', { text: '/tmp/makima-does-not-exist.pdf' })).resolves.toEqual({
       matched: false
     })
+  })
+
+  it('persists explicit image capability only for configured managed-provider models', async () => {
+    const w = makeWorld()
+    const mutations: unknown[] = []
+    const settings = {
+      get: () => ({ providers: {} }),
+      mutate: async (_ns: string, ops: unknown[]) => { mutations.push(...ops) }
+    }
+    ;(w.ctx as any).get = (name: string) => name === 'settings' ? settings : name === 'llm'
+      ? { listModels: async () => [], listProviders: () => [] }
+      : undefined
+    ;(w.ctx as any).credentials = {
+      describe: async () => ({ configured: true }),
+      set: async () => {},
+      unset: async () => {}
+    }
+
+    await expect(w.client.request('providers.saveOpenAiCompatible', {
+      api: 'openai-responses',
+      base_url: 'https://api.example.test/v1',
+      display_name: 'Example',
+      image_models: ['gpt-5.6-terra', 'missing-model'],
+      models: ['gpt-5.6-terra', 'text-only']
+    })).resolves.toEqual({ id: 'makima-example', saved: true })
+
+    expect(mutations).toEqual([expect.objectContaining({
+      value: expect.objectContaining({
+        models: [
+          { id: 'gpt-5.6-terra', input: ['text', 'image'] },
+          { id: 'text-only', input: ['text'] }
+        ]
+      })
+    })])
   })
 
   it('does not submit a staged image when its chip was deleted', async () => {

@@ -615,6 +615,8 @@ export interface ProviderManagerItem {
   current?: boolean
   display_name: string
   id: string
+  /** Models explicitly configured to accept image attachments. */
+  image_models?: string[]
   models?: string[]
   removable: boolean
   type: 'api_key' | 'oauth' | 'system'

@@ -77,7 +77,7 @@ interface ManagedProviderProfile {
   apiKeyEnv?: string
   baseURL?: string
   displayName?: string
-  models?: Array<{ id?: string }>
+  models?: Array<{ id?: string; input?: string[] }>
 }
 
 const nonEmptyString = (value: unknown): string | undefined =>
@@ -108,6 +108,15 @@ const modelsFrom = (value: unknown): string[] => {
     }
     return []
   }))]
+}
+
+/**
+ * Image support is opt-in per configured model. OpenAI-compatible gateways
+ * differ, so guessing from a model name could send an invalid image request.
+ */
+const imageModelsFrom = (value: unknown, models: readonly string[]): string[] => {
+  const requested = new Set(modelsFrom(value))
+  return models.filter(model => requested.has(model))
 }
 
 /**
@@ -1957,6 +1966,9 @@ export class HarnessGatewayClient extends GatewayClient {
       return {
         api: profile?.api,
         base_url: profile?.baseURL,
+        image_models: profile?.models
+          ?.filter(model => model.input?.includes('image'))
+          .flatMap(model => typeof model.id === 'string' ? [model.id] : []),
         credential_configured: credential?.configured,
         credential_source: credential?.source,
         credential_writable: credential?.writable,
@@ -1981,6 +1993,7 @@ export class HarnessGatewayClient extends GatewayClient {
     const baseURL = nonEmptyString(params.base_url)
     const api = nonEmptyString(params.api) ?? 'openai-completions'
     const models = modelsFrom(params.models)
+    const imageModels = imageModelsFrom(params.image_models, models)
     const apiKey = nonEmptyString(params.api_key)
 
     if (!baseURL) throw new Error('base URL is required')
@@ -2009,7 +2022,13 @@ export class HarnessGatewayClient extends GatewayClient {
       await settings.mutate(PI_AI_SETTINGS_NS, [{
         op: 'set',
         path: ['providers', id],
-        value: { api, apiKeyEnv: ref, baseURL, displayName, models: models.map(id => ({ id })) }
+        value: {
+          api,
+          apiKeyEnv: ref,
+          baseURL,
+          displayName,
+          models: models.map(id => ({ id, input: imageModels.includes(id) ? ['text', 'image'] : ['text'] }))
+        }
       }])
     } catch (error) {
       // Do not leave a new secret behind if its profile was rejected. Existing

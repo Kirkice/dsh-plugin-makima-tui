@@ -32,6 +32,45 @@
 
 ---
 
+## 🖼️ 界面预览
+
+> 以下图片均使用仓库内的相对路径；在 GitHub、npm README 预览和本地 Markdown 阅读器中均可直接加载。点击图片可查看原始分辨率。
+
+### 启动工作台
+
+<a href="./screenshots/start.jpeg"><img src="./screenshots/start.jpeg" alt="Makima TUI 启动工作台：会话状态、运行时能力、权限姿态与快捷命令" width="100%" /></a>
+
+启动页在单个视图内汇总当前模型、工作区、权限、上下文、可用工具与 Skills，并提供模型、权限和会话管理的快捷入口。
+
+### 对话与执行
+
+<a href="./screenshots/main.jpeg"><img src="./screenshots/main.jpeg" alt="Makima TUI 流式对话、代码卡片与验证结果" width="100%" /></a>
+
+流式输出保留 Markdown、代码语言标识、工具过程与验证结论，便于在终端中快速审阅智能体工作结果。
+
+### 会话、插件与 Provider 管理
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="./screenshots/sessions.jpeg"><img src="./screenshots/sessions.jpeg" alt="Makima TUI Sessions 会话管理器" width="100%" /></a>
+      <strong>Sessions</strong><br />新建、切换、恢复及管理实时和持久化会话。
+    </td>
+    <td width="50%" valign="top">
+      <a href="./screenshots/plugins.jpeg"><img src="./screenshots/plugins.jpeg" alt="Makima TUI Plugins Hub 插件管理器" width="100%" /></a>
+      <strong>Plugins Hub</strong><br />查看 profile 插件、角色与依赖，并安全卸载非内置插件。
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" valign="top">
+      <a href="./screenshots/provider.jpeg"><img src="./screenshots/provider.jpeg" alt="Makima TUI Provider 管理器" width="100%" /></a>
+      <strong>Providers</strong><br />统一切换系统 Provider、管理 OpenAI 兼容 API Key 路由，以及登录 ChatGPT / Codex OAuth。
+    </td>
+  </tr>
+</table>
+
+---
+
 ## 🚀 快速开始
 
 ### 前置条件
