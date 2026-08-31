@@ -2,6 +2,7 @@ import type { Context } from '@deepseek-ai/cordis'
 
 import { OpenAiCodexAdapter } from './openAiCodexAdapter.js'
 import { OpenAiCodexAuthManager, OPENAI_CODEX_PROVIDER, openAiCodexOAuthConfig, type OpenAiCodexAuthView, type OAuthLogin } from './openAiCodexAuth.js'
+import { openExternalUrl } from './openExternalUrl.js'
 
 type LoginMethod = 'browser' | 'device_code'
 
@@ -17,7 +18,6 @@ let loginError: string | undefined
 
 /** Install the provider into the host LLM registry. Called once from the Cordis plugin lifecycle. */
 export function installOpenAiCodex(ctx: Context): void {
-  if (!process.env.MAKIMA_OPENAI_CODEX_CLIENT_ID?.trim()) return
   let config
   try {
     config = openAiCodexOAuthConfig()
@@ -26,9 +26,16 @@ export function installOpenAiCodex(ctx: Context): void {
   }
   const next = new OpenAiCodexAuthManager(config)
   manager = next
-  const dispose = ctx.llm.registerAdapter([OPENAI_CODEX_PROVIDER], new OpenAiCodexAdapter(next))
+
+  // Makima itself only requires the agent registry. Register the OAuth adapter
+  // in a child lifecycle so Cordis waits for the optional LLM service instead
+  // of reading ctx.llm while the parent plugin is still being applied.
+  ctx.inject(['llm'], llmCtx => {
+    const dispose = llmCtx.llm.registerAdapter([OPENAI_CODEX_PROVIDER], new OpenAiCodexAdapter(next))
+    llmCtx.effect(() => () => dispose())
+  })
+
   ctx.effect(() => () => {
-    dispose()
     if (manager === next) manager = undefined
   })
 }
@@ -44,11 +51,19 @@ export async function openAiCodexStatus(): Promise<OpenAiCodexAuthView & { devic
 }
 
 export async function startOpenAiCodexLogin(method: LoginMethod = 'browser'): Promise<OpenAiCodexLoginView> {
-  if (!manager) throw new Error('OpenAI Codex OAuth is not configured; set MAKIMA_OPENAI_CODEX_CLIENT_ID, MAKIMA_OPENAI_CODEX_REDIRECT_URI, and MAKIMA_OPENAI_CODEX_API_BASE_URL')
+  if (!manager) throw new Error('OpenAI Codex OAuth failed to initialize; restart Makima and check the plugin startup logs')
   if (login) throw new Error('OpenAI Codex OAuth login is already in progress')
   loginError = undefined
   login = await manager.beginLogin(method)
   const active = login
+  if (active.authorizationUrl) {
+    try {
+      await openExternalUrl(active.authorizationUrl)
+    } catch (error) {
+      const detail = error instanceof Error ? `: ${error.message}` : ''
+      loginError = `Could not open the browser automatically${detail}. Open the authorization URL shown below instead.`
+    }
+  }
   void active.complete()
     .catch((error: unknown) => { loginError = error instanceof Error ? error.message : 'OpenAI Codex sign-in failed' })
     .finally(() => { if (login === active) login = undefined })

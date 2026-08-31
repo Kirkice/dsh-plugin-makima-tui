@@ -601,6 +601,40 @@ export interface ModelOptionsResponse {
   providers?: ModelOptionProvider[]
 }
 
+// ── Provider manager ─────────────────────────────────────────────────
+
+/** A redacted provider row for `/providers`; API key material is never returned. */
+export interface ProviderManagerItem {
+  api?: string
+  base_url?: string
+  credential_configured?: boolean
+  credential_source?: string
+  credential_writable?: boolean
+  current?: boolean
+  display_name: string
+  id: string
+  models?: string[]
+  removable: boolean
+  type: 'api_key' | 'oauth' | 'system'
+  warning?: string
+}
+
+export interface ProvidersListResponse {
+  current_provider?: string
+  items: ProviderManagerItem[]
+  protocols: string[]
+}
+
+export interface ProviderSaveResponse {
+  id: string
+  saved: boolean
+}
+
+export interface ProviderRemoveResponse {
+  id: string
+  removed: boolean
+}
+
 /**
  * The effort ladder one model actually accepts — the picker's step 3.
  * `supported: false` means the model takes no effort parameter at all, and

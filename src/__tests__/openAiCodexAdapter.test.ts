@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { GenerateOptions } from '@deepseek-ai/dsh-llm'
 
-import { readSse, serializeRequest, translateResponseEvents } from '../harness/openAiCodexAdapter.js'
+import { OpenAiCodexAdapter, readSse, serializeRequest, translateResponseEvents } from '../harness/openAiCodexAdapter.js'
 
 const collect = async <T>(source: AsyncIterable<T>): Promise<T[]> => {
   const values: T[] = []
@@ -11,6 +11,21 @@ const collect = async <T>(source: AsyncIterable<T>): Promise<T[]> => {
 }
 
 describe('OpenAI Codex Responses adapter', () => {
+  it('lists the ChatGPT/Codex catalog, including GPT-5.6 Sol, Terra, and Luna', async () => {
+    const adapter = new OpenAiCodexAdapter({} as never)
+    const models = await adapter.listModels('openai-codex')
+
+    expect(models.map(model => model.id)).toEqual([
+      'gpt-5.3-codex-spark',
+      'gpt-5.4',
+      'gpt-5.4-mini',
+      'gpt-5.5',
+      'gpt-5.6-sol',
+      'gpt-5.6-terra',
+      'gpt-5.6-luna'
+    ])
+  })
+
   it('serializes messages, tools, and generation settings for Responses', () => {
     const request = serializeRequest({
       maxTokens: 123,

@@ -11,7 +11,7 @@ Makima TUI 是运行在 DeepSeek Harness / dsh 中的终端智能体界面插件
 - 工具调用轨迹、命令结果和结构化 Diff
 - Shell、文件系统、搜索等 Harness 工具接入
 - 审批弹窗与用户问题弹窗
-- `/plan`、`/model`、`/sessions`、`/resume`、`/agents` 等命令
+- `/plan`、`/providers`、`/model`、`/sessions`、`/resume`、`/agents` 等命令
 - 会话新建、恢复、重命名和标题管理
 - 子代理、目标、Todo 和 Token 状态
 - inline scrollback 与 alternate screen 两种显示模式
@@ -59,33 +59,40 @@ DEEPSEEK_API_KEY: sk-...
 
 ### ChatGPT / Codex OAuth
 
-Makima 也可通过**你自己注册并获 OpenAI 授权的 OAuth client**使用 ChatGPT/Codex 订阅。插件不内置、也不会复用第三方应用的 OAuth `client_id`、`originator` 或 token。
+Makima 内置已获维护者授权的 OpenAI OAuth public client，因此**无需环境变量或 API Key**：启动后输入 `/providers`，按 `o` 打开 ChatGPT / Codex 面板，再按 `b` 即可完成浏览器 PKCE 登录；按 `d` 可使用设备代码登录。浏览器回调固定为 `http://localhost:1455/auth/callback`，本机仅接受匹配单次 PKCE `state` 的回调。
+
+登录完成后，access token、refresh token 和过期时间保存在 `~/.makima-tui/openai-codex-oauth.json`（可用 `MAKIMA_OPENAI_CODEX_CREDENTIAL_PATH` 覆盖）。凭据不进入会话、TUI RPC 响应、日志或提示词；在 OAuth 面板按 `l`，或在模型选择器按 `Ctrl+D`，会删除本地 OAuth 会话。
+
+默认使用 ChatGPT Codex backend、OpenAI OAuth 端点及 Device Code 端点。仅在开发、私有部署或需要使用另一获授权 OAuth client 时，才可使用下列可选覆盖项；若更改 client 或回调地址，必须保证其已在 OAuth 应用注册中获授权：
 
 ```sh
-# 必填：这些值必须来自你的 OAuth client 注册信息和获准的服务端点。
-export MAKIMA_OPENAI_CODEX_CLIENT_ID='your-client-id'
-export MAKIMA_OPENAI_CODEX_REDIRECT_URI='http://127.0.0.1:1455/callback'
+export MAKIMA_OPENAI_CODEX_CLIENT_ID='your-authorized-client-id'
+export MAKIMA_OPENAI_CODEX_REDIRECT_URI='http://localhost:1455/auth/callback'
 export MAKIMA_OPENAI_CODEX_API_BASE_URL='https://your-authorized-codex-endpoint'
-
-# 可选：默认值分别是 OpenAI OAuth 端点、标准 OIDC scope 和 makima-tui。
 export MAKIMA_OPENAI_CODEX_AUTHORIZE_URL='https://auth.openai.com/oauth/authorize'
 export MAKIMA_OPENAI_CODEX_TOKEN_URL='https://auth.openai.com/oauth/token'
 export MAKIMA_OPENAI_CODEX_SCOPES='openid profile email offline_access'
 export MAKIMA_OPENAI_CODEX_ORIGINATOR='makima-tui'
-# 可选：仅当你自己的 OAuth client 被服务端明确授权 Device Code grant 时设置；四项必须同时存在。
 export MAKIMA_OPENAI_CODEX_DEVICE_AUTHORIZE_URL='https://your-authorized-oauth-endpoint/device-authorize'
 export MAKIMA_OPENAI_CODEX_DEVICE_TOKEN_URL='https://your-authorized-oauth-endpoint/device-token'
 export MAKIMA_OPENAI_CODEX_DEVICE_VERIFICATION_URI='https://your-authorized-device-verification-page'
 export MAKIMA_OPENAI_CODEX_DEVICE_REDIRECT_URI='https://your-authorized-oauth-endpoint/device-callback'
 ```
 
-重新启动 Makima 后，在 `/model` 中选择 **OpenAI ChatGPT / Codex**，按 Enter 打开浏览器授权链接。完成登录时，本机回调仅接受已验证的单次 PKCE `state`，并将 access token、refresh token 和过期时间以独立 JSON 文件存储在 `~/.makima-tui/openai-codex-oauth.json`（可用 `MAKIMA_OPENAI_CODEX_CREDENTIAL_PATH` 覆盖）。该文件不进入会话、TUI RPC 返回值、日志或提示词；模型选择器的 `Ctrl+D` 将只删除此本地 OAuth 会话。
-
-浏览器登录可使用已注册的 `http://localhost/...` 或 `http://127.0.0.1/...` 回调 URI；推荐显式注册并使用 `127.0.0.1`，避免本机 IPv4/IPv6 的 `localhost` 解析差异。若已完整配置 Device Code 端点，可在授权界面先按 `Esc`/`c` 取消当前浏览器流程，再按 `d` 启动设备码；此功能不会使用任何内置或第三方 OAuth client。
-
 另提供独立命令：`makima-tui-auth login openai-codex --browser`、`makima-tui-auth login openai-codex --device-code`、`makima-tui-auth status openai-codex` 与 `makima-tui-auth logout openai-codex`。这些命令与 TUI 共享同一份本地凭据，但只输出脱敏状态。
 
-> Codex backend 和 OAuth 授权范围由服务提供方决定。仅使用你获授权的 client、redirect URI 和 API base URL；配置缺失时 provider 不会注册。
+> 可用模型、额度及 OAuth 协议由 OpenAI 和已登录 ChatGPT 账号决定；服务端变更时可能需要更新 Makima。
+
+### `/providers`：统一 Provider 管理
+
+输入 `/providers` 打开 Provider 管理器。它不会改变既有快捷命令：`/provider <route>` 仍用于快速切换 Provider，`/model` 仍用于选择模型和推理强度。
+
+- 按 `a` 新增一个 OpenAI 兼容的 API-key Provider：填写显示名称、HTTP(S) Base URL、API key、至少一个模型 ID，并在 `openai-completions`、`openai-responses` 或 `anthropic-messages` 协议中选择服务端实际兼容的协议。
+- 按 Enter 编辑 Makima 创建的 Provider。API key 一栏留空会保留已有密钥；界面只展示“已配置”状态，永不回传或显示密钥文本。
+- 在编辑界面按 `x` 并确认，可删除该 Provider 的配置及其密钥。安全起见，只有 `/providers` 自行创建、路由名以 `makima-` 开头的 Provider 可以删除；内置或 composition Provider 仅展示。
+- 按 `o` 管理 **ChatGPT / Codex**。无需预先配置即可启动浏览器 PKCE 或 Device Code 授权，也可取消挂起授权或退出本地 OAuth 会话。
+
+新建 API-key Provider 的密钥通过 Harness credential service 存储为 `MAKIMA_TUI_PROVIDER_*_API_KEY`，而不是写入 settings、会话、日志或 RPC 列表响应。保存 Provider 后，Harness 会动态注册路由，随后可通过 `/provider` 或 `/model` 直接选用。
 
 ## 配置
 

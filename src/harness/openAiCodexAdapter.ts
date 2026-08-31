@@ -2,9 +2,20 @@ import { CallId, LlmAdapter, LlmError, type FinishReason, type GenerateOptions, 
 
 import { OPENAI_CODEX_PROVIDER, type OpenAiCodexAuthManager } from './openAiCodexAuth.js'
 
+/**
+ * ChatGPT/Codex accounts expose a versioned catalog through the Codex
+ * Responses endpoint. Keep this list explicit: account entitlements are still
+ * enforced by OpenAI at request time, while the TUI can offer every supported
+ * model to eligible Plus/Pro users.
+ */
 const MODELS = [
-  { id: 'gpt-5-codex', name: 'GPT-5 Codex', contextWindow: 272_000 },
-  { id: 'gpt-5', name: 'GPT-5', contextWindow: 272_000 }
+  { id: 'gpt-5.3-codex-spark', name: 'GPT-5.3 Codex Spark', contextWindow: 128_000 },
+  { id: 'gpt-5.4', name: 'GPT-5.4', contextWindow: 272_000 },
+  { id: 'gpt-5.4-mini', name: 'GPT-5.4 mini', contextWindow: 272_000 },
+  { id: 'gpt-5.5', name: 'GPT-5.5', contextWindow: 272_000 },
+  { id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol', contextWindow: 272_000 },
+  { id: 'gpt-5.6-terra', name: 'GPT-5.6 Terra', contextWindow: 272_000 },
+  { id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna', contextWindow: 272_000 }
 ] as const
 
 type OutputBlock =

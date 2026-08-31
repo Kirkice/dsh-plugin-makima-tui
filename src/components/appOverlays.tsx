@@ -18,6 +18,7 @@ import { OverlayHint, windowItems } from './overlayControls.js'
 import { PermissionsPicker } from './permissionsPicker.js'
 import { PetPicker } from './petPicker.js'
 import { PluginsHub } from './pluginsHub.js'
+import { ProvidersHub } from './providersHub.js'
 import { ApprovalPrompt, ClarifyPrompt, ConfirmPrompt, PlanApprovalPrompt } from './prompts.js'
 import { QuestionPrompt } from './questionPrompt.js'
 import { SkillsHub } from './skillsHub.js'
@@ -212,6 +213,7 @@ export function FloatingOverlays({
     overlay.sessions ||
     overlay.skillsHub ||
     overlay.pluginsHub ||
+    overlay.providersHub ||
     completions.length
 
   if (!hasAny) {
@@ -289,6 +291,16 @@ export function FloatingOverlays({
             sessionId={sid}
             t={theme}
             usage={usage}
+          />
+        </FloatBox>
+      )}
+
+      {overlay.providersHub && (
+        <FloatBox color={theme.color.border}>
+          <ProvidersHub
+            gw={gw}
+            onClose={() => patchOverlayState({ providersHub: false })}
+            t={theme}
           />
         </FloatBox>
       )}

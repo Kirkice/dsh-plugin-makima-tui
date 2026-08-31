@@ -122,6 +122,14 @@ export const sessionCommands: SlashCommand[] = [
   },
 
   {
+    help: 'manage API-key providers and ChatGPT/Codex sign-in',
+    name: 'providers',
+    run: (_arg, ctx) => {
+      patchOverlayState({ providersHub: true })
+    }
+  },
+
+  {
     aliases: ['switch', 'session', 'resume'],
     argumentHint: '[new | <id or title>]',
     help: 'browse, switch, or resume sessions',

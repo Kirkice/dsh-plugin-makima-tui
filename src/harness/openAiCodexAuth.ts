@@ -13,6 +13,17 @@ const CALLBACK_TIMEOUT_MS = 5 * 60_000
 const DEVICE_TIMEOUT_MS = 15 * 60_000
 const EXPIRY_SKEW_MS = 60_000
 
+// This public client is owned by Makima's maintainer and registered for the
+// loopback callback below. Environment variables remain opt-in overrides for
+// development or a separately authorized deployment.
+const DEFAULT_CLIENT_ID = 'app_EMoamEEZ73f0CkXaXp7hrann'
+const DEFAULT_API_BASE_URL = 'https://chatgpt.com/backend-api'
+const DEFAULT_REDIRECT_URI = 'http://localhost:1455/auth/callback'
+const DEFAULT_DEVICE_AUTHORIZE_URL = 'https://auth.openai.com/api/accounts/deviceauth/usercode'
+const DEFAULT_DEVICE_TOKEN_URL = 'https://auth.openai.com/api/accounts/deviceauth/token'
+const DEFAULT_DEVICE_VERIFICATION_URI = 'https://auth.openai.com/codex/device'
+const DEFAULT_DEVICE_REDIRECT_URI = 'https://auth.openai.com/deviceauth/callback'
+
 type LoginMethod = 'browser' | 'device_code'
 
 export interface OpenAiCodexOAuthConfig {
@@ -102,36 +113,35 @@ function optionalUrl(value: string | undefined, name: string, allowLoopback = fa
   return nonEmpty(value) === undefined ? undefined : configuredUrl(value, name, allowLoopback)
 }
 
-/** Read host-only configuration. No OAuth identity is embedded in this plugin. */
+/**
+ * Read the built-in OAuth defaults, allowing explicit environment overrides
+ * for development and separately authorized deployments.
+ */
 export function openAiCodexOAuthConfig(env = process.env): OpenAiCodexOAuthConfig {
-  const redirectUri = configuredUrl(env.MAKIMA_OPENAI_CODEX_REDIRECT_URI, 'MAKIMA_OPENAI_CODEX_REDIRECT_URI', true)
+  const redirectUri = configuredUrl(env.MAKIMA_OPENAI_CODEX_REDIRECT_URI ?? DEFAULT_REDIRECT_URI, 'MAKIMA_OPENAI_CODEX_REDIRECT_URI', true)
   const callback = new URL(redirectUri)
   if (callback.protocol !== 'http:' || (callback.hostname !== 'localhost' && callback.hostname !== '127.0.0.1')) {
     throw new Error('MAKIMA_OPENAI_CODEX_REDIRECT_URI must be a registered http://localhost or http://127.0.0.1 callback URI')
   }
-  const deviceAuthorizationEndpoint = optionalUrl(env.MAKIMA_OPENAI_CODEX_DEVICE_AUTHORIZE_URL, 'MAKIMA_OPENAI_CODEX_DEVICE_AUTHORIZE_URL')
-  const deviceTokenEndpoint = optionalUrl(env.MAKIMA_OPENAI_CODEX_DEVICE_TOKEN_URL, 'MAKIMA_OPENAI_CODEX_DEVICE_TOKEN_URL')
-  const deviceVerificationUri = optionalUrl(env.MAKIMA_OPENAI_CODEX_DEVICE_VERIFICATION_URI, 'MAKIMA_OPENAI_CODEX_DEVICE_VERIFICATION_URI')
-  const deviceRedirectUri = optionalUrl(env.MAKIMA_OPENAI_CODEX_DEVICE_REDIRECT_URI, 'MAKIMA_OPENAI_CODEX_DEVICE_REDIRECT_URI')
+  const deviceAuthorizationEndpoint = optionalUrl(env.MAKIMA_OPENAI_CODEX_DEVICE_AUTHORIZE_URL ?? DEFAULT_DEVICE_AUTHORIZE_URL, 'MAKIMA_OPENAI_CODEX_DEVICE_AUTHORIZE_URL')
+  const deviceTokenEndpoint = optionalUrl(env.MAKIMA_OPENAI_CODEX_DEVICE_TOKEN_URL ?? DEFAULT_DEVICE_TOKEN_URL, 'MAKIMA_OPENAI_CODEX_DEVICE_TOKEN_URL')
+  const deviceVerificationUri = optionalUrl(env.MAKIMA_OPENAI_CODEX_DEVICE_VERIFICATION_URI ?? DEFAULT_DEVICE_VERIFICATION_URI, 'MAKIMA_OPENAI_CODEX_DEVICE_VERIFICATION_URI')
+  const deviceRedirectUri = optionalUrl(env.MAKIMA_OPENAI_CODEX_DEVICE_REDIRECT_URI ?? DEFAULT_DEVICE_REDIRECT_URI, 'MAKIMA_OPENAI_CODEX_DEVICE_REDIRECT_URI')
   const deviceValues = [deviceAuthorizationEndpoint, deviceTokenEndpoint, deviceVerificationUri, deviceRedirectUri]
   if (deviceValues.some(Boolean) && deviceValues.some(value => !value)) {
     throw new Error('all MAKIMA_OPENAI_CODEX_DEVICE_* OAuth settings are required when Device Code is enabled')
   }
   return {
-    apiBaseUrl: configuredUrl(env.MAKIMA_OPENAI_CODEX_API_BASE_URL, 'MAKIMA_OPENAI_CODEX_API_BASE_URL').replace(/\/$/, ''),
+    apiBaseUrl: configuredUrl(env.MAKIMA_OPENAI_CODEX_API_BASE_URL ?? DEFAULT_API_BASE_URL, 'MAKIMA_OPENAI_CODEX_API_BASE_URL').replace(/\/$/, ''),
     authorizationEndpoint: configuredUrl(env.MAKIMA_OPENAI_CODEX_AUTHORIZE_URL ?? 'https://auth.openai.com/oauth/authorize', 'MAKIMA_OPENAI_CODEX_AUTHORIZE_URL'),
     callbackTimeoutMs: CALLBACK_TIMEOUT_MS,
-    clientId: nonEmpty(env.MAKIMA_OPENAI_CODEX_CLIENT_ID) ?? missingClientId(),
+    clientId: nonEmpty(env.MAKIMA_OPENAI_CODEX_CLIENT_ID) ?? DEFAULT_CLIENT_ID,
     ...(deviceAuthorizationEndpoint ? { deviceAuthorizationEndpoint, deviceRedirectUri, deviceTokenEndpoint, deviceVerificationUri } : {}),
     originator: nonEmpty(env.MAKIMA_OPENAI_CODEX_ORIGINATOR) ?? 'makima-tui',
     redirectUri,
     scopes: nonEmpty(env.MAKIMA_OPENAI_CODEX_SCOPES) ?? 'openid profile email offline_access',
     tokenEndpoint: configuredUrl(env.MAKIMA_OPENAI_CODEX_TOKEN_URL ?? 'https://auth.openai.com/oauth/token', 'MAKIMA_OPENAI_CODEX_TOKEN_URL')
   }
-}
-
-function missingClientId(): string {
-  throw new Error('MAKIMA_OPENAI_CODEX_CLIENT_ID is required; configure an OAuth client authorized for this application')
 }
 
 export function credentialPath(): string {
@@ -280,7 +290,7 @@ export class OpenAiCodexAuthManager {
     const { challenge, verifier } = createPkcePair()
     const state = randomBytes(32).toString('base64url')
     const url = new URL(this.config.authorizationEndpoint)
-    for (const [key, value] of Object.entries({ response_type: 'code', client_id: this.config.clientId, redirect_uri: this.config.redirectUri, scope: this.config.scopes, state, code_challenge: challenge, code_challenge_method: 'S256' })) url.searchParams.set(key, value)
+    for (const [key, value] of Object.entries({ response_type: 'code', client_id: this.config.clientId, redirect_uri: this.config.redirectUri, scope: this.config.scopes, state, code_challenge: challenge, code_challenge_method: 'S256', id_token_add_organizations: 'true', codex_cli_simplified_flow: 'true', originator: this.config.originator })) url.searchParams.set(key, value)
     const callback = await listenForCallback(this.config.redirectUri, state, this.config.callbackTimeoutMs)
     return {
       authorizationUrl: url.toString(),

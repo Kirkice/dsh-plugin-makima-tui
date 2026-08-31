@@ -14,7 +14,9 @@ import { join } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import { installModelSelection, type Agent, type AgentHandle, type ModelSelection, type ModelSelectionRef } from '@deepseek-ai/dsh-agent'
 import { SessionId, type Session, type SessionEvent, type SessionHeader } from '@deepseek-ai/dsh-session'
+import { credentialRef } from '@deepseek-ai/dsh-credentials'
 import { createUserMessage, type ContentBlock, type StreamChunk, type TokenUsage } from '@deepseek-ai/dsh-llm'
+import { supportedProtocols } from '@deepseek-ai/dsh-llm-pi-ai'
 import type { ApprovalOutcome, ApprovalRequest } from '@deepseek-ai/dsh-user-approval'
 import type { AskUserQuestionAnswer, AskUserQuestionItem, AskUserQuestionRequest } from '@deepseek-ai/dsh-user-questions'
 // Type-only: activates the 'plan/mode' SessionEventMap augmentation.
@@ -61,6 +63,48 @@ const PLUGIN_VERSION = (() => {
 
   return ''
 })()
+
+const MANAGED_PROVIDER_PREFIX = 'makima-'
+const MANAGED_CREDENTIAL_PREFIX = 'MAKIMA_TUI_PROVIDER_'
+const PI_AI_SETTINGS_NS = 'llm-pi-ai'
+
+interface ManagedProviderProfile {
+  api?: string
+  apiKeyEnv?: string
+  baseURL?: string
+  displayName?: string
+  models?: Array<{ id?: string }>
+}
+
+const nonEmptyString = (value: unknown): string | undefined =>
+  typeof value === 'string' && value.trim() ? value.trim() : undefined
+
+const managedProviderId = (value: string): string => {
+  const slug = value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+
+  if (!slug) throw new Error('provider name must contain a letter or number')
+
+  return `${MANAGED_PROVIDER_PREFIX}${slug}`
+}
+
+const isManagedProviderId = (value: string): boolean =>
+  value.startsWith(MANAGED_PROVIDER_PREFIX) && /^[a-z0-9][a-z0-9-]*$/.test(value.slice(MANAGED_PROVIDER_PREFIX.length))
+
+const managedCredentialRef = (provider: string): string =>
+  `${MANAGED_CREDENTIAL_PREFIX}${provider.slice(MANAGED_PROVIDER_PREFIX.length).replace(/-/g, '_').toUpperCase()}_API_KEY`
+
+const modelsFrom = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return []
+
+  return [...new Set(value.flatMap(item => {
+    if (typeof item === 'string') return item.trim() ? [item.trim()] : []
+    if (item && typeof item === 'object' && 'id' in item) {
+      const id = (item as { id?: unknown }).id
+      return typeof id === 'string' && id.trim() ? [id.trim()] : []
+    }
+    return []
+  }))]
+}
 
 /**
  * What one running subagent has done so far, accumulated from ITS OWN session
@@ -1760,6 +1804,138 @@ export class HarnessGatewayClient extends GatewayClient {
     return { ok: true, provider, value: model }
   }
 
+  private async listManagedProviders(): Promise<{
+    current_provider?: string
+    items: Array<Record<string, unknown>>
+    protocols: string[]
+  }> {
+    const llm = this.ctx.get('llm') as
+      | {
+          listModels?: (provider: string) => Promise<ReadonlyArray<{ id: string }>>
+          listProviders?: () => Array<{ id: string; name: string }>
+        }
+      | undefined
+    const settings = this.ctx.get('settings') as { get?: (ns: string) => unknown } | undefined
+    const value = settings?.get?.(PI_AI_SETTINGS_NS)
+    const profiles = value && typeof value === 'object' && 'providers' in value
+      ? (value as { providers?: unknown }).providers
+      : undefined
+    const profileMap = profiles && typeof profiles === 'object' && !Array.isArray(profiles)
+      ? profiles as Record<string, ManagedProviderProfile>
+      : {}
+    const current = this.selection.current?.provider
+    const codexAuth = await openAiCodexStatus()
+    const items = await Promise.all((llm?.listProviders?.() ?? []).map(async provider => {
+      const profile = profileMap[provider.id]
+      const managed = isManagedProviderId(provider.id)
+      const credential = managed && profile?.apiKeyEnv
+        ? await this.ctx.credentials.describe(credentialRef(profile.apiKeyEnv))
+        : undefined
+      let models: string[] = []
+
+      try {
+        models = ((await llm?.listModels?.(provider.id)) ?? []).map(model => model.id)
+      } catch {
+        // A partial profile must remain visible and removable.
+      }
+
+      if (provider.id === 'openai-codex') {
+        return {
+          current: provider.id === current,
+          display_name: provider.name,
+          id: provider.id,
+          models,
+          removable: false,
+          type: 'oauth',
+          warning: !codexAuth.authenticated ? (codexAuth.login_error || 'Sign in with ChatGPT to activate') : undefined
+        }
+      }
+
+      return {
+        api: profile?.api,
+        base_url: profile?.baseURL,
+        credential_configured: credential?.configured,
+        credential_source: credential?.source,
+        credential_writable: credential?.writable,
+        current: provider.id === current,
+        display_name: profile?.displayName || provider.name,
+        id: provider.id,
+        models,
+        removable: managed,
+        type: managed ? 'api_key' : 'system'
+      }
+    }))
+
+    return { current_provider: current, items, protocols: [...supportedProtocols()] }
+  }
+
+  private async saveManagedProvider(params: Record<string, unknown>): Promise<{ id: string; saved: boolean }> {
+    const requestedId = nonEmptyString(params.id) ?? nonEmptyString(params.display_name)
+    if (!requestedId) throw new Error('provider name is required')
+
+    const id = isManagedProviderId(requestedId) ? requestedId : managedProviderId(requestedId)
+    const displayName = nonEmptyString(params.display_name) ?? id
+    const baseURL = nonEmptyString(params.base_url)
+    const api = nonEmptyString(params.api) ?? 'openai-completions'
+    const models = modelsFrom(params.models)
+    const apiKey = nonEmptyString(params.api_key)
+
+    if (!baseURL) throw new Error('base URL is required')
+    try {
+      const parsed = new URL(baseURL)
+      if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') throw new Error('unsupported protocol')
+    } catch {
+      throw new Error('base URL must be a valid http(s) URL')
+    }
+    if (!supportedProtocols().includes(api)) throw new Error(`unsupported provider protocol: ${api}`)
+    if (!models.length) throw new Error('add at least one model id')
+
+    const settings = this.ctx.get('settings') as
+      | { mutate?: (ns: string, ops: readonly { op: 'set'; path: readonly string[]; value: unknown }[]) => Promise<void> }
+      | undefined
+    if (!settings?.mutate) throw new Error('Harness settings service is unavailable')
+
+    const ref = managedCredentialRef(id)
+    const existing = await this.ctx.credentials.describe(credentialRef(ref))
+    if (!apiKey && !existing.configured) throw new Error('API key is required for a new provider')
+
+    const createdCredential = !!apiKey && !existing.configured
+    if (apiKey) await this.ctx.credentials.set(credentialRef(ref), apiKey)
+
+    try {
+      await settings.mutate(PI_AI_SETTINGS_NS, [{
+        op: 'set',
+        path: ['providers', id],
+        value: { api, apiKeyEnv: ref, baseURL, displayName, models: models.map(id => ({ id })) }
+      }])
+    } catch (error) {
+      // Do not leave a new secret behind if its profile was rejected. Existing
+      // credentials are intentionally retained because they may still belong
+      // to the prior, working version of this managed provider.
+      if (createdCredential) {
+        await this.ctx.credentials.unset(credentialRef(ref)).catch(() => {})
+      }
+      throw error
+    }
+
+    return { id, saved: true }
+  }
+
+  private async removeManagedProvider(rawId: unknown): Promise<{ id: string; removed: boolean }> {
+    const id = nonEmptyString(rawId)
+    if (!id || !isManagedProviderId(id)) throw new Error('only providers created by Makima can be removed')
+
+    const settings = this.ctx.get('settings') as
+      | { mutate?: (ns: string, ops: readonly { op: 'unset'; path: readonly string[] }[]) => Promise<void> }
+      | undefined
+    if (!settings?.mutate) throw new Error('Harness settings service is unavailable')
+
+    await settings.mutate(PI_AI_SETTINGS_NS, [{ op: 'unset', path: ['providers', id] }])
+    await this.ctx.credentials.unset(credentialRef(managedCredentialRef(id)))
+
+    return { id, removed: true }
+  }
+
   // ── RPCs ───────────────────────────────────────────────────────────────
   override request<T = unknown>(method: string, params?: Record<string, unknown>): Promise<T> {
     const p = (params ?? {}) as Record<string, unknown>
@@ -2124,6 +2300,15 @@ export class HarnessGatewayClient extends GatewayClient {
 
         return this.runHarnessCommand(`${name}${arg}`).then(r => ({ output: r.output, type: 'exec' }) as T)
       }
+
+      case 'providers.list':
+        return this.listManagedProviders().then(result => result as T)
+
+      case 'providers.saveOpenAiCompatible':
+        return this.saveManagedProvider(p).then(result => result as T)
+
+      case 'providers.remove':
+        return this.removeManagedProvider(p.id).then(result => result as T)
 
       case 'llm.openAiCodex.status':
         return openAiCodexStatus().then(status => status as T)

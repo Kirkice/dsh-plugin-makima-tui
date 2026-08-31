@@ -798,6 +798,7 @@ export const SLASHES: ReadonlyArray<{ desc: string; hint?: string; name: string 
     name: '/effort'
   },
   { desc: 'Switch the provider', hint: '[<provider>]', name: '/provider' },
+  { desc: 'Manage API-key providers and ChatGPT/Codex sign-in', name: '/providers' },
   {
     desc: 'Configure the advisor reviewer model (consulted mid-task by the worker)',
     hint: '[<provider>:<model> [--client] [--effort <level>] | --effort <level> | --no-client | off|unset]',

@@ -157,6 +157,7 @@ export interface OverlayState {
   petPicker: boolean
   planApproval: null | PlanApprovalReq
   pluginsHub: boolean
+  providersHub: boolean
   questions: null | QuestionReq
   secret: null | SecretReq
   sessions: boolean

@@ -18,6 +18,7 @@ const buildOverlayState = (): OverlayState => ({
   petPicker: false,
   planApproval: null,
   pluginsHub: false,
+  providersHub: false,
   questions: null,
   secret: null,
   sessions: false,
@@ -45,6 +46,7 @@ export const $isBlocked = computed(
     petPicker,
     planApproval,
     pluginsHub,
+    providersHub,
     questions,
     secret,
     sessions,
@@ -67,6 +69,7 @@ export const $isBlocked = computed(
       petPicker ||
       planApproval ||
       pluginsHub ||
+      providersHub ||
       questions ||
       secret ||
       sessions ||
@@ -103,6 +106,7 @@ export const resetFlowOverlays = () =>
     permissionsPicker: $overlayState.get().permissionsPicker,
     petPicker: $overlayState.get().petPicker,
     pluginsHub: $overlayState.get().pluginsHub,
+    providersHub: $overlayState.get().providersHub,
     sessions: $overlayState.get().sessions,
     skillsHub: $overlayState.get().skillsHub,
     // Deliberately preserved: the exit keep/remove dialog is an explicit user

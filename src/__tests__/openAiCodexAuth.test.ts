@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   accountIdFromTokens,
   createPkcePair,
+  openAiCodexOAuthConfig,
   OpenAiCodexAuthManager,
   OpenAiCodexCredentialStore,
   type OpenAiCodexOAuthConfig
@@ -34,6 +35,20 @@ describe('OpenAI Codex OAuth host credential lifecycle', () => {
     expect(verifier).toMatch(/^[A-Za-z0-9_-]+$/)
     expect(challenge).toMatch(/^[A-Za-z0-9_-]+$/)
     expect(challenge).toBe(crypto.createHash('sha256').update(verifier).digest('base64url'))
+  })
+
+  it('uses the authorized built-in OAuth client when no environment variables are set', () => {
+    expect(openAiCodexOAuthConfig({})).toMatchObject({
+      apiBaseUrl: 'https://chatgpt.com/backend-api',
+      authorizationEndpoint: 'https://auth.openai.com/oauth/authorize',
+      clientId: 'app_EMoamEEZ73f0CkXaXp7hrann',
+      deviceAuthorizationEndpoint: 'https://auth.openai.com/api/accounts/deviceauth/usercode',
+      deviceRedirectUri: 'https://auth.openai.com/deviceauth/callback',
+      deviceTokenEndpoint: 'https://auth.openai.com/api/accounts/deviceauth/token',
+      deviceVerificationUri: 'https://auth.openai.com/codex/device',
+      redirectUri: 'http://localhost:1455/auth/callback',
+      tokenEndpoint: 'https://auth.openai.com/oauth/token'
+    })
   })
 
   it('extracts the ChatGPT account ID from standard and namespaced claims', () => {
