@@ -565,20 +565,37 @@ export function SessionPanel({ info, logoPalette, maxWidth, sid, t }: SessionPan
   )
 
   // ── Session overview ────────────────────────────────────────────────
-  // The portrait intentionally makes the left rail tall. Give the matching
-  // right rail a useful landing dashboard so the opening screen reads as a
-  // composed workspace instead of a sparse capability list beside artwork.
+  // The portrait deliberately gives the left rail presence. Mirror that weight
+  // on wide terminals with a compact command-center: useful runtime facts first,
+  // then a small operating guide — never decorative filler.
+  const permissionState = permsLabel || 'Default'
+  const permissionTone = info.permission_mode === 'bypassPermissions' || info.permission_mode === 'dontAsk'
+    ? t.color.error
+    : t.color.accent
+  const modelMode = [
+    info.reasoning_effort ? `${info.reasoning_effort} reasoning` : 'standard reasoning',
+    info.fast ? 'fast lane' : '',
+    info.nano ? 'nano' : ''
+  ].filter(Boolean).join(' · ')
+  const contextPercent = info.usage?.context_percent
+  const contextLabel = contextPercent === undefined
+    ? 'fresh context'
+    : `${contextPercent}% context used`
+  const connectionLabel = mcpServers.length > 0
+    ? `${mcpConnected}/${mcpServers.length} MCP connected`
+    : 'local runtime'
+
   const overview = (
     <Box flexDirection="column" marginBottom={1}>
-      <Text wrap="truncate-end">
-        <Text bold color={t.color.primary}>SESSION READY</Text>
-        <Text color={t.color.muted}> · workspace initialized</Text>
-      </Text>
+      <Box flexDirection="row" justifyContent="space-between" width="100%">
+        <Text wrap="truncate-end">
+          <Text bold color={t.color.primary}>SESSION READY</Text>
+          <Text color={t.color.muted}> · workspace initialized</Text>
+        </Text>
+        <Text color={t.color.ok} wrap="truncate-end">● ONLINE</Text>
+      </Box>
       <Text color={t.color.muted} wrap="truncate-end">
-        {modelLine}
-        {info.reasoning_effort ? ` · ${info.reasoning_effort} reasoning` : ''}
-        {info.fast ? ' · fast' : ''}
-        {info.nano ? ' · nano' : ''}
+        {modelLine} <Text color={t.color.frame}>│</Text> {modelMode}
       </Text>
 
       <Box
@@ -591,27 +608,30 @@ export function SessionPanel({ info, logoPalette, maxWidth, sid, t }: SessionPan
         marginY={1}
       />
 
-      <Text wrap="truncate-end">
-        <Text color={t.color.muted}>CAPABILITIES  </Text>
-        <Text bold color={t.color.accent}>{toolsTotal}</Text>
-        <Text color={t.color.muted}> tools   </Text>
-        <Text bold color={t.color.accent}>{skillsTotal}</Text>
-        <Text color={t.color.muted}> skills</Text>
-        {mcpServers.length > 0 && (
-          <>
-            <Text color={t.color.muted}>   </Text>
-            <Text bold color={mcpConnected > 0 ? t.color.ok : t.color.muted}>{mcpConnected}</Text>
-            <Text color={t.color.muted}> MCP online</Text>
-          </>
-        )}
-      </Text>
-      <Text wrap="truncate-end">
-        <Text color={t.color.ok}>● ONLINE</Text>
-        <Text color={t.color.muted}> · ready for your next task</Text>
-        <Text color={t.color.muted}> · </Text>
-        <Text color={t.color.command}>/help</Text>
-        <Text color={t.color.muted}> to explore commands</Text>
-      </Text>
+      <Box flexDirection="row" width="100%">
+        <Box flexDirection="column" flexGrow={1} flexShrink={1} width="50%">
+          <Text color={t.color.muted}>RUNTIME</Text>
+          <Text wrap="truncate-end">
+            <Text bold color={t.color.accent}>{toolsTotal}</Text>
+            <Text color={t.color.muted}> tools  ·  </Text>
+            <Text bold color={t.color.accent}>{skillsTotal}</Text>
+            <Text color={t.color.muted}> skills</Text>
+          </Text>
+          <Text color={t.color.muted} wrap="truncate-end">
+            {connectionLabel}
+          </Text>
+        </Box>
+        <Box flexDirection="column" flexGrow={1} flexShrink={1} paddingLeft={2} width="50%">
+          <Text color={t.color.muted}>SESSION POSTURE</Text>
+          <Text wrap="truncate-end">
+            <Text color={permissionTone}>{permissionState}</Text>
+            <Text color={t.color.muted}> access</Text>
+          </Text>
+          <Text color={contextPercent !== undefined && contextPercent >= 80 ? t.color.warn : t.color.muted} wrap="truncate-end">
+            {contextLabel}
+          </Text>
+        </Box>
+      </Box>
 
       <Box
         borderBottom={false}
@@ -624,11 +644,19 @@ export function SessionPanel({ info, logoPalette, maxWidth, sid, t }: SessionPan
       />
 
       <Text wrap="truncate-end">
-        <Text bold color={t.color.accent}>QUICK START  </Text>
+        <Text bold color={t.color.accent}>COMMAND DECK  </Text>
         <Text color={t.color.command}>/model</Text>
-        <Text color={t.color.muted}> switch model   </Text>
+        <Text color={t.color.muted}> tune model   </Text>
         <Text color={t.color.command}>/permissions</Text>
-        <Text color={t.color.muted}> review access</Text>
+        <Text color={t.color.muted}> access   </Text>
+        <Text color={t.color.command}>/sessions</Text>
+        <Text color={t.color.muted}> switch</Text>
+      </Text>
+      <Text wrap="truncate-end">
+        <Text color={t.color.ok}>● READY</Text>
+        <Text color={t.color.muted}> · paste text, files, or screenshots · </Text>
+        <Text color={t.color.command}>/help</Text>
+        <Text color={t.color.muted}> for the full command index</Text>
       </Text>
     </Box>
   )

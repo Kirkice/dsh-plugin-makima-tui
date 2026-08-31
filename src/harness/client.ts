@@ -7,15 +7,17 @@
 // Boundary rule: src/harness/ is the ONLY directory allowed to import
 // @deepseek-ai/* (see docs/ARCHITECTURE.md).
 import { randomUUID } from 'node:crypto'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { join } from 'node:path'
+import { basename, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import type { Context } from '@deepseek-ai/cordis'
 import { installModelSelection, type Agent, type AgentHandle, type ModelSelection, type ModelSelectionRef } from '@deepseek-ai/dsh-agent'
 import { SessionId, type Session, type SessionEvent, type SessionHeader } from '@deepseek-ai/dsh-session'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'
 import { createUserMessage, type ContentBlock, type StreamChunk, type TokenUsage } from '@deepseek-ai/dsh-llm'
+import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import { supportedProtocols } from '@deepseek-ai/dsh-llm-pi-ai'
 import type { ApprovalOutcome, ApprovalRequest } from '@deepseek-ai/dsh-user-approval'
 import type { AskUserQuestionAnswer, AskUserQuestionItem, AskUserQuestionRequest } from '@deepseek-ai/dsh-user-questions'
@@ -43,6 +45,8 @@ import {
   startOpenAiCodexLogin
 } from './openAiCodexRuntime.js'
 import type { SessionInfo, Usage } from '../types.js'
+import { parseImageRefs } from '../protocol/imageRef.js'
+import { readImageFile, readWindowsClipboardImage, type IngressImage } from './imageIngress.js'
 
 const PLUGIN_VERSION = (() => {
   const require = createRequire(import.meta.url)
@@ -464,6 +468,9 @@ export class HarnessGatewayClient extends GatewayClient {
     planApprove?: string
     resolve: (a: AskUserQuestionAnswer) => void
   } | null = null
+  /** Images staged by the composer, indexed by the visible `[Image #N]` chip. */
+  private pendingImages = new Map<string, Map<number, ImageAttachmentRef>>()
+  private nextImageId = 1
 
   constructor(ctx: Context, opts: HarnessClientOptions = {}) {
     super()
@@ -1459,12 +1466,107 @@ export class HarnessGatewayClient extends GatewayClient {
       return
     }
 
-    const message = createUserMessage({ content: [{ text, type: 'text' }], source: { kind: 'user' } })
+    const pending = this.pendingImages.get(this.sid)
+    const refs = [...new Set(parseImageRefs(text))]
+    const images = refs.flatMap(id => {
+      const attachment = pending?.get(id)
+      return attachment ? [{ attachment, type: 'image' } as ContentBlock] : []
+    })
+
+    // The chip is a live attachment contract: once submitted, both attached and
+    // deleted chips leave this composer staging area. The durable store retains
+    // only images actually included in the session event.
+    this.pendingImages.delete(this.sid)
+    const message = createUserMessage({ content: [{ text, type: 'text' }, ...images], source: { kind: 'user' } })
 
     if (placement === 'steer') {
       agent.steer(message)
     } else {
       agent.followup(message)
+    }
+  }
+
+  private async stageImage(image: IngressImage): Promise<{ height: number; id: number; name: string; token_estimate: number; width: number }> {
+    const attachments = this.ctx.get('attachments') as
+      | { saveImage?: (input: { data: Uint8Array; mediaType: IngressImage['mediaType']; name: string }) => Promise<ImageAttachmentRef> }
+      | undefined
+
+    if (!attachments?.saveImage) {
+      throw new Error('image attachments are unavailable: this Harness profile does not mount dsh-attachment')
+    }
+
+    const attachment = await attachments.saveImage({ data: image.data, mediaType: image.mediaType, name: image.name })
+    const id = this.nextImageId++
+    const staged = this.pendingImages.get(this.sid) ?? new Map<number, ImageAttachmentRef>()
+    staged.set(id, attachment)
+    this.pendingImages.set(this.sid, staged)
+
+    return {
+      height: attachment.height,
+      id,
+      name: attachment.name ?? image.name,
+      token_estimate: Math.ceil((attachment.width * attachment.height) / 750),
+      width: attachment.width
+    }
+  }
+
+  private async attachImageFromClipboard(): Promise<Record<string, unknown>> {
+    try {
+      const image = readWindowsClipboardImage()
+      if (!image) return { message: 'No image found in clipboard' }
+      return await this.stageImage(image)
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'Unable to read the clipboard image' }
+    }
+  }
+
+  private async attachImageFromPath(path: string): Promise<Record<string, unknown>> {
+    if (!path.trim()) return { error: 'image path is required' }
+
+    try {
+      return await this.stageImage(await readImageFile(path.trim()))
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'Unable to read the image file' }
+    }
+  }
+
+  /**
+   * Resolve an explorer/terminal pasted file path for the in-process runtime.
+   *
+   * The legacy gateway delegates this to `detect_file_drop`; Harness has no
+   * subprocess control endpoint, so keep the same public RPC contract here.
+   * Image files are staged by `image.attach` before this method is reached;
+   * this resolver deliberately turns every other existing file into the normal
+   * `@absolute-path` reference understood by the agent tools.
+   */
+  private detectDroppedFile(raw: string): Record<string, unknown> {
+    const text = raw.trim()
+
+    if (!text) return { matched: false }
+
+    let candidate = text
+
+    try {
+      if (candidate.startsWith('file://')) {
+        candidate = fileURLToPath(candidate)
+      } else if (
+        (candidate.startsWith('"') && candidate.endsWith('"')) ||
+        (candidate.startsWith("'") && candidate.endsWith("'"))
+      ) {
+        candidate = candidate.slice(1, -1)
+      }
+
+      const cwd = this.agent?.session.header.cwd ?? this.opts.cwd ?? this.opts.launchCwd ?? process.cwd()
+      const path = resolve(cwd, candidate)
+      const stat = statSync(path)
+
+      if (!stat.isFile()) return { matched: false }
+
+      return { is_image: false, matched: true, name: basename(path), text: `@${path}` }
+    } catch {
+      // Missing/invalid paths remain literal composer text, matching the
+      // legacy fallback and avoiding a surprising rewrite of ordinary prose.
+      return { matched: false }
     }
   }
 
@@ -1485,6 +1587,7 @@ export class HarnessGatewayClient extends GatewayClient {
     }
 
     this.live.clear()
+    this.pendingImages.clear()
   }
 
 
@@ -2051,6 +2154,7 @@ export class HarnessGatewayClient extends GatewayClient {
             }
           }
 
+          this.pendingImages.delete(id)
           return { discarded_empty: discardEmpty, ok: true } as T
         })()
       }
@@ -2140,6 +2244,27 @@ export class HarnessGatewayClient extends GatewayClient {
 
         return Promise.resolve({ ok: true } as T)
       }
+
+      case 'image.clipboard':
+        return this.attachImageFromClipboard().then(result => result as T)
+
+      case 'clipboard.paste':
+        return this.attachImageFromClipboard().then(result => {
+          // The legacy bracketed-paste path expects `{ attached, count }`,
+          // whereas the direct composer image probe consumes image metadata.
+          // Preserve both RPC contracts instead of silently staging an image
+          // that the bracketed-paste UI cannot render.
+          const id = typeof result.id === 'number' ? result.id : undefined
+          return (id === undefined
+            ? result
+            : { ...result, attached: true, count: id }) as T
+        })
+
+      case 'image.attach':
+        return this.attachImageFromPath(String(p.path ?? '')).then(result => result as T)
+
+      case 'input.detect_drop':
+        return Promise.resolve(this.detectDroppedFile(String(p.text ?? '')) as T)
 
       case 'session.steer': {
         this.deliver(String(p.text ?? ''), 'steer')

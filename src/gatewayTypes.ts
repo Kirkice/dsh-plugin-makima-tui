@@ -511,6 +511,8 @@ export interface ClipboardPasteResponse {
   attached?: boolean
   /** The N in the `[Image #N]` chip the composer inserts. */
   count?: number
+  /** Direct attachment metadata used by the in-process Harness gateway. */
+  id?: number
   /** Set when the image could not be read; `attached` is then absent. */
   error?: string
   height?: number

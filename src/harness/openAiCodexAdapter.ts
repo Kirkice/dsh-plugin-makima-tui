@@ -1,4 +1,5 @@
 import { CallId, LlmAdapter, LlmError, type FinishReason, type GenerateOptions, type LlmModelInfo, type LlmProviderInfo, type LlmResolvedModelInfo, type ResolvedRetryPolicy, type StreamChunk, attributionHeaders } from '@deepseek-ai/dsh-llm'
+import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 
 import { OPENAI_CODEX_PROVIDER, type OpenAiCodexAuthManager } from './openAiCodexAuth.js'
 
@@ -23,10 +24,13 @@ type OutputBlock =
   | { index: number; kind: 'text'; text: string }
   | { callId: string; index: number; kind: 'tool'; name: string; opened: boolean; text: string }
 
+export type ImageReader = (ref: ImageAttachmentRef, signal?: AbortSignal) => Promise<{ data: Uint8Array; ref: ImageAttachmentRef }>
+
 export class OpenAiCodexAdapter extends LlmAdapter {
   constructor(
     private readonly auth: OpenAiCodexAuthManager,
-    private readonly fetcher: typeof fetch = fetch
+    private readonly fetcher: typeof fetch = fetch,
+    private readonly readImage?: ImageReader
   ) {
     super()
   }
@@ -53,7 +57,7 @@ export class OpenAiCodexAdapter extends LlmAdapter {
     const credential = await this.auth.store.load()
     const url = `${this.auth.config.apiBaseUrl}/responses`
     const response = await this.fetcher(url, {
-      body: JSON.stringify(serializeRequest(options)),
+      body: JSON.stringify(await serializeRequest(options, this.readImage)),
       headers: {
         Accept: 'text/event-stream',
         Authorization: `Bearer ${accessToken}`,
@@ -75,7 +79,7 @@ export class OpenAiCodexAdapter extends LlmAdapter {
   }
 }
 
-export function serializeRequest(options: GenerateOptions): Record<string, unknown> {
+export async function serializeRequest(options: GenerateOptions, readImage?: ImageReader): Promise<Record<string, unknown>> {
   const input: unknown[] = []
   if (options.system) input.push({ content: [{ text: options.system, type: 'input_text' }], role: 'system' })
 
@@ -91,12 +95,16 @@ export function serializeRequest(options: GenerateOptions): Record<string, unkno
       continue
     }
 
-    const text: string[] = []
+    const content: unknown[] = []
     for (const block of message.content) {
-      if (block.type === 'text') text.push(block.text)
-      else if (block.type === 'tool-result') input.push({ call_id: block.toolCallId, output: flattenText(block.content) || '(no output)', type: 'function_call_output' })
+      if (block.type === 'text') content.push({ text: block.text, type: 'input_text' })
+      else if (block.type === 'image') {
+        if (!readImage) throw new LlmError('OpenAI Codex image attachments are unavailable because the attachment store is not mounted', 'ATTACHMENT_UNAVAILABLE')
+        const stored = await readImage(block.attachment, options.signal)
+        content.push({ image_url: `data:${stored.ref.mediaType};base64,${Buffer.from(stored.data).toString('base64')}`, type: 'input_image' })
+      } else if (block.type === 'tool-result') input.push({ call_id: block.toolCallId, output: flattenText(block.content) || '(no output)', type: 'function_call_output' })
     }
-    if (text.length) input.push({ content: [{ text: text.join(''), type: 'input_text' }], role: 'user' })
+    if (content.length) input.push({ content, role: 'user' })
   }
 
   return {

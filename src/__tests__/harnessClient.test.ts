@@ -171,6 +171,19 @@ function makeWorld() {
         return { currentSelection: () => undefined, saveSelection: async () => {} }
       }
 
+      if (name === 'attachments') {
+        return {
+          saveImage: async ({ name }: { name: string }) => ({
+            attachmentId: 'stored-image',
+            bytes: 3,
+            height: 12,
+            mediaType: 'image/png',
+            name,
+            width: 16
+          })
+        }
+      }
+
       if (name === 'sessionPersistence') {
         return {
           append: async (id: string, events: readonly unknown[]) => { appended.push({ events, id }) },
@@ -241,6 +254,78 @@ function makeWorld() {
 const settle = () => new Promise(resolve => setTimeout(resolve, 0))
 
 describe('HarnessGatewayClient', () => {
+  it('turns referenced staged images into durable user message blocks', async () => {
+    const w = makeWorld()
+    w.client.start()
+    await settle()
+
+    ;(w.client as any).pendingImages.set('cc-test-session', new Map([[7, {
+      attachmentId: 'stored-image', bytes: 3, height: 12, mediaType: 'image/png', name: 'clipboard-screenshot.png', width: 16
+    }]]))
+    await w.client.request('prompt.submit', { text: '[Image #7] inspect this' })
+
+    expect(w.followups).toHaveLength(1)
+    expect(w.followups[0]).toMatchObject({
+      content: [
+        { text: '[Image #7] inspect this', type: 'text' },
+        { attachment: { attachmentId: 'stored-image' }, type: 'image' }
+      ]
+    })
+  })
+
+  it('returns a direct image id from clipboard.paste for the in-process composer', async () => {
+    const w = makeWorld()
+    w.client.start()
+    await settle()
+
+    const result = await (w.client as any).stageImage({
+      data: new Uint8Array([1, 2, 3]),
+      mediaType: 'image/png',
+      name: 'clipboard-screenshot.png'
+    })
+
+    expect(result).toMatchObject({ id: expect.any(Number), name: 'clipboard-screenshot.png' })
+  })
+
+  it('normalizes an existing non-image path through input.detect_drop', async () => {
+    const w = makeWorld()
+    const dir = mkdtempSync(join(tmpdir(), 'makima-drop-'))
+    const file = join(dir, 'notes.pdf')
+    writeFileSync(file, 'not an image')
+
+    try {
+      await expect(w.client.request('input.detect_drop', { text: file })).resolves.toEqual({
+        is_image: false,
+        matched: true,
+        name: 'notes.pdf',
+        text: `@${file}`
+      })
+    } finally {
+      rmSync(dir, { force: true, recursive: true })
+    }
+  })
+
+  it('leaves missing file paths unmatched so the composer preserves their literal text', async () => {
+    const w = makeWorld()
+
+    await expect(w.client.request('input.detect_drop', { text: '/tmp/makima-does-not-exist.pdf' })).resolves.toEqual({
+      matched: false
+    })
+  })
+
+  it('does not submit a staged image when its chip was deleted', async () => {
+    const w = makeWorld()
+    w.client.start()
+    await settle()
+
+    ;(w.client as any).pendingImages.set('cc-test-session', new Map([[7, {
+      attachmentId: 'stored-image', bytes: 3, height: 12, mediaType: 'image/png', name: 'clipboard-screenshot.png', width: 16
+    }]]))
+    await w.client.request('prompt.submit', { text: 'text only' })
+
+    expect(w.followups[0]).toMatchObject({ content: [{ text: 'text only', type: 'text' }] })
+  })
+
   it('uses the CLI launch directory when creating a session without a configured directory', async () => {
     const w = makeWorld()
     const client = new HarnessGatewayClient(w.ctx as never, { launchCwd: 'H:\\Project\\Roo-Code' })

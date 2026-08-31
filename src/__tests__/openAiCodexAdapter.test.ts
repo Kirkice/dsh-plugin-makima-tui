@@ -26,8 +26,8 @@ describe('OpenAI Codex Responses adapter', () => {
     ])
   })
 
-  it('serializes messages, tools, and generation settings for Responses', () => {
-    const request = serializeRequest({
+  it('serializes messages, tools, and generation settings for Responses', async () => {
+    const request = await serializeRequest({
       maxTokens: 123,
       messages: [
         { content: [{ text: 'hello', type: 'text' }], role: 'user' },
@@ -56,6 +56,31 @@ describe('OpenAI Codex Responses adapter', () => {
       { content: [{ text: 'hello', type: 'input_text' }], role: 'user' },
       { call_id: 'call-1', output: 'source', type: 'function_call_output' }
     ]))
+  })
+
+  it('resolves durable image attachments into Responses input_image blocks', async () => {
+    const request = await serializeRequest({
+      messages: [{
+        content: [
+          { text: '[Image #1] describe this', type: 'text' },
+          {
+            attachment: { attachmentId: 'image-1', bytes: 3, height: 1, mediaType: 'image/png', name: 'shot.png', width: 1 },
+            type: 'image'
+          }
+        ],
+        role: 'user'
+      }],
+      model: 'gpt-5.6-terra',
+      signal: new AbortController().signal
+    } as unknown as GenerateOptions, async ref => ({ data: new Uint8Array([1, 2, 3]), ref }))
+
+    expect(request.input).toEqual([{
+      content: [
+        { text: '[Image #1] describe this', type: 'input_text' },
+        { image_url: 'data:image/png;base64,AQID', type: 'input_image' }
+      ],
+      role: 'user'
+    }])
   })
 
   it('parses split SSE frames and ignores the DONE sentinel', async () => {

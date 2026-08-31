@@ -1,6 +1,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 
 import { OpenAiCodexAdapter } from './openAiCodexAdapter.js'
+import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import { OpenAiCodexAuthManager, OPENAI_CODEX_PROVIDER, openAiCodexOAuthConfig, type OpenAiCodexAuthView, type OAuthLogin } from './openAiCodexAuth.js'
 import { openExternalUrl } from './openExternalUrl.js'
 
@@ -31,7 +32,13 @@ export function installOpenAiCodex(ctx: Context): void {
   // in a child lifecycle so Cordis waits for the optional LLM service instead
   // of reading ctx.llm while the parent plugin is still being applied.
   ctx.inject(['llm'], llmCtx => {
-    const dispose = llmCtx.llm.registerAdapter([OPENAI_CODEX_PROVIDER], new OpenAiCodexAdapter(next))
+    const attachments = llmCtx.get('attachments') as
+      | { readImage?: (ref: ImageAttachmentRef, signal?: AbortSignal) => Promise<{ data: Uint8Array; ref: ImageAttachmentRef }> }
+      | undefined
+    const dispose = llmCtx.llm.registerAdapter(
+      [OPENAI_CODEX_PROVIDER],
+      new OpenAiCodexAdapter(next, fetch, attachments?.readImage?.bind(attachments))
+    )
     llmCtx.effect(() => () => dispose())
   })
 

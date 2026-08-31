@@ -884,12 +884,18 @@ export function useMainApp(gw: GatewayClient) {
           return
         }
 
-        if (r.attached) {
+        // `GatewayClient` historically returned `{ attached, count }`, while
+        // the in-process Harness gateway returns the attachment metadata
+        // directly as `{ id, name, ... }`. Bracketed terminal paste reaches this
+        // route, so accept both contracts; otherwise a successful screenshot is
+        // silently staged but never rendered as an `[Image #N]` chip.
+        const imageId = r.attached ? r.count : r.id
+        if (imageId) {
           // The chip in the composer IS the feedback — matching the reference,
           // which shows `[Image #N]` inline and prints nothing to the transcript.
           // It also doubles as un-attach: delete the chip and the backend drops
           // the image at submit.
-          return insertImageRefRef.current(r.count ?? 0)
+          return insertImageRefRef.current(imageId)
         }
 
         if (r.error || r.unavailable) {

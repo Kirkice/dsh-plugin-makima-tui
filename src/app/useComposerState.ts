@@ -251,11 +251,24 @@ export function useComposerState({
             return null
           }
 
-          if (attached?.error || attached?.unavailable) {
+          if (attached?.unavailable) {
+            // Clipboard/image tooling is unavailable: this is an actionable
+            // platform error, not a file-type mismatch, so surface it.
             onImageAttached?.(attached)
 
             return null
           }
+
+          // `image.attach` deliberately accepts images only. A dragged or
+          // pasted PDF, source file, archive, etc. must continue through the
+          // generic file-drop resolver below (or, when unsupported by the
+          // gateway, remain visible as its literal path). Previously an
+          // "unsupported image" reply was treated as terminal here, which made
+          // every non-image file path appear to vanish from the composer.
+          //
+          // The generic resolver may still turn a real dropped file into its
+          // Harness reference form, while a failed/missing path safely falls
+          // back to normal text paste at the end of this handler.
         } catch {
           // Fall back to generic file-drop detection below.
         }
