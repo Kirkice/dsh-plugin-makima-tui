@@ -504,15 +504,51 @@ function renderNodeToOutput(
     }
 
     if (cached && (node.dirty || positionChanged)) {
+      const oldX = Math.floor(cached.x)
+      const oldY = Math.floor(cached.y)
+      const oldWidth = Math.floor(cached.width)
+      const oldHeight = Math.floor(cached.height)
+      const newX = Math.floor(x)
+      const newY = Math.floor(y)
+      const newWidth = Math.floor(width)
+      const newHeight = Math.floor(height)
+
       output.clear(
-        {
-          x: Math.floor(cached.x),
-          y: Math.floor(cached.y),
-          width: Math.floor(cached.width),
-          height: Math.floor(cached.height)
-        },
+        { height: oldHeight, width: oldWidth, x: oldX, y: oldY },
+        node.style.position === 'absolute',
         node.style.position === 'absolute'
       )
+
+      // For normal-flow nodes, only the part of the old rect that is no
+      // longer covered by the replacement layout must block prevScreen
+      // blits. Descendants in the overlap remain eligible for fast-path
+      // reuse, while old code-block border cells cannot be restored.
+      if (node.style.position !== 'absolute' && positionChanged) {
+        const overlapX1 = Math.max(oldX, newX)
+        const overlapY1 = Math.max(oldY, newY)
+        const overlapX2 = Math.min(oldX + oldWidth, newX + newWidth)
+        const overlapY2 = Math.min(oldY + oldHeight, newY + newHeight)
+
+        if (overlapX1 >= overlapX2 || overlapY1 >= overlapY2) {
+          output.clear({ height: oldHeight, width: oldWidth, x: oldX, y: oldY }, false, true)
+        } else {
+          if (oldY < overlapY1) {
+            output.clear({ height: overlapY1 - oldY, width: oldWidth, x: oldX, y: oldY }, false, true)
+          }
+
+          if (overlapY2 < oldY + oldHeight) {
+            output.clear({ height: oldY + oldHeight - overlapY2, width: oldWidth, x: oldX, y: overlapY2 }, false, true)
+          }
+
+          if (oldX < overlapX1) {
+            output.clear({ height: overlapY2 - overlapY1, width: overlapX1 - oldX, x: oldX, y: overlapY1 }, false, true)
+          }
+
+          if (overlapX2 < oldX + oldWidth) {
+            output.clear({ height: overlapY2 - overlapY1, width: oldX + oldWidth - overlapX2, x: overlapX2, y: overlapY1 }, false, true)
+          }
+        }
+      }
     }
 
     // Read before deleting — hasRemovedChild disables prevScreen blitting

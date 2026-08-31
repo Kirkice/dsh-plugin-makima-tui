@@ -158,14 +158,13 @@ type ShiftOperation = {
 type ClearOperation = {
   type: 'clear'
   region: Rectangle
-  /**
-   * Set when the clear is for an absolute-positioned node's old bounds.
-   * Absolute nodes overlay normal-flow siblings, so their stale paint is
-   * what an earlier sibling's clean-subtree blit wrongly restores from
-   * prevScreen. Normal-flow siblings' clears don't have this problem —
-   * their old position can't have been painted on top of a sibling.
-   */
+  /** Set for an absolute-positioned node's old bounds (diagnostics only). */
   fromAbsolute?: boolean
+  /**
+   * Prevent subsequent prevScreen blits from restoring this region. Used only
+   * for the part of an old layout rect no longer occupied by its replacement.
+   */
+  fenceBlit?: boolean
 }
 
 type NoSelectOperation = {
@@ -233,8 +232,8 @@ export default class Output {
    * Clear a region by writing empty cells. Used when a node shrinks to
    * ensure stale content from the previous frame is removed.
    */
-  clear(region: Rectangle, fromAbsolute?: boolean): void {
-    this.operations.push({ type: 'clear', region, fromAbsolute })
+  clear(region: Rectangle, fromAbsolute?: boolean, fenceBlit = false): void {
+    this.operations.push({ type: 'clear', fenceBlit, fromAbsolute, region })
   }
 
   /**
@@ -284,17 +283,11 @@ export default class Output {
     let writeCells = 0
 
     // Pass 1: expand damage to cover clear regions. The buffer is freshly
-    // zeroed by resetScreen, so this pass only marks damage so diff()
-    // checks these regions against the previous frame.
-    //
-    // Also collect clears from absolute-positioned nodes. An absolute
-    // node overlays normal-flow siblings; when it shrinks, its clear is
-    // pushed AFTER those siblings' clean-subtree blits (DOM order). The
-    // blit copies the absolute node's own stale paint from prevScreen,
-    // and since clear is damage-only, the ghost survives diff. Normal-
-    // flow clears don't need this — a normal-flow node's old position
-    // can't have been painted on top of a sibling's current position.
-    const absoluteClears: Rectangle[] = []
+    // zeroed by resetScreen, so a clear is represented by preserving that
+    // empty state and marking it as damage. Only stale regions outside a
+    // node's replacement rect fence later prevScreen blits: clean descendants
+    // inside the replacement rect are still valid to reuse.
+    const blitFences: Rectangle[] = []
 
     for (const operation of this.operations) {
       if (operation.type !== 'clear') {
@@ -320,8 +313,8 @@ export default class Output {
 
       screen.damage = screen.damage ? unionRect(screen.damage, rect) : rect
 
-      if (operation.fromAbsolute) {
-        absoluteClears.push(rect)
+      if (operation.fenceBlit) {
+        blitFences.push(rect)
       }
     }
 
@@ -371,11 +364,10 @@ export default class Output {
             continue
           }
 
-          // Exclude cells covered by an absolute-positioned node's clear.
-          // Absolute nodes overlay normal-flow siblings, so prevScreen in
-          // that region holds stale overlay paint. If we blit those cells
-          // back, removed/moved overlays ghost as a duplicate.
-          if (absoluteClears.length === 0) {
+          // Do not copy cells in stale old bounds that no current layout node
+          // occupies. A clean ancestor blit would otherwise resurrect a prior
+          // frame's border/content after its child shrinks or moves.
+          if (blitFences.length === 0) {
             blitRegion(screen, src, startX, startY, maxX, maxY)
             blitCells += (maxY - startY) * (maxX - startX)
 
@@ -385,7 +377,7 @@ export default class Output {
           for (let row = startY; row < maxY; row++) {
             let spans: [number, number][] = [[startX, maxX]]
 
-            for (const r of absoluteClears) {
+            for (const r of blitFences) {
               if (row < r.y || row >= r.y + r.height || !spans.length) {
                 break
               }

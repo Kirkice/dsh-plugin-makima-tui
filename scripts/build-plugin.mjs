@@ -10,6 +10,7 @@ import { dirname, resolve } from 'node:path'
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '..')
 const out = resolve(root, 'dist/plugin.js')
+const authCliOut = resolve(root, 'dist/openai-codex-auth.js')
 
 const stubDevtools = {
   name: 'stub-react-devtools-core',
@@ -25,12 +26,17 @@ const stubDevtools = {
   }
 }
 
-await build({
-  entryPoints: [resolve(root, 'src/harness/index.ts')],
+const shared = {
   bundle: true,
   platform: 'node',
   format: 'esm',
   target: 'node20',
+  logLevel: 'info'
+}
+
+await build({
+  ...shared,
+  entryPoints: [resolve(root, 'src/harness/index.ts')],
   outfile: out,
   jsx: 'automatic',
   jsxImportSource: 'react',
@@ -43,8 +49,18 @@ await build({
   plugins: [stubDevtools],
   banner: {
     js: "import { createRequire as __cr } from 'node:module'; const require = __cr(import.meta.url);"
-  },
-  logLevel: 'info'
+  }
+})
+
+await build({
+  ...shared,
+  entryPoints: [resolve(root, 'src/harness/openAiCodexCli.ts')],
+  external: ['proper-lockfile'],
+  outfile: authCliOut,
+  banner: {
+    js: "import { createRequire as __cr } from 'node:module'; const require = __cr(import.meta.url);"
+  }
 })
 
 console.log(`built ${out}`)
+console.log(`built ${authCliOut}`)

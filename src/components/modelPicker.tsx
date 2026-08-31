@@ -1,4 +1,4 @@
-import { Box, Text, useInput, useStdout } from '@makima-tui/ink'
+import { Box, Link, Text, useInput, useStdout } from '@makima-tui/ink'
 import { useEffect, useMemo, useState } from 'react'
 
 import { providerDisplayNames } from '../domain/providers.js'
@@ -17,7 +17,20 @@ const VISIBLE = 12
 const MIN_WIDTH = 40
 const MAX_WIDTH = 90
 
-type Stage = 'provider' | 'key' | 'model' | 'effort' | 'disconnect'
+type Stage = 'provider' | 'key' | 'oauth' | 'model' | 'effort' | 'disconnect'
+
+interface OpenAiCodexLoginResponse {
+  authorization_url?: string
+  device_code?: { expires_at: number; user_code: string; verification_uri: string }
+  method?: 'browser' | 'device_code'
+}
+
+interface OpenAiCodexAuthStatus {
+  authenticated?: boolean
+  device_code_available?: boolean
+  login_error?: string
+  login_pending?: boolean
+}
 
 /**
  * Offered above the model's real levels on step 3: clears the session
@@ -47,6 +60,9 @@ export function ModelPicker({
   const [keyInput, setKeyInput] = useState('')
   const [keySaving, setKeySaving] = useState(false)
   const [keyError, setKeyError] = useState('')
+  const [oauthUrl, setOauthUrl] = useState('')
+  const [oauthDeviceCode, setOauthDeviceCode] = useState<{ expiresAt: number; userCode: string; verificationUri: string } | undefined>()
+  const [oauthPending, setOauthPending] = useState(false)
   // Step 3. `effortLevels` is auto + whatever the chosen model accepts;
   // `pendingModel` is the step-2 choice held while step 3 runs, so the
   // switch is applied once, with both halves, rather than twice.
@@ -95,6 +111,58 @@ export function ModelPicker({
         setLoading(false)
       })
   }, [gw, sessionId])
+
+  useEffect(() => {
+    if (stage !== 'oauth' || !oauthPending) {
+      return
+    }
+
+    let alive = true
+    const poll = () => {
+      gw.request<OpenAiCodexAuthStatus>('llm.openAiCodex.status')
+        .then(raw => {
+          const status = asRpcResult<OpenAiCodexAuthStatus>(raw)
+
+          if (!alive) {
+            return
+          }
+
+          if (status?.login_error) {
+            setKeyError(status.login_error)
+            setOauthPending(false)
+            return
+          }
+
+          if (!status?.authenticated) {
+            if (status?.login_pending === false) setOauthPending(false)
+            return
+          }
+
+          setProviders(prev => prev.map(p =>
+            p.slug === 'openai-codex'
+              ? { ...p, authenticated: true, warning: undefined }
+              : p
+          ))
+          setOauthPending(false)
+          setOauthUrl('')
+          setKeyError('')
+          setModelIdx(0)
+          setStage('model')
+        })
+        .catch(() => {
+          // The original login error remains visible. A transient status poll
+          // failure must not discard a valid browser authorization flow.
+        })
+    }
+
+    poll()
+    const timer = setInterval(poll, 1000)
+
+    return () => {
+      alive = false
+      clearInterval(timer)
+    }
+  }, [gw, oauthPending, stage])
 
   const names = useMemo(() => providerDisplayNames(providers), [providers])
   const health = useMemo(() => contextHealth(usage), [usage])
@@ -175,6 +243,20 @@ export function ModelPicker({
       setEffortIdx(0)
       setEffortLoading(false)
       setPendingModel('')
+      setFilter('')
+
+      return
+    }
+
+    if (stage === 'oauth') {
+      if (oauthPending) {
+        void gw.request('llm.openAiCodex.cancelLogin').catch(() => undefined)
+      }
+
+      setOauthPending(false)
+      setOauthUrl('')
+      setKeyError('')
+      setStage('provider')
       setFilter('')
 
       return
@@ -265,6 +347,27 @@ export function ModelPicker({
       return
     }
 
+    if (stage === 'oauth') {
+      if (key.escape || ch.toLowerCase() === 'c') {
+        back()
+        return
+      }
+      if (ch.toLowerCase() === 'd' && !oauthPending && provider?.slug === 'openai-codex') {
+        setOauthPending(true)
+        setOauthUrl('')
+        setOauthDeviceCode(undefined)
+        setKeyError('')
+        gw.request<OpenAiCodexLoginResponse>('llm.openAiCodex.login', { method: 'device_code' })
+          .then(raw => {
+            const login = asRpcResult<OpenAiCodexLoginResponse>(raw)
+            if (!login?.device_code) throw new Error('failed to start Device Code sign-in')
+            setOauthDeviceCode({ expiresAt: login.device_code.expires_at, userCode: login.device_code.user_code, verificationUri: login.device_code.verification_uri })
+          })
+          .catch((e: unknown) => { setKeyError(rpcErrorMessage(e)); setOauthPending(false) })
+      }
+      return
+    }
+
     // Disconnect confirmation stage
     if (stage === 'disconnect') {
       if (ch.toLowerCase() === 'y' || key.return) {
@@ -276,14 +379,18 @@ export function ModelPicker({
 
         setKeySaving(true)
         setKeyError('')
-        gw.request<{ disconnected?: boolean }>('model.disconnect', {
-          slug: provider.slug,
-          ...(sessionId ? { session_id: sessionId } : {})
-        })
-          .then(raw => {
-            const r = asRpcResult<{ disconnected?: boolean }>(raw)
+        const disconnect = provider.auth_type === 'oauth'
+          ? gw.request<{ disconnected?: boolean; logged_out?: boolean }>('llm.openAiCodex.logout')
+          : gw.request<{ disconnected?: boolean; logged_out?: boolean }>('model.disconnect', {
+              slug: provider.slug,
+              ...(sessionId ? { session_id: sessionId } : {})
+            })
 
-            if (r?.disconnected) {
+        disconnect
+          .then(raw => {
+            const r = asRpcResult<{ disconnected?: boolean; logged_out?: boolean }>(raw)
+
+            if (r?.disconnected || r?.logged_out) {
               // Mark provider as unauthenticated in local state
               setProviders(prev =>
                 prev.map(p =>
@@ -293,7 +400,9 @@ export function ModelPicker({
                         authenticated: false,
                         models: [],
                         total_models: 0,
-                        warning: p.key_env ? `paste ${p.key_env} to activate` : 'add the key to ~/.dsh/.credentials.yaml to activate'
+                        warning: p.auth_type === 'oauth'
+                          ? 'Sign in with ChatGPT to activate'
+                          : p.key_env ? `paste ${p.key_env} to activate` : 'add the key to ~/.dsh/.credentials.yaml to activate'
                       }
                     : p
                 )
@@ -364,15 +473,32 @@ export function ModelPicker({
         }
 
         if (provider.authenticated === false) {
-          // api_key providers: prompt for key inline
+          // API-key providers prompt for a key; Codex OAuth starts a host-only
+          // PKCE session and exposes only the authorization URL to this TUI.
           if (provider.auth_type === 'api_key' && provider.key_env) {
             setStage('key')
             setKeyInput('')
             setKeyError('')
             setFilter('')
+          } else if (provider.auth_type === 'oauth' && provider.slug === 'openai-codex') {
+            setStage('oauth')
+            setOauthPending(true)
+            setOauthUrl('')
+            setOauthDeviceCode(undefined)
+            setKeyError('')
+            setFilter('')
+            gw.request<OpenAiCodexLoginResponse>('llm.openAiCodex.login')
+              .then(raw => {
+                const login = asRpcResult<OpenAiCodexLoginResponse>(raw)
+                if (!login?.authorization_url) throw new Error('failed to start ChatGPT sign-in')
+                setOauthUrl(login.authorization_url)
+              })
+              .catch((e: unknown) => {
+                setKeyError(rpcErrorMessage(e))
+                setOauthPending(false)
+              })
           }
 
-          // Other auth types: no-op (warning shown tells them to run clawcodex model)
           return
         }
 
@@ -563,6 +689,50 @@ export function ModelPicker({
     )
   }
 
+  // ── ChatGPT OAuth login stage ─────────────────────────────────────────
+  if (stage === 'oauth' && provider) {
+    return (
+      <Box flexDirection="column" width={width}>
+        <Text bold color={t.color.accent} wrap="truncate-end">
+          Sign in to {provider.name}
+        </Text>
+        <Text color={t.color.muted} wrap="truncate-end">
+          {oauthDeviceCode ? 'Open the verification page and enter the displayed code.' : 'Complete the secure ChatGPT authorization in your browser.'}
+        </Text>
+        <Text color={t.color.muted} wrap="truncate-end">
+          {' '}
+        </Text>
+        {oauthDeviceCode ? (
+          <>
+            <Link url={oauthDeviceCode.verificationUri}>
+              <Text color={t.color.accent} wrap="truncate-end">Open ChatGPT device verification</Text>
+            </Link>
+            <Text bold color={t.color.accent} wrap="truncate-end">Code: {oauthDeviceCode.userCode}</Text>
+          </>
+        ) : oauthUrl ? (
+          <Link url={oauthUrl}>
+            <Text color={t.color.accent} wrap="truncate-end">Open ChatGPT authorization</Text>
+          </Link>
+        ) : (
+          <Text color={t.color.muted} wrap="truncate-end">{oauthPending ? 'starting authorization…' : 'authorization was not started'}</Text>
+        )}
+        <Text color={t.color.muted} wrap="truncate-end">
+          {oauthPending ? (oauthDeviceCode ? 'Waiting for Device Code authorization…' : 'Waiting for the loopback callback…') : 'Sign-in did not complete.'}
+        </Text>
+        {keyError ? (
+          <Text color={t.color.label} wrap="truncate-end">
+            error: {keyError}
+          </Text>
+        ) : (
+          <Text color={t.color.muted} wrap="truncate-end">
+            {' '}
+          </Text>
+        )}
+        <OverlayHint t={t}>{oauthPending ? 'Esc/c cancel' : 'Esc/c cancel · d device code'}</OverlayHint>
+      </Box>
+    )
+  }
+
   // ── Disconnect confirmation stage ─────────────────────────────────────
   if (stage === 'disconnect' && provider) {
     return (
@@ -576,7 +746,9 @@ export function ModelPicker({
         </Text>
 
         <Text color={t.color.muted} wrap="truncate-end">
-          Clears providers.{provider.slug}.api_key from ~/.clawcodex/config.json
+          {provider.auth_type === 'oauth'
+            ? 'Removes the locally stored ChatGPT OAuth session.'
+            : `Clears providers.${provider.slug}.api_key from ~/.clawcodex/config.json`}
         </Text>
 
         {provider.removes_env?.length ? (
@@ -687,7 +859,9 @@ export function ModelPicker({
       const modelCount = p.total_models ?? p.models?.length ?? 0
 
       const suffix =
-        p.authenticated === false ? (p.auth_type === 'api_key' ? '(no key)' : '(needs setup)') : `${modelCount} models`
+        p.authenticated === false
+          ? (p.auth_type === 'api_key' ? '(no key)' : p.auth_type === 'oauth' ? '(sign in)' : '(needs setup)')
+          : `${modelCount} models`
 
       return `${authMark} ${name} · ${suffix}`
     })

@@ -5,6 +5,8 @@
 import type { Context } from '@deepseek-ai/cordis'
 import Schema from '@deepseek-ai/schemastery'
 
+import { installOpenAiCodex } from './openAiCodexRuntime.js'
+
 export const name = 'makima-tui'
 
 // Code-level inject stays minimal (the agent registry is the one hard
@@ -37,6 +39,7 @@ export const Config: Schema<Config> = Schema.object({
 })
 
 export async function apply(ctx: Context, config: Config): Promise<void> {
+  installOpenAiCodex(ctx)
   const mod = await import('./plugin.js')
 
   await mod.mountCcTui(ctx, config)

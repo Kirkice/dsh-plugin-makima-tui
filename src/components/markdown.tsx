@@ -289,6 +289,20 @@ const COL_GAP = 2 // the '  ' between columns
 const TABLE_PADDING_LEFT = 2 // paddingLeft={2} on the outer <Box>
 
 const ruleWidth = (cols?: number, inset = 0) => Math.max(1, Math.min(Math.max(1, (cols ?? 64) - inset), 72))
+const HORIZONTAL_RULE_COLOR = '#80FBA3'
+
+/** Make Markdown separators visibly ornamental, not easily mistaken for a box edge. */
+export const horizontalRule = (cols?: number) => {
+  const width = ruleWidth(cols)
+
+  if (width < 7) {
+    return '✦'
+  }
+
+  const arm = Math.max(2, Math.floor((width - 5) / 2))
+
+  return `✦ ${'─'.repeat(arm)} ✦ ${'─'.repeat(arm)}`
+}
 
 const listMarkerColor = (t: Theme, depth: number) =>
   depth === 0 ? t.color.highlight : depth === 1 ? t.color.command : t.color.thinking
@@ -932,8 +946,8 @@ function MdImpl({ cols, compact, t, text }: MdProps) {
       if (HR_RE.test(line)) {
         start('rule')
         nodes.push(
-          <Text color={t.color.frame} key={key}>
-            {'─'.repeat(ruleWidth(cols))}
+          <Text color={HORIZONTAL_RULE_COLOR} key={key}>
+            {horizontalRule(cols)}
           </Text>
         )
         i++

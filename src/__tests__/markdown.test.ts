@@ -4,7 +4,7 @@ import { Box, renderSync } from '@makima-tui/ink'
 import React from 'react'
 import { describe, expect, it } from 'vitest'
 
-import { AUDIO_DIRECTIVE_RE, INLINE_RE, Md, MEDIA_LINE_RE, stripInlineMarkup } from '../components/markdown.js'
+import { AUDIO_DIRECTIVE_RE, horizontalRule, INLINE_RE, Md, MEDIA_LINE_RE, stripInlineMarkup } from '../components/markdown.js'
 import { stripAnsi } from '../lib/text.js'
 import { DEFAULT_THEME } from '../theme.js'
 
@@ -220,6 +220,16 @@ describe('protocol sentinels', () => {
     expect(AUDIO_DIRECTIVE_RE.test('[[audio_as_voice]]')).toBe(true)
     expect(AUDIO_DIRECTIVE_RE.test('  [[audio_as_voice]]  ')).toBe(true)
     expect(AUDIO_DIRECTIVE_RE.test('audio_as_voice')).toBe(false)
+  })
+})
+
+describe('Markdown horizontal rules', () => {
+  it('uses an ornamental separator rather than a bare box-like line', () => {
+    expect(horizontalRule(40)).toMatch(/^✦ ─+ ✦ ─+$/)
+  })
+
+  it('keeps a compact marker on narrow displays', () => {
+    expect(horizontalRule(6)).toBe('✦')
   })
 })
 

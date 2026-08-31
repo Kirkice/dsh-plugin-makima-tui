@@ -9085,15 +9085,41 @@ function renderNodeToOutput(node, output, {
       absoluteOverlayMoved ||= node.style.position === "absolute";
     }
     if (cached && (node.dirty || positionChanged)) {
+      const oldX = Math.floor(cached.x);
+      const oldY = Math.floor(cached.y);
+      const oldWidth = Math.floor(cached.width);
+      const oldHeight = Math.floor(cached.height);
+      const newX = Math.floor(x);
+      const newY = Math.floor(y);
+      const newWidth = Math.floor(width);
+      const newHeight = Math.floor(height);
       output.clear(
-        {
-          x: Math.floor(cached.x),
-          y: Math.floor(cached.y),
-          width: Math.floor(cached.width),
-          height: Math.floor(cached.height)
-        },
+        { height: oldHeight, width: oldWidth, x: oldX, y: oldY },
+        node.style.position === "absolute",
         node.style.position === "absolute"
       );
+      if (node.style.position !== "absolute" && positionChanged) {
+        const overlapX1 = Math.max(oldX, newX);
+        const overlapY1 = Math.max(oldY, newY);
+        const overlapX2 = Math.min(oldX + oldWidth, newX + newWidth);
+        const overlapY2 = Math.min(oldY + oldHeight, newY + newHeight);
+        if (overlapX1 >= overlapX2 || overlapY1 >= overlapY2) {
+          output.clear({ height: oldHeight, width: oldWidth, x: oldX, y: oldY }, false, true);
+        } else {
+          if (oldY < overlapY1) {
+            output.clear({ height: overlapY1 - oldY, width: oldWidth, x: oldX, y: oldY }, false, true);
+          }
+          if (overlapY2 < oldY + oldHeight) {
+            output.clear({ height: oldY + oldHeight - overlapY2, width: oldWidth, x: oldX, y: overlapY2 }, false, true);
+          }
+          if (oldX < overlapX1) {
+            output.clear({ height: overlapY2 - overlapY1, width: overlapX1 - oldX, x: oldX, y: overlapY1 }, false, true);
+          }
+          if (overlapX2 < oldX + oldWidth) {
+            output.clear({ height: overlapY2 - overlapY1, width: oldX + oldWidth - overlapX2, x: overlapX2, y: overlapY1 }, false, true);
+          }
+        }
+      }
     }
     const clears = pendingClears.get(node);
     const hasRemovedChild = clears !== void 0;
@@ -12047,8 +12073,8 @@ var Output = class {
    * Clear a region by writing empty cells. Used when a node shrinks to
    * ensure stale content from the previous frame is removed.
    */
-  clear(region, fromAbsolute) {
-    this.operations.push({ type: "clear", region, fromAbsolute });
+  clear(region, fromAbsolute, fenceBlit = false) {
+    this.operations.push({ type: "clear", fenceBlit, fromAbsolute, region });
   }
   /**
    * Mark a region as non-selectable (excluded from fullscreen text
@@ -12088,7 +12114,7 @@ var Output = class {
     const screenHeight = this.height;
     let blitCells = 0;
     let writeCells = 0;
-    const absoluteClears = [];
+    const blitFences = [];
     for (const operation of this.operations) {
       if (operation.type !== "clear") {
         continue;
@@ -12108,8 +12134,8 @@ var Output = class {
         height: maxY - startY
       };
       screen.damage = screen.damage ? unionRect(screen.damage, rect) : rect;
-      if (operation.fromAbsolute) {
-        absoluteClears.push(rect);
+      if (operation.fenceBlit) {
+        blitFences.push(rect);
       }
     }
     const clips = [];
@@ -12133,14 +12159,14 @@ var Output = class {
           if (startX >= maxX || startY >= maxY) {
             continue;
           }
-          if (absoluteClears.length === 0) {
+          if (blitFences.length === 0) {
             blitRegion(screen, src, startX, startY, maxX, maxY);
             blitCells += (maxY - startY) * (maxX - startX);
             continue;
           }
           for (let row = startY; row < maxY; row++) {
             let spans = [[startX, maxX]];
-            for (const r of absoluteClears) {
+            for (const r of blitFences) {
               if (row < r.y || row >= r.y + r.height || !spans.length) {
                 break;
               }

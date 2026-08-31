@@ -34,6 +34,12 @@ import { structuredPatch } from 'diff'
 
 import type { GatewayEvent, GatewayTranscriptMessage, StructuredDiffPayload } from '../gatewayTypes.js'
 import { resolveManagedProfile } from './profile.js'
+import {
+  cancelOpenAiCodexLogin,
+  logoutOpenAiCodex,
+  openAiCodexStatus,
+  startOpenAiCodexLogin
+} from './openAiCodexRuntime.js'
 import type { SessionInfo, Usage } from '../types.js'
 
 const PLUGIN_VERSION = (() => {
@@ -2119,6 +2125,20 @@ export class HarnessGatewayClient extends GatewayClient {
         return this.runHarnessCommand(`${name}${arg}`).then(r => ({ output: r.output, type: 'exec' }) as T)
       }
 
+      case 'llm.openAiCodex.status':
+        return openAiCodexStatus().then(status => status as T)
+
+      case 'llm.openAiCodex.login': {
+        const method = p.method === 'device_code' ? 'device_code' : 'browser'
+        return startOpenAiCodexLogin(method).then(login => login as T)
+      }
+
+      case 'llm.openAiCodex.cancelLogin':
+        return cancelOpenAiCodexLogin().then(() => ({ cancelled: true }) as T)
+
+      case 'llm.openAiCodex.logout':
+        return logoutOpenAiCodex().then(() => ({ logged_out: true }) as T)
+
       case 'model.options': {
         return (async () => {
           const llm = this.ctx.get('llm') as
@@ -2128,6 +2148,7 @@ export class HarnessGatewayClient extends GatewayClient {
               }
             | undefined
           const current = this.selection.current
+          const codexAuth = await openAiCodexStatus()
           const providers = await Promise.all(
             (llm?.listProviders?.() ?? []).map(async info => {
               let models: string[] = []
@@ -2138,13 +2159,19 @@ export class HarnessGatewayClient extends GatewayClient {
                 models = []
               }
 
+              const isOpenAiCodex = info.id === 'openai-codex'
+
               return {
-                authenticated: true,
+                auth_type: isOpenAiCodex ? 'oauth' : undefined,
+                authenticated: isOpenAiCodex ? codexAuth.authenticated : true,
                 is_current: info.id === current?.provider,
                 models,
                 name: info.name,
                 slug: info.id,
-                total_models: models.length
+                total_models: models.length,
+                warning: isOpenAiCodex && !codexAuth.authenticated
+                  ? 'Sign in with ChatGPT to activate'
+                  : undefined
               }
             })
           )

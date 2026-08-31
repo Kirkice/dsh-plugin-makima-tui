@@ -362,11 +362,10 @@ function buildTheme(themeName: string, mode: ColorMode): Theme {
   }
 
   if (isDark) {
-    // A subdued cool/warm pair keeps changed code readable without the
-    // traffic-light saturation of pure green/red bands. The closer word chip
-    // adds focus while the line band stays intentionally quiet.
+    // User-selected cool/warm line bands. Word chips remain darker so an
+    // inline replacement is still distinguishable inside the full-line band.
     const fg = rgb(232, 234, 240)
-    const deleteLine = tc ? rgb(51, 25, 35) : ansiIdx(52)
+    const deleteLine = tc ? rgb(255, 111, 181) : ansiIdx(211)
     const deleteWord = tc ? rgb(91, 38, 57) : ansiIdx(89)
     const deleteDecoration = rgb(245, 151, 169)
 
@@ -385,7 +384,7 @@ function buildTheme(themeName: string, mode: ColorMode): Theme {
     }
 
     return {
-      addLine: tc ? rgb(20, 43, 50) : ansiIdx(23),
+      addLine: tc ? rgb(89, 217, 255) : ansiIdx(117),
       addWord: tc ? rgb(30, 75, 83) : ansiIdx(30),
       addDecoration: rgb(120, 215, 200),
       deleteLine,
