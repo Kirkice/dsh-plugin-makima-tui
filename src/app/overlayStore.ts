@@ -23,6 +23,7 @@ const buildOverlayState = (): OverlayState => ({
   secret: null,
   sessions: false,
   skillsHub: false,
+  skillsMcpManager: null,
   sudo: null,
   worktreeExit: null
 })
@@ -51,6 +52,7 @@ export const $isBlocked = computed(
     secret,
     sessions,
     skillsHub,
+    skillsMcpManager,
     sudo,
     worktreeExit
   }) =>
@@ -74,6 +76,7 @@ export const $isBlocked = computed(
       secret ||
       sessions ||
       skillsHub ||
+      skillsMcpManager ||
       sudo ||
       worktreeExit
     )
@@ -109,6 +112,7 @@ export const resetFlowOverlays = () =>
     providersHub: $overlayState.get().providersHub,
     sessions: $overlayState.get().sessions,
     skillsHub: $overlayState.get().skillsHub,
+    skillsMcpManager: $overlayState.get().skillsMcpManager,
     // Deliberately preserved: the exit keep/remove dialog is an explicit user
     // flow, not turn-scoped — a background turn completing while it is up
     // must not wipe it (that would strand requestExit's in-flight guard).

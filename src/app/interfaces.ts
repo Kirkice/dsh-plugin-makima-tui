@@ -162,6 +162,8 @@ export interface OverlayState {
   secret: null | SecretReq
   sessions: boolean
   skillsHub: boolean
+  /** Local filesystem-backed Skills/MCP configuration manager. */
+  skillsMcpManager: 'mcp' | 'skills' | null
   sudo: null | SudoReq
   worktreeExit: null | WorktreeExitReq
 }

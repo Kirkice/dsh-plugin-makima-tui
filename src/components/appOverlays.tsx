@@ -22,6 +22,7 @@ import { ProvidersHub } from './providersHub.js'
 import { ApprovalPrompt, ClarifyPrompt, ConfirmPrompt, PlanApprovalPrompt } from './prompts.js'
 import { QuestionPrompt } from './questionPrompt.js'
 import { SkillsHub } from './skillsHub.js'
+import { SkillsMcpManagerOverlay } from './skillsMcpManagerOverlay.js'
 import { WorktreeExitPrompt } from './worktreeExitPrompt.js'
 
 const COMPLETION_WINDOW = 16
@@ -212,6 +213,7 @@ export function FloatingOverlays({
     overlay.petPicker ||
     overlay.sessions ||
     overlay.skillsHub ||
+    overlay.skillsMcpManager ||
     overlay.pluginsHub ||
     overlay.providersHub ||
     completions.length
@@ -347,6 +349,17 @@ export function FloatingOverlays({
       {overlay.skillsHub && (
         <FloatBox color={theme.color.border}>
           <SkillsHub gw={gw} onClose={() => patchOverlayState({ skillsHub: false })} t={theme} />
+        </FloatBox>
+      )}
+
+      {overlay.skillsMcpManager && (
+        <FloatBox color={theme.color.border}>
+          <SkillsMcpManagerOverlay
+            gw={gw}
+            initialTab={overlay.skillsMcpManager}
+            onClose={() => patchOverlayState({ skillsMcpManager: null })}
+            t={theme}
+          />
         </FloatBox>
       )}
 

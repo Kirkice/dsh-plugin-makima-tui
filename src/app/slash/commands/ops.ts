@@ -21,6 +21,25 @@ import { patchOverlayState } from '../../overlayStore.js'
 import { getSpawnHistory, pushDiskSnapshot, setDiffPair, type SpawnSnapshot } from '../../spawnHistoryStore.js'
 import type { SlashCommand } from '../types.js'
 
+interface ManagedMcpServer {
+  enabled: boolean
+  error?: string
+  name: string
+  status?: 'connected' | 'connecting' | 'disabled' | 'failed' | 'stopped'
+  tools?: number
+  transport: 'stdio' | 'streamable-http'
+}
+
+interface ManagedMcpListResponse {
+  config_path?: string
+  servers?: ManagedMcpServer[]
+}
+
+interface ManagedMcpMutationResponse {
+  deleted?: string
+  server?: ManagedMcpServer
+}
+
 interface SkillInfo {
   category?: string
   description?: string
@@ -191,6 +210,53 @@ export const opsCommands: SlashCommand[] = [
           })
         )
         .catch(ctx.guardedErr)
+    }
+  },
+
+  {
+    aliases: ['skills-manage'],
+    help: 'open the local Skills manager',
+    name: 'manage-skills',
+    run: (_arg, _ctx) => patchOverlayState({ skillsMcpManager: 'skills' })
+  },
+
+  {
+    argumentHint: '[manage|list|reload|enable <name>|disable <name>|delete <name>]',
+    help: 'open or manage backend-owned MCP connections and their runtime state',
+    name: 'mcp',
+    run: (arg, ctx) => {
+      const [action = 'manage', ...nameParts] = arg.trim().split(/\s+/).filter(Boolean)
+      const name = nameParts.join(' ')
+
+      if (action === 'manage' || action === 'ui') {
+        patchOverlayState({ skillsMcpManager: 'mcp' })
+        return
+      }
+
+      if (action === 'list' || action === 'reload') {
+        const method = action === 'reload' ? 'mcp.manager.reload' : 'mcp.manager.list'
+        ctx.gateway.rpc<ManagedMcpListResponse>(method, {}).then(ctx.guarded(r => {
+          const servers = r.servers ?? []
+          if (!servers.length) return ctx.transcript.sys(`no managed MCP servers · ${r.config_path ?? '~/.dsh/mcp.json'}`)
+          ctx.transcript.panel('MCP Servers', [{
+            rows: servers.map(server => [
+              server.name,
+              `${server.status ?? (server.enabled ? 'connecting' : 'disabled')} · ${server.transport} · ${server.tools ?? 0} tools${server.error ? ` · ${server.error}` : ''}`
+            ])
+          }, { text: action === 'reload' ? 'Backend MCP runtime reconciled.' : 'Connections and tools are owned by the Harness backend.' }])
+        })).catch(ctx.guardedErr)
+        return
+      }
+
+      if (!name || !['enable', 'disable', 'delete'].includes(action)) {
+        return ctx.transcript.sys('usage: /mcp [manage|list|reload|enable <name>|disable <name>|delete <name>]')
+      }
+
+      const rpc = action === 'delete' ? 'mcp.manager.delete' : 'mcp.manager.set_enabled'
+      const params = action === 'delete' ? { name } : { enabled: action === 'enable', name }
+      ctx.gateway.rpc<ManagedMcpMutationResponse>(rpc, params).then(ctx.guarded(() => {
+        ctx.transcript.sys(`MCP ${name} ${action === 'delete' ? 'deleted and unloaded' : action === 'enable' ? 'enabled and applying' : 'disabled and unloaded'}`)
+      })).catch(ctx.guardedErr)
     }
   },
 
@@ -554,14 +620,18 @@ export const opsCommands: SlashCommand[] = [
   },
 
   {
-    argumentHint: '[list | inspect <name> | search <query>]',
-    help: 'browse, inspect, install skills',
+    argumentHint: '[manage | list | inspect <name> | search <query> | install <name or url>]',
+    help: 'open the Skills Hub; manage local Skills or browse, inspect, and install skills',
     name: 'skills',
     run: (arg, ctx, cmd) => {
       const text = arg.trim()
 
-      if (!text) {
-        return patchOverlayState({ skillsHub: true })
+      // The Skills Hub now shares the native manager with MCP.  Keeping this
+      // as the no-argument entry point makes /skills the discoverable surface
+      // for enable/disable/delete operations instead of hiding it behind the
+      // legacy /manage-skills alias.
+      if (!text || text.toLowerCase() === 'manage') {
+        return patchOverlayState({ skillsMcpManager: 'skills' })
       }
 
       const [sub, ...rest] = text.split(/\s+/)

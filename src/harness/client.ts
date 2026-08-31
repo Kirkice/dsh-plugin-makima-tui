@@ -47,6 +47,7 @@ import {
 import type { SessionInfo, Usage } from '../types.js'
 import { parseImageRefs } from '../protocol/imageRef.js'
 import { readImageFile, readWindowsClipboardImage, type IngressImage } from './imageIngress.js'
+import { HarnessMcpManager, type McpServerConfig } from './mcpManager.js'
 
 const PLUGIN_VERSION = (() => {
   const require = createRequire(import.meta.url)
@@ -480,6 +481,8 @@ export class HarnessGatewayClient extends GatewayClient {
   /** Images staged by the composer, indexed by the visible `[Image #N]` chip. */
   private pendingImages = new Map<string, Map<number, ImageAttachmentRef>>()
   private nextImageId = 1
+  /** MCP transports and tool fibers belong to the Harness backend, never Ink. */
+  private readonly mcp: HarnessMcpManager
 
   constructor(ctx: Context, opts: HarnessClientOptions = {}) {
     super()
@@ -488,6 +491,7 @@ export class HarnessGatewayClient extends GatewayClient {
     this.harnessReady = new Promise<void>(resolve => {
       this.harnessReadyResolve = resolve
     })
+    this.mcp = new HarnessMcpManager(ctx)
   }
 
   // ── lifecycle ──────────────────────────────────────────────────────────
@@ -503,6 +507,7 @@ export class HarnessGatewayClient extends GatewayClient {
     const loader = this.ctx.get('loader') as { await?: () => Promise<unknown> } | undefined
 
     await loader?.await?.()
+    await this.mcp.reload()
     await this.removeEmptyPersistedSessions()
 
     const handle = await this.createAgent(this.opts.sessionId)
@@ -1597,6 +1602,7 @@ export class HarnessGatewayClient extends GatewayClient {
 
     this.live.clear()
     this.pendingImages.clear()
+    void this.mcp.dispose()
   }
 
 
@@ -2257,6 +2263,21 @@ export class HarnessGatewayClient extends GatewayClient {
           return Promise.reject(err instanceof Error ? err : new Error(String(err)))
         }
       }
+
+      case 'mcp.manager.list':
+        return Promise.resolve({ config_path: this.mcp.configPath(), servers: this.mcp.list() } as T)
+
+      case 'mcp.manager.reload':
+        return this.mcp.reload().then(servers => ({ config_path: this.mcp.configPath(), servers }) as T)
+
+      case 'mcp.manager.save':
+        return this.mcp.save(p.server as McpServerConfig).then(server => ({ server }) as T)
+
+      case 'mcp.manager.set_enabled':
+        return this.mcp.setEnabled(String(p.name ?? ''), p.enabled === true).then(server => ({ server }) as T)
+
+      case 'mcp.manager.delete':
+        return this.mcp.delete(String(p.name ?? '')).then(() => ({ deleted: String(p.name ?? '') }) as T)
 
       case 'prompt.submit': {
         this.deliver(String(p.text ?? ''), 'followup')

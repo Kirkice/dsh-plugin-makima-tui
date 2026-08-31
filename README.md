@@ -162,7 +162,7 @@ node ./bin/makima-tui.js
 - **Plugins Hub**：`/plugins` 展示当前 dsh profile 的插件清单，包含 bundle、内置与依赖角色信息；可在详情中卸载非内置插件，操作后提示重启 dsh 生效。
 - **运行时插件诊断**：`/plugins runtime` 显示每个运行时插件的启用状态、加载阶段与入口 ID，便于定位组合层问题。
 - **Skills Hub**：`/skills` 浏览 Skills；支持列出、检查、搜索、安装、浏览社区来源及 `/reload-skills` 热重扫。
-- **工具面板**：`/tools enable|disable <name...>` 控制内置或 MCP 工具可用性；`/reload-mcp` 重新加载 MCP 服务。
+- **工具面板**：`/tools enable|disable <name...>` 控制内置或 MCP 工具可用性；MCP 的连接、重连、工具注册与卸载均由 Harness 后端统一管理。
 
 ### 终端交互与视觉
 
@@ -313,12 +313,14 @@ makima-tui-auth logout openai-codex
 |:--|:--|
 | `/plugins [runtime]` | 打开 Plugins Hub；`runtime` 显示运行时插件加载状态；`/plugin` 为别名。 |
 | `/skills [list\|inspect <名称>\|search <关键词>\|install <名称或 URL>\|browse [页码]]` | 浏览、检索、检查或安装 Skills。 |
+| `/manage-skills`（`/skills-manage` 别名） | 打开本地 Skills 管理界面，可检查、启用/停用或删除受管 Skill。 |
+| `/mcp [manage\|list\|reload\|enable <名称>\|disable <名称>\|delete <名称>]` | 打开或快速管理后端拥有的 MCP 连接；界面显示连接状态、已注册工具数和错误。保存、启用、停用或删除会立即由 Harness 后端收敛到运行时。 |
 | `/reload-skills` | 重新扫描已安装 Skills，并刷新命令目录。 |
 | `/agents [pause\|resume\|status]` | 打开子代理树，或直接暂停 / 恢复委派；`/tasks` 为别名。 |
 | `/replay [N\|last\|list\|load <路径>]` | 回放已完成的子代理树快照。 |
 | `/replay-diff <基线> <候选>` | 比较两个已完成的子代理树。 |
 | `/tools enable\|disable <名称...>` | 启用或停用内置 / MCP 工具。 |
-| `/reload-mcp [now\|always]` | 重载当前会话的 MCP 服务。 |
+| `/reload-mcp [now\|always]` | 兼容旧后端的当前会话 MCP 重载命令；Harness 原生运行时使用 `/mcp reload` 收敛后端拥有的连接。 |
 | `/stop` | 停止后台进程。 |
 
 ### 输入、媒体与工作流

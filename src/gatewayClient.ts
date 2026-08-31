@@ -29,6 +29,7 @@ import type {
   PatchHunk,
   StructuredDiffPayload
 } from './gatewayTypes.js'
+import { SkillsMcpManager, type ImportSkillInput, type McpServerConfig } from './domain/skillsMcpManager.js'
 import { formatTotalCost, setLastCostSnapshot } from './lib/costSummary.js'
 import { extractTag } from './lib/messages.js'
 import type { SessionInfo } from './types.js'
@@ -825,7 +826,16 @@ export const SLASHES: ReadonlyArray<{ desc: string; hint?: string; name: string 
     hint: '[status|pending|approve <id|all>|reject <id|all>]',
     name: '/memory'
   },
-  { desc: 'Browse and inspect available skills', hint: '[list | inspect <name> | search <query>]', name: '/skills' },
+  {
+    desc: 'Browse, inspect, enable, disable, delete, or install managed Skills',
+    hint: '[list | inspect <name> | search <query> | install <name or url> | manage]',
+    name: '/skills'
+  },
+  {
+    desc: 'Manage MCP connections, status, and registered tools',
+    hint: '[manage | list | reload | enable <name> | disable <name> | delete <name>]',
+    name: '/mcp'
+  },
   { desc: 'Open the installed plugins manager or inspect runtime plugin status', hint: '[runtime]', name: '/plugins' },
   { desc: 'Alias for /plugins', hint: '[runtime]', name: '/plugin' },
   { desc: 'Enable plan mode or view the current session plan', hint: '[<description>]', name: '/plan' },
@@ -900,6 +910,11 @@ export class GatewayClient extends EventEmitter {
   // Backend workflow commands (slash menu + dispatch), TTL-cached.
   private wfCommands: WorkflowCommand[] = []
   private wfFetchedAt = 0
+  // Phase-one local manager: configuration and skill-file operations are owned
+  // by this process; the agent-server owns the live MCP connection lifecycle.
+  private readonly skillsMcp = new SkillsMcpManager({
+    workspace: process.env.MAKIMA_TUI_WORKSPACE || process.env.MAKIMA_TUI_CWD || process.cwd()
+  })
 
   constructor() {
     super()
@@ -1356,6 +1371,43 @@ export class GatewayClient extends EventEmitter {
         return this.fetchSkills().then(
           skills => ({ output: `Re-scanned skills: ${this.skillsTotal || skills.length} available.` }) as T
         )
+
+      // ── local Skills & MCP configuration manager ─────────────────────────
+      // These RPCs intentionally do not make a direct MCP connection. They
+      // persist the shared ~/.dsh/mcp.json document, after which the existing
+      // reload.mcp command asks the agent-server to converge its live tools.
+      case 'skills.manager.list':
+        return Promise.resolve({ skills: this.skillsMcp.listSkills() } as T)
+      case 'skills.manager.read': {
+        const skill = this.skillsMcp.readSkill(String(p.path ?? ''))
+        if (!skill) return Promise.reject(new Error('skill not found'))
+        return Promise.resolve({ skill } as T)
+      }
+      case 'skills.manager.set_enabled':
+        this.skillsMcp.setSkillEnabled(String(p.path ?? ''), p.enabled === true)
+        this.skillsFetchedAt = 0
+        return Promise.resolve({ enabled: p.enabled === true, path: String(p.path ?? '') } as T)
+      case 'skills.manager.delete':
+        return Promise.resolve({
+          removed: this.skillsMcp.deleteSkill(String(p.path ?? ''), p.kind === 'bundle' ? 'bundle' : 'file')
+        } as T)
+      case 'skills.manager.scan_import':
+        return Promise.resolve({ items: this.skillsMcp.scanImportDirectory(String(p.directory ?? '')) } as T)
+      case 'skills.manager.import': {
+        const items = Array.isArray(p.items) ? p.items as ImportSkillInput[] : []
+        if (!items.length) return Promise.reject(new Error('no skills selected for import'))
+        this.skillsFetchedAt = 0
+        return Promise.resolve({ results: this.skillsMcp.importSkills(items) } as T)
+      }
+      case 'mcp.manager.list':
+        return Promise.resolve({ config_path: this.skillsMcp.mcpConfigPath(), servers: this.skillsMcp.listMcpServers() } as T)
+      case 'mcp.manager.save':
+        return Promise.resolve({ server: this.skillsMcp.saveMcpServer(p.server as McpServerConfig) } as T)
+      case 'mcp.manager.set_enabled':
+        return Promise.resolve({ server: this.skillsMcp.setMcpEnabled(String(p.name ?? ''), p.enabled === true) } as T)
+      case 'mcp.manager.delete':
+        this.skillsMcp.deleteMcpServer(String(p.name ?? ''))
+        return Promise.resolve({ deleted: String(p.name ?? '') } as T)
 
       // ── /memory picker (backend enumerates; the TUI owns the editor) ─────
       case 'memory.targets':
