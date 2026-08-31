@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import type { GenerateOptions } from '@deepseek-ai/dsh-llm'
-
 import { OpenAiCodexAdapter, readSse, serializeRequest, translateResponseEvents } from '../harness/openAiCodexAdapter.js'
+
+type GenerateOptions = Parameters<typeof serializeRequest>[0]
 
 const collect = async <T>(source: AsyncIterable<T>): Promise<T[]> => {
   const values: T[] = []
