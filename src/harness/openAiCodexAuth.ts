@@ -17,7 +17,7 @@ const EXPIRY_SKEW_MS = 60_000
 // loopback callback below. Environment variables remain opt-in overrides for
 // development or a separately authorized deployment.
 const DEFAULT_CLIENT_ID = 'app_EMoamEEZ73f0CkXaXp7hrann'
-const DEFAULT_API_BASE_URL = 'https://chatgpt.com/backend-api'
+const DEFAULT_API_BASE_URL = 'https://chatgpt.com/backend-api/codex'
 const DEFAULT_REDIRECT_URI = 'http://localhost:1455/auth/callback'
 const DEFAULT_DEVICE_AUTHORIZE_URL = 'https://auth.openai.com/api/accounts/deviceauth/usercode'
 const DEFAULT_DEVICE_TOKEN_URL = 'https://auth.openai.com/api/accounts/deviceauth/token'

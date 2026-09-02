@@ -2,6 +2,7 @@ import {
   CallId,
   LlmAdapter,
   LlmError,
+  ReasoningEffortId,
   type FinishReason,
   type GenerateOptions,
   type LlmModelInfo,
@@ -14,6 +15,14 @@ import {
 import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 
 import { OPENAI_CODEX_PROVIDER, type OpenAiCodexAuthManager } from './openAiCodexAuth.js'
+
+const GPT_56_REASONING_EFFORTS = [
+  { id: ReasoningEffortId('none'), name: 'None' },
+  { id: ReasoningEffortId('low'), name: 'Low' },
+  { id: ReasoningEffortId('medium'), name: 'Medium' },
+  { id: ReasoningEffortId('high'), name: 'High' },
+  { id: ReasoningEffortId('xhigh'), name: 'Extra high' }
+] as const
 
 /**
  * ChatGPT/Codex accounts expose a versioned catalog through the Codex
@@ -71,7 +80,15 @@ export class OpenAiCodexAdapter extends LlmAdapter {
       id: model,
       ...(known ? { inputModalities: known.inputModalities } : {}),
       name: known?.name ?? model,
-      provider
+      provider,
+      ...model.startsWith('gpt-5.6-')
+        ? {
+          reasoning: {
+            efforts: GPT_56_REASONING_EFFORTS,
+            defaultEffort: ReasoningEffortId('medium')
+          }
+        }
+        : {}
     }
   }
 
@@ -87,6 +104,7 @@ export class OpenAiCodexAdapter extends LlmAdapter {
         'Content-Type': 'application/json',
         ...attributionHeaders({ product: 'makima-tui', url: 'https://github.com/agentforce314/dsh-makimaTUI', version: '0.1.0' }),
         originator: this.auth.config.originator,
+        session_id: options.sessionId ?? crypto.randomUUID(),
         ...(credential?.accountId ? { 'ChatGPT-Account-Id': credential.accountId } : {})
       },
       method: 'POST',
@@ -113,7 +131,6 @@ export async function serializeRequest(options: GenerateOptions, readImage?: Ima
       const content: unknown[] = []
       for (const block of message.content) {
         if (block.type === 'text') content.push({ text: block.text, type: 'output_text' })
-        else if (block.type === 'reasoning') content.push({ text: block.text, type: 'reasoning' })
         else if (block.type === 'tool-call')
           content.push({ arguments: block.arguments, call_id: block.id, name: block.name, type: 'function_call' })
       }

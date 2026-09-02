@@ -38,7 +38,7 @@ describe('OpenAI Codex OAuth host credential lifecycle', () => {
 
   it('uses the authorized built-in OAuth client when no environment variables are set', () => {
     expect(openAiCodexOAuthConfig({})).toMatchObject({
-      apiBaseUrl: 'https://chatgpt.com/backend-api',
+      apiBaseUrl: 'https://chatgpt.com/backend-api/codex',
       authorizationEndpoint: 'https://auth.openai.com/oauth/authorize',
       clientId: 'app_EMoamEEZ73f0CkXaXp7hrann',
       deviceAuthorizationEndpoint: 'https://auth.openai.com/api/accounts/deviceauth/usercode',
