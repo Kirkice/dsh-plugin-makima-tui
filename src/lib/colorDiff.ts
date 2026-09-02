@@ -362,12 +362,13 @@ function buildTheme(themeName: string, mode: ColorMode): Theme {
   }
 
   if (isDark) {
-    // User-selected cool/warm line bands. Word chips remain darker so an
-    // inline replacement is still distinguishable inside the full-line band.
+    // Keep diff bands deliberately muted: edits remain scannable without
+    // overpowering syntax highlighting or the surrounding transcript. Word
+    // chips are darker still so replacements stay locally distinguishable.
     const fg = rgb(232, 234, 240)
-    const deleteLine = tc ? rgb(255, 111, 181) : ansiIdx(211)
-    const deleteWord = tc ? rgb(91, 38, 57) : ansiIdx(89)
-    const deleteDecoration = rgb(245, 151, 169)
+    const deleteLine = tc ? rgb(71, 31, 48) : ansiIdx(52)
+    const deleteWord = tc ? rgb(51, 24, 36) : ansiIdx(53)
+    const deleteDecoration = rgb(220, 119, 145)
 
     if (isDaltonized) {
       return {
@@ -384,9 +385,9 @@ function buildTheme(themeName: string, mode: ColorMode): Theme {
     }
 
     return {
-      addLine: tc ? rgb(89, 217, 255) : ansiIdx(117),
-      addWord: tc ? rgb(30, 75, 83) : ansiIdx(30),
-      addDecoration: rgb(120, 215, 200),
+      addLine: tc ? rgb(24, 67, 82) : ansiIdx(24),
+      addWord: tc ? rgb(18, 49, 61) : ansiIdx(23),
+      addDecoration: rgb(91, 183, 174),
       deleteLine,
       deleteWord,
       deleteDecoration,

@@ -969,7 +969,21 @@ function MdImpl({ cols, compact, t, text }: MdProps) {
             {horizontalRule(cols)}
           </Text>
         )
+
+        // Model output occasionally emits the same Markdown separator twice,
+        // often with only blank lines between them. Treat that run as one
+        // semantic divider so the transcript does not show stacked ornaments.
         i++
+
+        while (i < lines.length && !lines[i]!.trim()) {
+          i++
+        }
+
+        if (i < lines.length && HR_RE.test(lines[i]!)) {
+          while (i < lines.length && (HR_RE.test(lines[i]!) || !lines[i]!.trim())) {
+            i++
+          }
+        }
 
         continue
       }
@@ -1036,7 +1050,7 @@ function MdImpl({ cols, compact, t, text }: MdProps) {
         const marker = task ? (task[1]!.toLowerCase() === 'x' ? '☑' : '☐') : '•'
 
         nodes.push(
-          <Box key={key} paddingLeft={indentDepth(bullet[1]!) * 2}>
+          <Box flexDirection="column" key={key} paddingLeft={indentDepth(bullet[1]!) * 2}>
             <Text wrap="wrap-trim">
               <Text color={listMarkerColor(t, indentDepth(bullet[1]!))}>{marker} </Text>
               <MdInline t={t} text={task ? task[2]! : bullet[2]!} />
@@ -1053,7 +1067,7 @@ function MdImpl({ cols, compact, t, text }: MdProps) {
       if (numbered) {
         start('list')
         nodes.push(
-          <Box key={key} paddingLeft={indentDepth(numbered[1]!) * 2}>
+          <Box flexDirection="column" key={key} paddingLeft={indentDepth(numbered[1]!) * 2}>
             <Text wrap="wrap-trim">
               <Text color={listMarkerColor(t, indentDepth(numbered[1]!))}>{numbered[2]}. </Text>
               <MdInline t={t} text={numbered[3]!} />

@@ -231,6 +231,20 @@ describe('Markdown horizontal rules', () => {
   it('keeps a compact marker on narrow displays', () => {
     expect(horizontalRule(6)).toBe('✦')
   })
+
+  it('collapses consecutive separators into one ornament', () => {
+    const lines = renderPlain(
+      React.createElement(
+        Box,
+        { flexDirection: 'column', width: 40 },
+        React.createElement(Md, { t: DEFAULT_THEME, text: 'before\n\n---\n\n***\n\nafter' })
+      )
+    )
+
+    expect(lines.filter((line) => line.startsWith('✦'))).toHaveLength(1)
+    expect(lines).toContain('before')
+    expect(lines).toContain('after')
+  })
 })
 
 describe('Md wrapping', () => {
@@ -254,6 +268,23 @@ describe('Md wrapping', () => {
 
     expect(lines).toContain('  • nested bullet')
     expect(lines).toContain('  │ nested quote')
+  })
+
+  it('keeps list rows full-width so later prose does not collapse to one character per line', () => {
+    const lines = renderPlain(
+      React.createElement(
+        Box,
+        { flexDirection: 'column', width: 48 },
+        React.createElement(Md, {
+          t: DEFAULT_THEME,
+          text: '输出一张 debug full-screen view：\n- x/y\n- sign\n- magnitude\n\n是否仅 camera motion;\n- shader 缺少 MotionVectors pass 的对象区域。'
+        })
+      )
+    )
+
+    expect(lines).toContain('是否仅 camera motion;')
+    expect(lines).toContain('• shader 缺少 MotionVectors pass 的对象区域。')
+    expect(lines).not.toContain('c')
   })
 
   it('preserves original inline-code edge spaces', () => {
