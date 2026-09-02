@@ -15,7 +15,7 @@ describe('constants', () => {
   it('string arrays are populated', () => {
     for (const arr of [FACES, PLACEHOLDERS, VERBS]) {
       expect(arr.length).toBeGreaterThan(0)
-      arr.forEach(s => expect(typeof s).toBe('string'))
+      arr.forEach((s) => expect(typeof s).toBe('string'))
     }
   })
 

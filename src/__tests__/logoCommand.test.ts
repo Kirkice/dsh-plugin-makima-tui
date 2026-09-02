@@ -71,9 +71,7 @@ describe('/logo TUI-local command', () => {
     const { ctx, sys } = makeCtx({ ok: false })
     logoCmd.run('ocean', ctx, '/logo ocean')
 
-    await vi.waitFor(() =>
-      expect(sys).toHaveBeenCalledWith('Could not persist the startup logo (backend not ready) — try again shortly.')
-    )
+    await vi.waitFor(() => expect(sys).toHaveBeenCalledWith('Could not persist the startup logo (backend not ready) — try again shortly.'))
     // Not persisted → the picker's current marker must not move.
     expect(getUiState().logoPalette).toBe('')
   })

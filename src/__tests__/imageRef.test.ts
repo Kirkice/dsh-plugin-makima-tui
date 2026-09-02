@@ -68,9 +68,7 @@ describe('chip round-trip against the backend contract', () => {
 
 describe('appendImageChip — composer placement', () => {
   it('puts the chip on its own line under existing text', () => {
-    expect(appendImageChip('what this image is about?', 2).value).toBe(
-      'what this image is about?\n[Image #2] '
-    )
+    expect(appendImageChip('what this image is about?', 2).value).toBe('what this image is about?\n[Image #2] ')
   })
 
   it('is the only content in an empty composer', () => {
@@ -89,9 +87,7 @@ describe('appendImageChip — composer placement', () => {
 
   it('keeps a dropped-path remainder after the chip', () => {
     // No trailing space before a newline — it would be invisible whitespace.
-    expect(appendImageChip('look:', 5, 'and this too').value).toBe(
-      'look:\n[Image #5]\nand this too'
-    )
+    expect(appendImageChip('look:', 5, 'and this too').value).toBe('look:\n[Image #5]\nand this too')
   })
 
   it('stacks multiple attachments, each parseable', () => {

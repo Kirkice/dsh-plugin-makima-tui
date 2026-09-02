@@ -53,12 +53,12 @@ export const sessionCommands: SlashCommand[] = [
       }
 
       ctx.gateway.rpc<BackgroundStartResponse>('prompt.background', { session_id: ctx.sid, text: arg }).then(
-        ctx.guarded<BackgroundStartResponse>(r => {
+        ctx.guarded<BackgroundStartResponse>((r) => {
           if (!r.task_id) {
             return
           }
 
-          patchUiState(state => ({ ...state, bgTasks: new Set(state.bgTasks).add(r.task_id!) }))
+          patchUiState((state) => ({ ...state, bgTasks: new Set(state.bgTasks).add(r.task_id!) }))
           ctx.transcript.sys(`bg ${r.task_id} started`)
         })
       )
@@ -87,7 +87,7 @@ export const sessionCommands: SlashCommand[] = [
             value: modelValueForConfigSet(arg)
           })
           .then(
-            ctx.guarded<ConfigSetResponse>(r => {
+            ctx.guarded<ConfigSetResponse>((r) => {
               if (r.confirm_required) {
                 patchOverlayState({
                   confirm: {
@@ -110,7 +110,7 @@ export const sessionCommands: SlashCommand[] = [
               ctx.transcript.sys(`model → ${r.value}`)
               ctx.local.maybeWarn(r)
 
-              patchUiState(state => ({
+              patchUiState((state) => ({
                 ...state,
                 info: infoAfterModelSwitch(state.info, r.value!, r.provider)
               }))
@@ -165,7 +165,7 @@ export const sessionCommands: SlashCommand[] = [
     name: 'image',
     run: (arg, ctx) => {
       ctx.gateway.rpc<ImageAttachResponse>('image.attach', { path: arg, session_id: ctx.sid }).then(
-        ctx.guarded<ImageAttachResponse>(r => {
+        ctx.guarded<ImageAttachResponse>((r) => {
           ctx.transcript.sys(attachedImageNotice(r))
 
           if (r.remainder) {
@@ -186,7 +186,7 @@ export const sessionCommands: SlashCommand[] = [
       }
 
       ctx.gateway.rpc<ConfigSetResponse>('config.set', { key: 'personality', session_id: ctx.sid, value: arg }).then(
-        ctx.guarded<ConfigSetResponse>(r => {
+        ctx.guarded<ConfigSetResponse>((r) => {
           if (r.history_reset) {
             ctx.session.resetVisibleHistory(r.info ?? null)
           }
@@ -209,7 +209,7 @@ export const sessionCommands: SlashCommand[] = [
           ...(arg ? { focus_topic: arg } : {})
         })
         .then(
-          ctx.guarded<SessionCompressResponse>(r => {
+          ctx.guarded<SessionCompressResponse>((r) => {
             if (Array.isArray(r.messages)) {
               const rows = toTranscriptMessages(r.messages)
 
@@ -221,7 +221,7 @@ export const sessionCommands: SlashCommand[] = [
             }
 
             if (r.usage) {
-              patchUiState(state => ({ ...state, usage: { ...state.usage, ...r.usage } }))
+              patchUiState((state) => ({ ...state, usage: { ...state.usage, ...r.usage } }))
             }
 
             if (r.summary?.headline) {
@@ -244,9 +244,7 @@ export const sessionCommands: SlashCommand[] = [
               return ctx.transcript.sys('nothing to compress')
             }
 
-            ctx.transcript.sys(
-              `compressed ${r.removed} messages${r.usage?.total ? ` · ${fmtK(r.usage.total)} tok` : ''}`
-            )
+            ctx.transcript.sys(`compressed ${r.removed} messages${r.usage?.total ? ` · ${fmtK(r.usage.total)} tok` : ''}`)
           })
         )
         .catch(ctx.guardedErr)
@@ -262,7 +260,7 @@ export const sessionCommands: SlashCommand[] = [
       const prevSid = ctx.sid
 
       ctx.gateway.rpc<SessionBranchResponse>('session.branch', { name: arg, session_id: ctx.sid }).then(
-        ctx.guarded<SessionBranchResponse>(r => {
+        ctx.guarded<SessionBranchResponse>((r) => {
           if (!r.session_id) {
             return
           }
@@ -283,13 +281,10 @@ export const sessionCommands: SlashCommand[] = [
     run: (arg, ctx) => {
       const normalized = (arg ?? '').trim().toLowerCase()
 
-      const action =
-        normalized === 'on' || normalized === 'off' || normalized === 'tts' || normalized === 'status'
-          ? normalized
-          : 'status'
+      const action = normalized === 'on' || normalized === 'off' || normalized === 'tts' || normalized === 'status' ? normalized : 'status'
 
       ctx.gateway.rpc<VoiceToggleResponse>('voice.toggle', { action }).then(
-        ctx.guarded<VoiceToggleResponse>(r => {
+        ctx.guarded<VoiceToggleResponse>((r) => {
           ctx.voice.setVoiceEnabled(!!r.enabled)
           ctx.voice.setVoiceTts(!!r.tts)
 
@@ -383,7 +378,7 @@ export const sessionCommands: SlashCommand[] = [
       ctx.gateway.gw
         .request<SlashExecResponse>('slash.exec', { command: cmd.slice(1), session_id: ctx.sid })
         .then(
-          ctx.guarded<SlashExecResponse>(r => {
+          ctx.guarded<SlashExecResponse>((r) => {
             const body = r.output || '/pet: no output'
             ctx.transcript.sys(r.warning ? `warning: ${r.warning}\n${body}` : body)
           })
@@ -420,7 +415,7 @@ export const sessionCommands: SlashCommand[] = [
       ctx.gateway
         .rpc<ConfigSetResponse>('config.set', { key: 'logoColor', value: name })
         .then(
-          ctx.guarded<ConfigSetResponse>(r => {
+          ctx.guarded<ConfigSetResponse>((r) => {
             if (!r.value) {
               return ctx.transcript.sys('Could not persist the startup logo (backend not ready) — try again shortly.')
             }
@@ -468,7 +463,7 @@ export const sessionCommands: SlashCommand[] = [
       ctx.gateway
         .rpc<ConfigSetResponse>('config.set', { key: 'permission_mode', persist, value: mode })
         .then(
-          ctx.guarded<ConfigSetResponse>(r => {
+          ctx.guarded<ConfigSetResponse>((r) => {
             if (r.ok === false) {
               return ctx.transcript.sys(r.error ?? `Could not set permissions to ${mode}.`)
             }
@@ -481,9 +476,7 @@ export const sessionCommands: SlashCommand[] = [
 
             const appliedLevel = levelForMode(applied)
 
-            ctx.transcript.sys(
-              appliedLevel ? `Permissions: ${appliedLevel.label}.` : `Permission mode: ${applied}.`
-            )
+            ctx.transcript.sys(appliedLevel ? `Permissions: ${appliedLevel.label}.` : `Permission mode: ${applied}.`)
           })
         )
         .catch(ctx.guardedErr)
@@ -498,12 +491,12 @@ export const sessionCommands: SlashCommand[] = [
       if (!arg) {
         return ctx.gateway
           .rpc<ConfigGetValueResponse>('config.get', { key: 'skin' })
-          .then(ctx.guarded<ConfigGetValueResponse>(r => ctx.transcript.sys(`skin: ${r.value || 'default'}`)))
+          .then(ctx.guarded<ConfigGetValueResponse>((r) => ctx.transcript.sys(`skin: ${r.value || 'default'}`)))
       }
 
       ctx.gateway
         .rpc<ConfigSetResponse>('config.set', { key: 'skin', value: arg })
-        .then(ctx.guarded<ConfigSetResponse>(r => r.value && ctx.transcript.sys(`skin → ${r.value}`)))
+        .then(ctx.guarded<ConfigSetResponse>((r) => r.value && ctx.transcript.sys(`skin → ${r.value}`)))
     }
   },
 
@@ -518,11 +511,7 @@ export const sessionCommands: SlashCommand[] = [
       if (!value) {
         return ctx.gateway
           .rpc<ConfigGetValueResponse>('config.get', { key: 'indicator' })
-          .then(
-            ctx.guarded<ConfigGetValueResponse>(r =>
-              ctx.transcript.sys(`indicator: ${r.value || DEFAULT_INDICATOR_STYLE}`)
-            )
-          )
+          .then(ctx.guarded<ConfigGetValueResponse>((r) => ctx.transcript.sys(`indicator: ${r.value || DEFAULT_INDICATOR_STYLE}`)))
       }
 
       if (!(INDICATOR_STYLES as readonly string[]).includes(value)) {
@@ -530,7 +519,7 @@ export const sessionCommands: SlashCommand[] = [
       }
 
       ctx.gateway.rpc<ConfigSetResponse>('config.set', { key: 'indicator', value }).then(
-        ctx.guarded<ConfigSetResponse>(r => {
+        ctx.guarded<ConfigSetResponse>((r) => {
           if (!r.value) {
             return
           }
@@ -551,7 +540,7 @@ export const sessionCommands: SlashCommand[] = [
     run: (_arg, ctx) => {
       ctx.gateway
         .rpc<ConfigSetResponse>('config.set', { key: 'yolo', session_id: ctx.sid })
-        .then(ctx.guarded<ConfigSetResponse>(r => ctx.transcript.sys(`yolo ${r.value === '1' ? 'on' : 'off'}`)))
+        .then(ctx.guarded<ConfigSetResponse>((r) => ctx.transcript.sys(`yolo ${r.value === '1' ? 'on' : 'off'}`)))
     }
   },
 
@@ -565,25 +554,25 @@ export const sessionCommands: SlashCommand[] = [
           .rpc<ConfigGetValueResponse>('config.get', { key: 'reasoning' })
           .then(
             ctx.guarded<ConfigGetValueResponse>(
-              r => r.value && ctx.transcript.sys(`reasoning: ${r.value} · display ${r.display || 'hide'}`)
+              (r) => r.value && ctx.transcript.sys(`reasoning: ${r.value} · display ${r.display || 'hide'}`)
             )
           )
       }
 
       ctx.gateway.rpc<ConfigSetResponse>('config.set', { key: 'reasoning', session_id: ctx.sid, value: arg }).then(
-        ctx.guarded<ConfigSetResponse>(r => {
+        ctx.guarded<ConfigSetResponse>((r) => {
           if (!r.value) {
             return
           }
 
           if (r.value === 'hide') {
-            patchUiState(state => ({
+            patchUiState((state) => ({
               ...state,
               sections: { ...state.sections, thinking: 'hidden' },
               showReasoning: false
             }))
           } else if (r.value === 'show') {
-            patchUiState(state => ({
+            patchUiState((state) => ({
               ...state,
               sections: { ...state.sections, thinking: 'expanded' },
               showReasoning: true
@@ -611,21 +600,17 @@ export const sessionCommands: SlashCommand[] = [
       if (!mode || mode === 'status') {
         return ctx.gateway
           .rpc<ConfigGetValueResponse>('config.get', { key: 'fast', session_id: ctx.sid })
-          .then(
-            ctx.guarded<ConfigGetValueResponse>(r =>
-              ctx.transcript.sys(`fast mode: ${r.value === 'fast' ? 'fast' : 'normal'}`)
-            )
-          )
+          .then(ctx.guarded<ConfigGetValueResponse>((r) => ctx.transcript.sys(`fast mode: ${r.value === 'fast' ? 'fast' : 'normal'}`)))
           .catch(ctx.guardedErr)
       }
 
       ctx.gateway
         .rpc<ConfigSetResponse>('config.set', { key: 'fast', session_id: ctx.sid, value: mode })
         .then(
-          ctx.guarded<ConfigSetResponse>(r => {
+          ctx.guarded<ConfigSetResponse>((r) => {
             const next = r.value === 'fast' ? 'fast' : 'normal'
             ctx.transcript.sys(`fast mode: ${next}`)
-            patchUiState(state => ({
+            patchUiState((state) => ({
               ...state,
               info: state.info
                 ? {
@@ -657,7 +642,7 @@ export const sessionCommands: SlashCommand[] = [
         return ctx.gateway
           .rpc<ConfigGetValueResponse>('config.get', { key: 'recap' })
           .then(
-            ctx.guarded<ConfigGetValueResponse>(r => {
+            ctx.guarded<ConfigGetValueResponse>((r) => {
               ctx.transcript.sys(`recap: ${r.value || 'on'}`)
             })
           )
@@ -667,7 +652,7 @@ export const sessionCommands: SlashCommand[] = [
       ctx.gateway
         .rpc<ConfigSetResponse & { note?: string }>('config.set', { key: 'recap', value: mode })
         .then(
-          ctx.guarded<ConfigSetResponse & { note?: string }>(r => {
+          ctx.guarded<ConfigSetResponse & { note?: string }>((r) => {
             if (r.error) {
               ctx.transcript.sys(`recap: ${r.error}`)
 
@@ -699,7 +684,7 @@ export const sessionCommands: SlashCommand[] = [
         return ctx.gateway
           .rpc<ConfigGetValueResponse>('config.get', { key: 'busy' })
           .then(
-            ctx.guarded<ConfigGetValueResponse>(r => {
+            ctx.guarded<ConfigGetValueResponse>((r) => {
               const current = r.value || 'interrupt'
               ctx.transcript.sys(`busy input mode: ${current}`)
             })
@@ -710,7 +695,7 @@ export const sessionCommands: SlashCommand[] = [
       ctx.gateway
         .rpc<ConfigSetResponse>('config.set', { key: 'busy', value: mode })
         .then(
-          ctx.guarded<ConfigSetResponse>(r => {
+          ctx.guarded<ConfigSetResponse>((r) => {
             const next = r.value || mode
             ctx.transcript.sys(`busy input mode: ${next}`)
           })
@@ -725,7 +710,7 @@ export const sessionCommands: SlashCommand[] = [
     run: (arg, ctx) => {
       ctx.gateway
         .rpc<ConfigSetResponse>('config.set', { key: 'verbose', session_id: ctx.sid, value: arg || 'cycle' })
-        .then(ctx.guarded<ConfigSetResponse>(r => r.value && ctx.transcript.sys(`verbose: ${r.value}`)))
+        .then(ctx.guarded<ConfigSetResponse>((r) => r.value && ctx.transcript.sys(`verbose: ${r.value}`)))
     }
   },
 
@@ -733,7 +718,7 @@ export const sessionCommands: SlashCommand[] = [
     help: 'session token usage',
     name: 'usage',
     run: (_arg, ctx) => {
-      ctx.gateway.rpc<SessionUsageResponse>('session.usage', { session_id: ctx.sid }).then(r => {
+      ctx.gateway.rpc<SessionUsageResponse>('session.usage', { session_id: ctx.sid }).then((r) => {
         if (ctx.stale()) {
           return
         }

@@ -17,11 +17,11 @@ const hashText = (text: string) => {
 }
 
 export const messageHeightKey = (msg: Msg) => {
-  const todoSig = msg.todos?.map(t => `${t.status}:${t.content}`).join('\u0001') ?? ''
+  const todoSig = msg.todos?.map((t) => `${t.status}:${t.content}`).join('\u0001') ?? ''
 
   const panelSig =
     msg.panelData?.sections
-      .map(s => `${s.title ?? ''}:${s.text?.length ?? 0}:${s.items?.length ?? 0}:${s.rows?.length ?? 0}`)
+      .map((s) => `${s.title ?? ''}:${s.text?.length ?? 0}:${s.items?.length ?? 0}:${s.rows?.length ?? 0}`)
       .join('\u0001') ?? ''
 
   const introSig = msg.kind === 'intro' ? (msg.info?.version ?? '') : ''
@@ -30,15 +30,9 @@ export const messageHeightKey = (msg: Msg) => {
     msg.role,
     msg.kind ?? '',
     hashText(
-      [
-        msg.text,
-        msg.thinking ?? '',
-        msg.tools?.join('\n') ?? '',
-        msg.toolsVerbose?.join('\n') ?? '',
-        todoSig,
-        panelSig,
-        introSig
-      ].join('\0')
+      [msg.text, msg.thinking ?? '', msg.tools?.join('\n') ?? '', msg.toolsVerbose?.join('\n') ?? '', todoSig, panelSig, introSig].join(
+        '\0'
+      )
     )
   ].join(':')
 }
@@ -97,12 +91,7 @@ export const wrappedLines = (text: string, width: number, maxLines: number = MAX
 const CALL_GUTTER = 2
 const DETAIL_GUTTER = 5
 
-const trailEntries = (
-  msg: Msg,
-  trailWidth: number,
-  toolsExpanded: boolean,
-  toolExpansion: ReadonlyMap<number, boolean>
-): number[] => {
+const trailEntries = (msg: Msg, trailWidth: number, toolsExpanded: boolean, toolExpansion: ReadonlyMap<number, boolean>): number[] => {
   // Keep one slot per raw trail line. ToolTrail silently routes meta lines to
   // Activity, but later grouping still needs raw-line indexes to align with the
   // matching rendered row.
@@ -148,12 +137,7 @@ const trailEntries = (
  * exploration calls into one summary row while keeping failures, writes and
  * delegation rows visible.
  */
-const trailRows = (
-  msg: Msg,
-  trailWidth: number,
-  toolsExpanded: boolean,
-  toolExpansion: ReadonlyMap<number, boolean>
-) => {
+const trailRows = (msg: Msg, trailWidth: number, toolsExpanded: boolean, toolExpansion: ReadonlyMap<number, boolean>) => {
   const entries = trailEntries(msg, trailWidth, toolsExpanded, toolExpansion)
 
   const renderedLines = (msg.tools ?? []).flatMap((line, index) => {
@@ -167,24 +151,32 @@ const trailRows = (
       return []
     }
 
-    return [{
-      call: parsed?.call ?? rendered,
-      failed: parsed?.mark === '✗',
-      standalone: expanded || !parsed,
-      rows: entries[index] ?? 0
-    }]
+    return [
+      {
+        call: parsed?.call ?? rendered,
+        failed: parsed?.mark === '✗',
+        standalone: expanded || !parsed,
+        rows: entries[index] ?? 0
+      }
+    ]
   })
-  const runs = briefRuns(renderedLines, item => item.call, item => item.failed || item.standalone)
+  const runs = briefRuns(
+    renderedLines,
+    (item) => item.call,
+    (item) => item.failed || item.standalone
+  )
 
-  return runs.reduce((sum, run) => {
-    if (run.kind === 'brief') {
-      const summary = briefText(countBriefTools(run.items.map(item => item.call)))
+  return (
+    runs.reduce((sum, run) => {
+      if (run.kind === 'brief') {
+        const summary = briefText(countBriefTools(run.items.map((item) => item.call)))
 
-      return sum + wrappedLines(`${summary}  (ctrl+o to expand)`, trailWidth - CALL_GUTTER)
-    }
+        return sum + wrappedLines(`${summary}  (ctrl+o to expand)`, trailWidth - CALL_GUTTER)
+      }
 
-    return sum + run.items[0]!.rows
-  }, 0) + Math.max(0, runs.length - 1)
+      return sum + run.items[0]!.rows
+    }, 0) + Math.max(0, runs.length - 1)
+  )
 }
 
 export const estimatedMsgHeight = (
@@ -194,9 +186,7 @@ export const estimatedMsgHeight = (
     compact,
     details,
     expandedTools,
-    toolExpansion = expandedTools
-      ? new Map([...expandedTools].map(index => [index, true] as const))
-      : new Map<number, boolean>(),
+    toolExpansion = expandedTools ? new Map([...expandedTools].map((index) => [index, true] as const)) : new Map<number, boolean>(),
     leadGap = false,
     thinkingExpanded = false,
     thinkingVisible = details,
@@ -276,9 +266,7 @@ export const estimatedMsgHeight = (
       // paints — a line or two — not the whole chain of thought. Counting the
       // chain there over-charged a reasoning-heavy turn by hundreds of rows,
       // which is exactly the kind of drift that makes the scrollbar jump.
-      const thinkingBody = thinkingExpanded
-        ? (msg.thinking ?? '')
-        : thinkingPreview(msg.thinking ?? '', 'truncated', THINKING_COT_MAX)
+      const thinkingBody = thinkingExpanded ? (msg.thinking ?? '') : thinkingPreview(msg.thinking ?? '', 'truncated', THINKING_COT_MAX)
       const thinkingRows = hasVisibleThinking ? 1 + wrappedLines(thinkingBody, trailWidth - DETAIL_GUTTER) : 0
 
       h += toolRows + thinkingRows

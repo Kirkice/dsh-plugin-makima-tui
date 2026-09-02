@@ -4,13 +4,7 @@ import { join } from 'node:path'
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import {
-  editorHint,
-  ensureMemoryFile,
-  memoryEditorArgv,
-  openMemoryFileInEditor,
-  relativeMemoryPath
-} from './memoryEdit.js'
+import { editorHint, ensureMemoryFile, memoryEditorArgv, openMemoryFileInEditor, relativeMemoryPath } from './memoryEdit.js'
 
 describe('ensureMemoryFile', () => {
   let home: string
@@ -49,24 +43,18 @@ describe('editorHint', () => {
   })
 
   it('names $EDITOR when $VISUAL is unset', () => {
-    expect(editorHint({ EDITOR: 'vim' })).toBe(
-      '> Using $EDITOR="vim". To change editor, set $EDITOR or $VISUAL environment variable.'
-    )
+    expect(editorHint({ EDITOR: 'vim' })).toBe('> Using $EDITOR="vim". To change editor, set $EDITOR or $VISUAL environment variable.')
   })
 
   it('falls back to the set-an-editor hint', () => {
-    expect(editorHint({})).toBe(
-      '> To use a different editor, set the $EDITOR or $VISUAL environment variable.'
-    )
+    expect(editorHint({})).toBe('> To use a different editor, set the $EDITOR or $VISUAL environment variable.')
   })
 })
 
 describe('relativeMemoryPath', () => {
   it('prefers the shorter of ~ and ./ spellings', () => {
     expect(relativeMemoryPath('/home/u/w/MAKIMA.md', '/home/u/w', '/home/u')).toBe('./MAKIMA.md')
-    expect(relativeMemoryPath('/home/u/.makima-tui/MAKIMA.md', '/home/u/deep/nested/dir', '/home/u')).toBe(
-      '~/.makima-tui/MAKIMA.md'
-    )
+    expect(relativeMemoryPath('/home/u/.makima-tui/MAKIMA.md', '/home/u/deep/nested/dir', '/home/u')).toBe('~/.makima-tui/MAKIMA.md')
   })
 
   it('falls back to the absolute path outside home and cwd', () => {
@@ -77,11 +65,7 @@ describe('relativeMemoryPath', () => {
 describe('memoryEditorArgv', () => {
   it('appends the wait flag to a bare GUI editor', () => {
     expect(memoryEditorArgv('/f.md', { EDITOR: 'code', PATH: '' })).toEqual(['code', '-w', '/f.md'])
-    expect(memoryEditorArgv('/f.md', { EDITOR: '/usr/local/bin/subl', PATH: '' })).toEqual([
-      '/usr/local/bin/subl',
-      '--wait',
-      '/f.md'
-    ])
+    expect(memoryEditorArgv('/f.md', { EDITOR: '/usr/local/bin/subl', PATH: '' })).toEqual(['/usr/local/bin/subl', '--wait', '/f.md'])
   })
 
   it('never second-guesses user-supplied arguments', () => {

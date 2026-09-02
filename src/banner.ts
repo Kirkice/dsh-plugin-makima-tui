@@ -66,9 +66,9 @@ const LOGO_ART = [
 // banner now uses Makima Agent's pixel portrait. Painted from
 // the active /logo gradient (default: ocean blues), beside the session panel.
 const WHALE_ART = [
-  '       : \' :',
-  '    ___\'_______',
-  '  /\'  o        \\--.',
+  "       : ' :",
+  "    ___'_______",
+  "  /'  o        \\--.",
   ' |              ___\\',
   '  \\____________/  \\/',
   '     \\__/  \\__/'
@@ -87,8 +87,8 @@ const LOGO_BRAND = [
   'rgb(25,55,110)'
 ] as const
 
-export const LOGO_WIDTH = Math.max(...LOGO_ART.map(line => line.length))
-export const WHALE_WIDTH = Math.max(...WHALE_ART.map(line => line.length))
+export const LOGO_WIDTH = Math.max(...LOGO_ART.map((line) => line.length))
+export const WHALE_WIDTH = Math.max(...WHALE_ART.map((line) => line.length))
 
 // /logo palette → banner painting (applied at the banner's startup paint; the
 // intro row is committed to scrollback, so a mid-session /logo shows on the

@@ -32,7 +32,7 @@ class FakeProc extends EventEmitter {
 const INIT_FUSED = {
   cwd: '/ws',
   // A fused session reports the BASE model here…
-  fusion: 'deepseek-v4-pro-V',   // …and the fusion model's name separately.
+  fusion: 'deepseek-v4-pro-V', // …and the fusion model's name separately.
   model: 'deepseek-v4-pro',
   protocol_version: '0.1.0',
   session_id: 's1',
@@ -63,16 +63,22 @@ describe('fusion models', () => {
 
   afterEach(() => {
     gw.kill()
-    if (prevWs === undefined) {delete process.env.MAKIMA_TUI_WORKSPACE}
-    else {process.env.MAKIMA_TUI_WORKSPACE = prevWs}
+    if (prevWs === undefined) {
+      delete process.env.MAKIMA_TUI_WORKSPACE
+    } else {
+      process.env.MAKIMA_TUI_WORKSPACE = prevWs
+    }
   })
 
-  const last = (t: string) => [...events].reverse().find(e => e.type === t)
+  const last = (t: string) => [...events].reverse().find((e) => e.type === t)
 
   const stdinFrames = (): any[] => {
     const raw = (proc.stdin as any).read()?.toString() ?? ''
 
-    return raw.split('\n').filter(Boolean).map((l: string) => JSON.parse(l))
+    return raw
+      .split('\n')
+      .filter(Boolean)
+      .map((l: string) => JSON.parse(l))
   }
 
   const replyToControl = async (subtype: string, response: unknown) => {
@@ -80,7 +86,7 @@ describe('fusion models', () => {
 
     await vi.waitFor(() => {
       seen.push(...stdinFrames())
-      req = seen.find(f => f.type === 'control_request' && f.request?.subtype === subtype)
+      req = seen.find((f) => f.type === 'control_request' && f.request?.subtype === subtype)
       expect(req).toBeTruthy()
     })
     proc.line({ response: { request_id: req.request_id, response }, type: 'control_response' })
@@ -133,7 +139,7 @@ describe('fusion models', () => {
     await replyToControl('list_workflow_commands', { commands: [] })
     const r = await p
 
-    expect(r.items.map(item => item.text)).not.toContain('/fusion')
+    expect(r.items.map((item) => item.text)).not.toContain('/fusion')
   })
 
   // ── /model interaction ────────────────────────────────────────────────────
@@ -189,14 +195,14 @@ describe('fusion models', () => {
       const p = gw.request('model.options', {})
       await vi.waitFor(() => {
         seen.push(...stdinFrames())
-        expect(seen.find(f => f.request?.subtype === 'list_model_providers')).toBeTruthy()
+        expect(seen.find((f) => f.request?.subtype === 'list_model_providers')).toBeTruthy()
       })
       await vi.advanceTimersByTimeAsync(5_100)
       await vi.waitFor(() => {
         seen.push(...stdinFrames())
-        expect(seen.find(f => f.request?.subtype === 'get_settings')).toBeTruthy()
+        expect(seen.find((f) => f.request?.subtype === 'get_settings')).toBeTruthy()
       })
-      const req = seen.find(f => f.request?.subtype === 'get_settings')!
+      const req = seen.find((f) => f.request?.subtype === 'get_settings')!
       proc.line({
         response: {
           request_id: req.request_id,

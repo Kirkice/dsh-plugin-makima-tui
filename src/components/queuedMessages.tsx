@@ -6,8 +6,7 @@ import type { Theme } from '../theme.js'
 export const QUEUE_WINDOW = 3
 
 export function getQueueWindow(queueLen: number, queueEditIdx: number | null) {
-  const start =
-    queueEditIdx === null ? 0 : Math.max(0, Math.min(queueEditIdx - 1, Math.max(0, queueLen - QUEUE_WINDOW)))
+  const start = queueEditIdx === null ? 0 : Math.max(0, Math.min(queueEditIdx - 1, Math.max(0, queueLen - QUEUE_WINDOW)))
 
   const end = Math.min(queueLen, start + QUEUE_WINDOW)
 

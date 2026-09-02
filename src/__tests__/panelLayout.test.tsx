@@ -9,7 +9,7 @@ import { TodoPanel } from '../components/todoPanel.js'
 import { stripAnsi } from '../lib/text.js'
 import { DEFAULT_THEME } from '../theme.js'
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 async function renderPanel(cols: number, child: React.ReactElement): Promise<string[]> {
   const stdout = new PassThrough()
@@ -20,23 +20,16 @@ async function renderPanel(cols: number, child: React.ReactElement): Promise<str
   Object.assign(stdout, { columns: cols, isTTY: false, rows: 40 })
   Object.assign(stdin, { isTTY: false })
   Object.assign(stderr, { isTTY: false })
-  stdout.on('data', chunk => {
+  stdout.on('data', (chunk) => {
     captured += chunk.toString()
   })
 
-  const instance = renderSync(
-    React.createElement(
-      Box,
-      { flexDirection: 'column', width: cols },
-      child
-    ),
-    {
-      patchConsole: false,
-      stderr: stderr as unknown as NodeJS.WriteStream,
-      stdin: stdin as unknown as NodeJS.ReadStream,
-      stdout: stdout as unknown as NodeJS.WriteStream
-    }
-  )
+  const instance = renderSync(React.createElement(Box, { flexDirection: 'column', width: cols }, child), {
+    patchConsole: false,
+    stderr: stderr as unknown as NodeJS.WriteStream,
+    stdin: stdin as unknown as NodeJS.ReadStream,
+    stdout: stdout as unknown as NodeJS.WriteStream
+  })
 
   try {
     await delay(20)
@@ -55,10 +48,7 @@ describe('transcript primary panels', () => {
         sections: [
           {
             rows: [
-              [
-                '/advisor',
-                'Configure the advisor reviewer model (consulted mid-task by the worker) with an intentionally long description'
-              ]
+              ['/advisor', 'Configure the advisor reviewer model (consulted mid-task by the worker) with an intentionally long description']
             ],
             title: 'Commands'
           }
@@ -67,7 +57,7 @@ describe('transcript primary panels', () => {
         title: 'Help'
       })
     )
-    const commandLines = lines.filter(line => line.includes('/advisor'))
+    const commandLines = lines.filter((line) => line.includes('/advisor'))
 
     expect(commandLines).toHaveLength(1)
     expect(commandLines[0]).toContain('Configure')
@@ -83,7 +73,7 @@ describe('transcript primary panels', () => {
         todos: [{ content: 'Keep transcript cards aligned', id: 'alignment', status: 'pending' }]
       })
     )
-    const borderedRows = lines.filter(line => /[╭│╰]/.test(line))
+    const borderedRows = lines.filter((line) => /[╭│╰]/.test(line))
 
     expect(borderedRows).not.toHaveLength(0)
     for (const row of borderedRows) {

@@ -21,13 +21,7 @@ let wired = false
 export const shouldExitForSignal = (signal: GracefulSignal, ignoredSignals: readonly GracefulSignal[] = []) =>
   !ignoredSignals.includes(signal)
 
-export function setupGracefulExit({
-  cleanups = [],
-  failsafeMs = 4000,
-  ignoredSignals = [],
-  onError,
-  onSignal
-}: SetupOptions = {}) {
+export function setupGracefulExit({ cleanups = [], failsafeMs = 4000, ignoredSignals = [], onError, onSignal }: SetupOptions = {}) {
   if (wired) {
     return
   }
@@ -49,7 +43,7 @@ export function setupGracefulExit({
 
     setTimeout(() => process.exit(code), failsafeMs).unref?.()
 
-    void Promise.allSettled(cleanups.map(fn => Promise.resolve().then(fn))).finally(() => process.exit(code))
+    void Promise.allSettled(cleanups.map((fn) => Promise.resolve().then(fn))).finally(() => process.exit(code))
   }
 
   for (const sig of SIGNALS) {
@@ -62,6 +56,6 @@ export function setupGracefulExit({
     })
   }
 
-  process.on('uncaughtException', err => onError?.('uncaughtException', err))
-  process.on('unhandledRejection', reason => onError?.('unhandledRejection', reason))
+  process.on('uncaughtException', (err) => onError?.('uncaughtException', err))
+  process.on('unhandledRejection', (reason) => onError?.('unhandledRejection', reason))
 }

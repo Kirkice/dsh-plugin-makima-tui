@@ -24,7 +24,6 @@ describe('external URL launcher', () => {
   })
 
   it('refuses non-HTTP(S) URL schemes', () => {
-    expect(() => externalUrlLaunchCommand('file:///C:/sensitive.txt', 'win32'))
-      .toThrow('Only HTTP(S) URLs can be opened externally')
+    expect(() => externalUrlLaunchCommand('file:///C:/sensitive.txt', 'win32')).toThrow('Only HTTP(S) URLs can be opened externally')
   })
 })

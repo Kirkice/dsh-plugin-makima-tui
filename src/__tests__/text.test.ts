@@ -72,14 +72,7 @@ describe('buildToolTrailLine', () => {
 
 describe('buildVerboseToolTrailLine', () => {
   it('preserves multiline args and result details', () => {
-    const line = buildVerboseToolTrailLine(
-      'terminal',
-      'npm test',
-      false,
-      1.25,
-      '{\n  "cmd": "npm test"\n}',
-      'first line\nsecond :: line'
-    )
+    const line = buildVerboseToolTrailLine('terminal', 'npm test', false, 1.25, '{\n  "cmd": "npm test"\n}', 'first line\nsecond :: line')
 
     expect(line).toContain('Args:\n{')
     expect(line).toContain('Result:\nfirst line\nsecond :: line')
@@ -276,9 +269,7 @@ describe('boundedLiveRenderText', () => {
 
 describe('edgePreview', () => {
   it('keeps both ends for long text', () => {
-    expect(edgePreview('Vampire Bondage ropes slipped from her neck, still stained with blood', 8, 18)).toBe(
-      'Vampire.. stained with blood'
-    )
+    expect(edgePreview('Vampire Bondage ropes slipped from her neck, still stained with blood', 8, 18)).toBe('Vampire.. stained with blood')
   })
 })
 

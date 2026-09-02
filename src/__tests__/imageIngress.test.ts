@@ -8,10 +8,13 @@ describe('readWindowsClipboardImage', () => {
   it('does not invoke PowerShell outside Windows', () => {
     let invoked = false
 
-    const image = readWindowsClipboardImage((() => {
-      invoked = true
-      throw new Error('should not run')
-    }) as never, 'linux')
+    const image = readWindowsClipboardImage(
+      (() => {
+        invoked = true
+        throw new Error('should not run')
+      }) as never,
+      'linux'
+    )
 
     expect(image).toBeUndefined()
     expect(invoked).toBe(false)
@@ -28,11 +31,14 @@ describe('readWindowsClipboardImage', () => {
   })
 
   it('converts Windows clipboard PNG base64 into an attachment-ready image', () => {
-    const image = readWindowsClipboardImage((() => ({
-      status: 0,
-      stderr: '',
-      stdout: `${PNG}\n`
-    })) as never, 'win32')
+    const image = readWindowsClipboardImage(
+      (() => ({
+        status: 0,
+        stderr: '',
+        stdout: `${PNG}\n`
+      })) as never,
+      'win32'
+    )
 
     expect(image).toMatchObject({
       mediaType: 'image/png',
@@ -42,18 +48,28 @@ describe('readWindowsClipboardImage', () => {
   })
 
   it('surfaces clipboard process errors with actionable detail', () => {
-    expect(() => readWindowsClipboardImage((() => ({
-      status: 1,
-      stderr: 'clipboard is busy',
-      stdout: ''
-    })) as never, 'win32')).toThrow('clipboard is busy')
+    expect(() =>
+      readWindowsClipboardImage(
+        (() => ({
+          status: 1,
+          stderr: 'clipboard is busy',
+          stdout: ''
+        })) as never,
+        'win32'
+      )
+    ).toThrow('clipboard is busy')
   })
 
   it('rejects successful process output that is not an image', () => {
-    expect(() => readWindowsClipboardImage((() => ({
-      status: 0,
-      stderr: '',
-      stdout: Buffer.from('not an image').toString('base64')
-    })) as never, 'win32')).toThrow('invalid image')
+    expect(() =>
+      readWindowsClipboardImage(
+        (() => ({
+          status: 0,
+          stderr: '',
+          stdout: Buffer.from('not an image').toString('base64')
+        })) as never,
+        'win32'
+      )
+    ).toThrow('invalid image')
   })
 })

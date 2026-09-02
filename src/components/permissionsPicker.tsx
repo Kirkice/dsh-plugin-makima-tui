@@ -22,7 +22,7 @@ import { OverlayHint } from './overlayControls.js'
  */
 export function PermissionsPicker({ current, onClose, onSelect, t }: PermissionsPickerProps) {
   const currentLevel = levelForMode(current)
-  const currentIdx = currentLevel ? PERMISSION_LEVELS.findIndex(l => l.key === currentLevel.key) : -1
+  const currentIdx = currentLevel ? PERMISSION_LEVELS.findIndex((l) => l.key === currentLevel.key) : -1
   const [idx, setIdx] = useState(Math.max(0, currentIdx))
 
   useInput((input, key) => {
@@ -31,11 +31,11 @@ export function PermissionsPicker({ current, onClose, onSelect, t }: Permissions
     }
 
     if (key.upArrow) {
-      return setIdx(i => Math.max(0, i - 1))
+      return setIdx((i) => Math.max(0, i - 1))
     }
 
     if (key.downArrow) {
-      return setIdx(i => Math.min(PERMISSION_LEVELS.length - 1, i + 1))
+      return setIdx((i) => Math.min(PERMISSION_LEVELS.length - 1, i + 1))
     }
 
     // Direct 1/2/3 selection — applies immediately, like the reference picker.

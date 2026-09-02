@@ -1,4 +1,16 @@
-import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync, type Dirent } from 'node:fs'
+import {
+  copyFileSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+  type Dirent
+} from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 
@@ -86,7 +98,13 @@ function parseFrontmatter(raw: string): Frontmatter | null {
     data[line.slice(0, colon).trim()] = scalar(line.slice(colon + 1).trim())
   }
 
-  return { body: lines.slice(close + 1).join('\n').trim(), data }
+  return {
+    body: lines
+      .slice(close + 1)
+      .join('\n')
+      .trim(),
+    data
+  }
 }
 
 function parseSkill(raw: string): ParsedSkill | null {
@@ -112,7 +130,7 @@ function rewriteInvocation(raw: string, enabled: boolean): string {
   if (lines[0]?.trim() !== '---') throw new Error('skill requires YAML frontmatter')
   const close = lines.findIndex((line, index) => index > 0 && line.trim() === '---')
   if (close < 0) throw new Error('skill frontmatter is not closed')
-  const kept = lines.slice(1, close).filter(line => !/^\s*(disable-model-invocation|user-invocable)\s*:/.test(line))
+  const kept = lines.slice(1, close).filter((line) => !/^\s*(disable-model-invocation|user-invocable)\s*:/.test(line))
   if (!enabled) kept.push('disable-model-invocation: true', 'user-invocable: false')
   return [lines[0]!, ...kept, ...lines.slice(close)].join('\n')
 }
@@ -135,7 +153,13 @@ export function validateMcpServer(input: unknown): string | null {
 export function normalizeMcpServer(server: McpServerConfig): McpServerConfig {
   const base: McpServerConfig = { enabled: server.enabled !== false, name: server.name, transport: server.transport }
   if (server.transport === 'stdio') {
-    return { ...base, args: Array.isArray(server.args) ? server.args.filter(arg => typeof arg === 'string') : [], command: server.command?.trim(), cwd: server.cwd ?? '', env: normalizeMap(server.env) }
+    return {
+      ...base,
+      args: Array.isArray(server.args) ? server.args.filter((arg) => typeof arg === 'string') : [],
+      command: server.command?.trim(),
+      cwd: server.cwd ?? '',
+      env: normalizeMap(server.env)
+    }
   }
   return { ...base, headers: normalizeMap(server.headers), url: server.url?.trim() }
 }
@@ -169,7 +193,7 @@ export class SkillsMcpManager {
   }
 
   readSkill(path: string): ManagedSkillDetail | null {
-    const summary = this.listSkills().find(skill => skill.path === resolve(path))
+    const summary = this.listSkills().find((skill) => skill.path === resolve(path))
     if (!summary) return null
     const parsed = parseSkill(readFileSync(summary.path, 'utf8'))
     return parsed ? { ...summary, content: parsed.content } : null
@@ -191,13 +215,18 @@ export class SkillsMcpManager {
   scanImportDirectory(directory: string): ScannedSkill[] {
     const dir = resolve(directory)
     if (!existsSync(dir) || !statSync(dir).isDirectory()) throw new Error(`directory not found: ${dir}`)
-    return this.scanRoot(dir, 'user-dsh').map(skill => ({ description: skill.description, kind: skill.kind, name: skill.name, sourcePath: skill.kind === 'bundle' ? dirname(skill.path) : skill.path }))
+    return this.scanRoot(dir, 'user-dsh').map((skill) => ({
+      description: skill.description,
+      kind: skill.kind,
+      name: skill.name,
+      sourcePath: skill.kind === 'bundle' ? dirname(skill.path) : skill.path
+    }))
   }
 
   importSkills(items: ImportSkillInput[]): ImportSkillResult[] {
     const destination = join(this.dshHome, 'skills')
     mkdirSync(destination, { recursive: true })
-    return items.map(item => {
+    return items.map((item) => {
       const source = resolve(item.sourcePath)
       const target = join(destination, basename(source))
       if (!existsSync(source)) return { name: basename(source), ok: false, reason: 'source not found' }
@@ -216,7 +245,11 @@ export class SkillsMcpManager {
     const path = this.mcpConfigPath()
     try {
       const parsed = JSON.parse(readFileSync(path, 'utf8')) as { servers?: unknown }
-      return Array.isArray(parsed.servers) ? parsed.servers.filter(server => validateMcpServer(server) === null).map(server => normalizeMcpServer(server as McpServerConfig)) : []
+      return Array.isArray(parsed.servers)
+        ? parsed.servers
+            .filter((server) => validateMcpServer(server) === null)
+            .map((server) => normalizeMcpServer(server as McpServerConfig))
+        : []
     } catch {
       return []
     }
@@ -227,7 +260,7 @@ export class SkillsMcpManager {
     if (error) throw new Error(error)
     const server = normalizeMcpServer(input)
     const servers = this.listMcpServers()
-    const index = servers.findIndex(candidate => candidate.name === server.name)
+    const index = servers.findIndex((candidate) => candidate.name === server.name)
     if (index >= 0) servers[index] = server
     else servers.push(server)
     this.writeMcpServers(servers)
@@ -236,7 +269,7 @@ export class SkillsMcpManager {
 
   setMcpEnabled(name: string, enabled: boolean): McpServerConfig {
     const servers = this.listMcpServers()
-    const server = servers.find(candidate => candidate.name === name)
+    const server = servers.find((candidate) => candidate.name === name)
     if (!server) throw new Error(`server not found: ${name}`)
     server.enabled = enabled
     this.writeMcpServers(servers)
@@ -245,8 +278,8 @@ export class SkillsMcpManager {
 
   deleteMcpServer(name: string): void {
     const servers = this.listMcpServers()
-    if (!servers.some(server => server.name === name)) throw new Error(`server not found: ${name}`)
-    this.writeMcpServers(servers.filter(server => server.name !== name))
+    if (!servers.some((server) => server.name === name)) throw new Error(`server not found: ${name}`)
+    this.writeMcpServers(servers.filter((server) => server.name !== name))
   }
 
   private findProjectRoot(): string {
@@ -261,7 +294,7 @@ export class SkillsMcpManager {
 
   private requireManagedSkill(path: string): ManagedSkill {
     const absolute = resolve(path)
-    const skill = this.listSkills().find(candidate => candidate.path === absolute)
+    const skill = this.listSkills().find((candidate) => candidate.path === absolute)
     if (!skill) throw new Error('skill path is outside managed roots or is not a valid skill')
     return skill
   }
@@ -277,10 +310,16 @@ export class SkillsMcpManager {
         if (!existsSync(path)) return []
         try {
           const parsed = parseSkill(readFileSync(path, 'utf8'))
-          return parsed ? [{ ...parsed, kind: entry.isDirectory() ? 'bundle' as const : 'file' as const, level, path: resolve(path), source }] : []
-        } catch { return [] }
+          return parsed
+            ? [{ ...parsed, kind: entry.isDirectory() ? ('bundle' as const) : ('file' as const), level, path: resolve(path), source }]
+            : []
+        } catch {
+          return []
+        }
       })
-    } catch { return [] }
+    } catch {
+      return []
+    }
   }
 
   private writeMcpServers(servers: McpServerConfig[]): void {

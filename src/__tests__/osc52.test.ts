@@ -1,11 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import {
-  buildOsc52ClipboardQuery,
-  OSC52_CLIPBOARD_QUERY,
-  parseOsc52ClipboardData,
-  readOsc52Clipboard
-} from '../lib/osc52.js'
+import { buildOsc52ClipboardQuery, OSC52_CLIPBOARD_QUERY, parseOsc52ClipboardData, readOsc52Clipboard } from '../lib/osc52.js'
 
 const envBackup = { ...process.env }
 

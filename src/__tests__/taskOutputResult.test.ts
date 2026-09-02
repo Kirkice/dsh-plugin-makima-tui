@@ -169,7 +169,7 @@ describe('background shell tasks', () => {
     expect(fmt(bashTask('step 1 done', 'running'))).toBe('step 1 done')
   })
 
-  it('strips only the delimiter newlines, never the task\'s own layout', () => {
+  it("strips only the delimiter newlines, never the task's own layout", () => {
     // The backend writes `<output>\n…\n</output>`; those two newlines are
     // framing. A blank first line or an indented first line is content.
     expect(fmt(bashTask('\n    indented'))).toBe('\n    indented')
@@ -187,7 +187,7 @@ describe('subagent tasks', () => {
     expect(fmt(agent('success', 'completed'))).toBe('Read output (ctrl+o to expand)')
   })
 
-  it.each(['timeout', 'not_ready'])('reports %s as still running', retrieval => {
+  it.each(['timeout', 'not_ready'])('reports %s as still running', (retrieval) => {
     expect(fmt(agent(retrieval, 'running'))).toBe('Task is still running…')
   })
 
@@ -328,20 +328,16 @@ describe('degenerate results', () => {
   })
 
   it('leaves errors to the error path', () => {
-    expect(formatToolResult('TaskOutput', 'No task found with ID: nope', true)).toBe(
-      'Error: No task found with ID: nope'
-    )
+    expect(formatToolResult('TaskOutput', 'No task found with ID: nope', true)).toBe('Error: No task found with ID: nope')
   })
 
-  it.each(['AgentOutputTool', 'BashOutputTool'])('routes the %s alias to the same renderer', alias => {
+  it.each(['AgentOutputTool', 'BashOutputTool'])('routes the %s alias to the same renderer', (alias) => {
     expect(fmt(bashTask('a\nb'), alias)).toBe('a\nb')
   })
 
   it('still summarizes when the tool name is unknown (mid-turn attach)', () => {
     expect(formatToolResult(undefined, bashTask('a\nb'))).toBe('a\nb')
-    expect(
-      formatToolResult(undefined, `<stuck_task_hint>stop polling</stuck_task_hint>\n\n${bashTask('a\nb')}`)
-    ).toBe('a\nb')
+    expect(formatToolResult(undefined, `<stuck_task_hint>stop polling</stuck_task_hint>\n\n${bashTask('a\nb')}`)).toBe('a\nb')
   })
 
   it('does not claim an unnamed result that is not a TaskOutput', () => {
@@ -378,7 +374,7 @@ describe('tool.complete payload', () => {
     gw.start()
     gw.drain()
 
-    const last = (t: string) => [...events].reverse().find(e => e.type === t)
+    const last = (t: string) => [...events].reverse().find((e) => e.type === t)
     const content = bashTask(BUILD_LOG)
 
     proc.line({

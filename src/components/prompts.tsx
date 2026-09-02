@@ -80,12 +80,7 @@ type ApprovalAction = { kind: 'choose'; choice: ApprovalChoice } | { kind: 'move
  * for approvals).  Numbers 1..opts.length pick the labelled choice.  Enter
  * confirms the current selection.  ↑/↓ moves the selection within bounds.
  */
-export function approvalAction(
-  ch: string,
-  key: ApprovalKey,
-  sel: number,
-  opts: readonly ApprovalChoice[] = APPROVAL_OPTS
-): ApprovalAction {
+export function approvalAction(ch: string, key: ApprovalKey, sel: number, opts: readonly ApprovalChoice[] = APPROVAL_OPTS): ApprovalAction {
   if (key.escape) {
     return { kind: 'choose', choice: 'deny' }
   }
@@ -122,9 +117,7 @@ export function approvalAction(
  *   → no persist option.
  * - `editable` is Bash-only: only a Bash suggestion carries a `rule` to widen.
  */
-export function approvalOptions(
-  req: Pick<ApprovalReq, 'allowPermanent' | 'rule'>
-): { editable: boolean; opts: readonly ApprovalChoice[] } {
+export function approvalOptions(req: Pick<ApprovalReq, 'allowPermanent' | 'rule'>): { editable: boolean; opts: readonly ApprovalChoice[] } {
   return {
     editable: !!req.rule,
     opts: req.allowPermanent === false ? APPROVAL_OPTS_NO_ALWAYS : APPROVAL_OPTS
@@ -145,8 +138,7 @@ export function ApprovalPrompt({ cols = 80, onChoice, req, t }: ApprovalPromptPr
   const [editing, setEditing] = useState(false)
   const alwaysIdx = opts.indexOf('always')
 
-  const confirm = (choice: ApprovalChoice) =>
-    onChoice(choice, choice === 'always' ? ruleText.trim() || req.rule : undefined)
+  const confirm = (choice: ApprovalChoice) => onChoice(choice, choice === 'always' ? ruleText.trim() || req.rule : undefined)
 
   // Navigation — disabled while the rule field is focused (TextInput owns input).
   useInput(
@@ -159,18 +151,21 @@ export function ApprovalPrompt({ cols = 80, onChoice, req, t }: ApprovalPromptPr
       }
       const action = approvalAction(ch, key, sel, opts)
       if (action.kind === 'choose') confirm(action.choice)
-      else if (action.kind === 'move') setSel(s => s + action.delta)
+      else if (action.kind === 'move') setSel((s) => s + action.delta)
     },
     { isActive: !editing }
   )
   // While editing, Esc cancels the edit (back to the option list), not deny.
-  useInput((_ch, key) => { if (key.escape) setEditing(false) }, { isActive: editing })
+  useInput(
+    (_ch, key) => {
+      if (key.escape) setEditing(false)
+    },
+    { isActive: editing }
+  )
 
   // Border (2) + paddingX (2) + the command box's paddingLeft (1) = 5 cols.
   const innerWidth = Math.max(20, cols - 5)
-  const rawLines = req.command
-    .split('\n')
-    .flatMap(line => wrapAnsi(line, innerWidth, { hard: true, trim: false }).split('\n'))
+  const rawLines = req.command.split('\n').flatMap((line) => wrapAnsi(line, innerWidth, { hard: true, trim: false }).split('\n'))
   const shown = rawLines.slice(0, CMD_PREVIEW_LINES)
   const overflow = rawLines.length - shown.length
 
@@ -188,10 +183,14 @@ export function ApprovalPrompt({ cols = 80, onChoice, req, t }: ApprovalPromptPr
       <Box borderColor={t.color.frame} borderTop />
       <Box borderColor={t.color.frame} borderStyle="single" flexDirection="column" paddingX={1}>
         {shown.map((line, i) => (
-          <Text color={t.color.text} key={i} wrap="truncate-end">{line || ' '}</Text>
+          <Text color={t.color.text} key={i} wrap="truncate-end">
+            {line || ' '}
+          </Text>
         ))}
         {overflow > 0 ? (
-          <Text color={t.color.muted}>… +{overflow} more line{overflow === 1 ? '' : 's'}</Text>
+          <Text color={t.color.muted}>
+            … +{overflow} more line{overflow === 1 ? '' : 's'}
+          </Text>
         ) : null}
       </Box>
 
@@ -200,7 +199,9 @@ export function ApprovalPrompt({ cols = 80, onChoice, req, t }: ApprovalPromptPr
         // overwrite remote history") — parity with the original's dialog
         // warning now that destructive commands prompt through the ordinary
         // grantable flow.
-        <Text bold color={t.color.warn}>⚠ {req.warning}</Text>
+        <Text bold color={t.color.warn}>
+          ⚠ {req.warning}
+        </Text>
       ) : null}
 
       <Text color={t.color.thinking}>
@@ -217,11 +218,21 @@ export function ApprovalPrompt({ cols = 80, onChoice, req, t }: ApprovalPromptPr
             const staticRule = ruleText || req.ruleLabel || req.toolName
             return (
               <Box key={o}>
-                <Text bold={isSel} color={isSel ? t.color.highlight : t.color.muted}>{label}</Text>
+                <Text bold={isSel} color={isSel ? t.color.highlight : t.color.muted}>
+                  {label}
+                </Text>
                 {editing ? (
-                  <TextInput columns={Math.max(12, innerWidth - label.length)} focus onChange={setRuleText} onSubmit={() => confirm('always')} value={ruleText} />
+                  <TextInput
+                    columns={Math.max(12, innerWidth - label.length)}
+                    focus
+                    onChange={setRuleText}
+                    onSubmit={() => confirm('always')}
+                    value={ruleText}
+                  />
                 ) : (
-                  <Text bold={isSel} color={isSel ? t.color.text : t.color.muted}>{staticRule}</Text>
+                  <Text bold={isSel} color={isSel ? t.color.text : t.color.muted}>
+                    {staticRule}
+                  </Text>
                 )}
               </Box>
             )
@@ -229,15 +240,19 @@ export function ApprovalPrompt({ cols = 80, onChoice, req, t }: ApprovalPromptPr
           // Other tools: the backend's authoritative per-tool wording, which
           // states the real scope ("Yes, allow all edits during this session"),
           // not a generic "don't ask again for <tool>".
-          const text = req.sessionLabel
-            ? `Yes, ${req.sessionLabel}`
-            : `${LABELS.always} ${req.ruleLabel || req.toolName}`
+          const text = req.sessionLabel ? `Yes, ${req.sessionLabel}` : `${LABELS.always} ${req.ruleLabel || req.toolName}`
           return (
-            <Text bold={isSel} color={isSel ? t.color.highlight : t.color.muted} key={o}>{head}{text}</Text>
+            <Text bold={isSel} color={isSel ? t.color.highlight : t.color.muted} key={o}>
+              {head}
+              {text}
+            </Text>
           )
         }
         return (
-          <Text bold={isSel} color={isSel ? t.color.highlight : t.color.muted} key={o}>{head}{LABELS[o]}</Text>
+          <Text bold={isSel} color={isSel ? t.color.highlight : t.color.muted} key={o}>
+            {head}
+            {LABELS[o]}
+          </Text>
         )
       })}
 
@@ -256,7 +271,7 @@ type PlanApprovalChoice = 'accept-edits' | 'bypass' | 'default' | 'deny'
 
 const PLAN_PREVIEW_LINES = 24
 
-const planLinesForReview = (plan: string): string[] => plan.split('\n').filter(line => line.trim().length > 0)
+const planLinesForReview = (plan: string): string[] => plan.split('\n').filter((line) => line.trim().length > 0)
 
 /**
  * Pure option builder (exported for tests).  The manual-approval handoff is
@@ -264,9 +279,7 @@ const planLinesForReview = (plan: string): string[] => plan.split('\n').filter(l
  * silently widen the agent's authority merely because it is the first option.
  * Elevated modes remain available, but are explicitly labelled as such.
  */
-export function planApprovalOptions(
-  bypassAvailable: boolean
-): { choice: PlanApprovalChoice; label: string }[] {
+export function planApprovalOptions(bypassAvailable: boolean): { choice: PlanApprovalChoice; label: string }[] {
   return [
     { choice: 'default', label: 'Execute with manual approvals (recommended)' },
     bypassAvailable
@@ -288,7 +301,7 @@ export function PlanApprovalPrompt({ cols = 80, onChoice, req, t }: PlanApproval
     : planApprovalOptions(req.bypassAvailable)
   // For a populated plan, start on the explicit safe handoff. Empty-plan
   // confirmation intentionally preserves its conventional Yes-first layout.
-  const [sel, setSel] = useState(() => (isEmpty ? 0 : opts.findIndex(o => o.choice === 'default')))
+  const [sel, setSel] = useState(() => (isEmpty ? 0 : opts.findIndex((o) => o.choice === 'default')))
   const [feedback, setFeedback] = useState('')
   const [typing, setTyping] = useState(false)
 
@@ -321,11 +334,11 @@ export function PlanApprovalPrompt({ cols = 80, onChoice, req, t }: PlanApproval
       }
 
       if (key.upArrow && sel > 0) {
-        setSel(s => s - 1)
+        setSel((s) => s - 1)
       }
 
       if (key.downArrow && sel < opts.length - 1) {
-        setSel(s => s + 1)
+        setSel((s) => s + 1)
       }
     },
     { isActive: !typing }
@@ -354,7 +367,9 @@ export function PlanApprovalPrompt({ cols = 80, onChoice, req, t }: PlanApproval
 
       return (
         <Box key={o.choice}>
-          <Text bold={isSel} color={isSel ? t.color.planMode : t.color.muted}>{label}</Text>
+          <Text bold={isSel} color={isSel ? t.color.planMode : t.color.muted}>
+            {label}
+          </Text>
           <TextInput
             columns={Math.max(12, innerWidth - label.length)}
             focus={typing}
@@ -368,7 +383,8 @@ export function PlanApprovalPrompt({ cols = 80, onChoice, req, t }: PlanApproval
 
     return (
       <Text bold={isSel} color={isSel ? t.color.planMode : t.color.muted} key={o.choice}>
-        {head}{o.label}
+        {head}
+        {o.label}
       </Text>
     )
   })
@@ -376,7 +392,9 @@ export function PlanApprovalPrompt({ cols = 80, onChoice, req, t }: PlanApproval
   if (isEmpty) {
     return (
       <Box borderColor={t.color.planMode} borderStyle="round" flexDirection="column" paddingX={1}>
-        <Text bold color={t.color.planMode}>Exit plan mode?</Text>
+        <Text bold color={t.color.planMode}>
+          Exit plan mode?
+        </Text>
         <Text color={t.color.text}>Claude wants to exit plan mode</Text>
         {optionRows}
         <Text color={t.color.muted}>↑/↓ select · Enter confirm · Esc keep planning</Text>
@@ -391,16 +409,24 @@ export function PlanApprovalPrompt({ cols = 80, onChoice, req, t }: PlanApproval
   return (
     <Box borderColor={t.color.planMode} borderStyle="round" flexDirection="column" paddingX={1}>
       <Box justifyContent="space-between">
-        <Text bold color={t.color.planMode}>PLAN REVIEW</Text>
-        <Text color={t.color.muted} dim>{planSections.length} sections · {planLines.length} lines</Text>
+        <Text bold color={t.color.planMode}>
+          PLAN REVIEW
+        </Text>
+        <Text color={t.color.muted} dim>
+          {planSections.length} sections · {planLines.length} lines
+        </Text>
       </Box>
-      <Text color={t.color.text} bold>Ready to hand off to execution?</Text>
+      <Text color={t.color.text} bold>
+        Ready to hand off to execution?
+      </Text>
       <Text color={t.color.muted}>Confirm the execution posture before the agent can change files or environment.</Text>
 
       <Box borderColor={t.color.muted} borderStyle="single" flexDirection="column" paddingX={1} marginTop={1}>
         <Md cols={innerWidth} t={t} text={shown.join('\n')} />
         {overflow > 0 ? (
-          <Text color={t.color.muted}>… +{overflow} more line{overflow === 1 ? '' : 's'} · {req.planFilePath ?? ''}</Text>
+          <Text color={t.color.muted}>
+            … +{overflow} more line{overflow === 1 ? '' : 's'} · {req.planFilePath ?? ''}
+          </Text>
         ) : null}
       </Box>
 
@@ -448,11 +474,11 @@ export function ClarifyPrompt({ cols = 80, onAnswer, onCancel, req, t }: Clarify
     }
 
     if (key.upArrow && sel > 0) {
-      setSel(s => s - 1)
+      setSel((s) => s - 1)
     }
 
     if (key.downArrow && sel < choices.length) {
-      setSel(s => s + 1)
+      setSel((s) => s + 1)
     }
 
     if (key.return) {
@@ -477,8 +503,7 @@ export function ClarifyPrompt({ cols = 80, onAnswer, onCancel, req, t }: Clarify
         </Box>
 
         <Text color={t.color.muted}>
-          Enter send · Esc {choices.length ? 'back' : 'cancel'} ·{' '}
-          {isMac ? 'Cmd+C copy · Cmd+V paste · Ctrl+C cancel' : 'Ctrl+C cancel'}
+          Enter send · Esc {choices.length ? 'back' : 'cancel'} · {isMac ? 'Cmd+C copy · Cmd+V paste · Ctrl+C cancel' : 'Ctrl+C cancel'}
         </Text>
       </Box>
     )

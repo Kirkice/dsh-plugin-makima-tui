@@ -64,15 +64,13 @@ describe('flattenToolResultContent', () => {
   })
 
   it('keeps text blocks and drops only the binary ones', () => {
-    expect(
-      flattenToolResultContent([{ text: 'before', type: 'text' }, ...IMAGE_CONTENT, { text: 'after', type: 'text' }])
-    ).toBe('before\n[image]\nafter')
+    expect(flattenToolResultContent([{ text: 'before', type: 'text' }, ...IMAGE_CONTENT, { text: 'after', type: 'text' }])).toBe(
+      'before\n[image]\nafter'
+    )
   })
 
   it('placeholders a document block', () => {
-    expect(flattenToolResultContent([{ source: { data: 'JVBERi0x', type: 'base64' }, type: 'document' }])).toBe(
-      '[document]'
-    )
+    expect(flattenToolResultContent([{ source: { data: 'JVBERi0x', type: 'base64' }, type: 'document' }])).toBe('[document]')
   })
 
   it('passes strings through untouched', () => {
@@ -89,9 +87,7 @@ describe('flattenToolResultContent', () => {
 describe('formatToolResult with an image envelope', () => {
   it('renders the original one-liner', () => {
     // FileReadTool/UI.tsx renderToolResultMessage case 'image'.
-    expect(formatToolResult('Read', '[image]', false, undefined, { originalSize: 128_000 })).toBe(
-      'Read image (125KB)'
-    )
+    expect(formatToolResult('Read', '[image]', false, undefined, { originalSize: 128_000 })).toBe('Read image (125KB)')
   })
 
   it('omits the size when the backend predates the envelope field', () => {
@@ -116,15 +112,15 @@ describe('formatToolResult with an image envelope', () => {
     // global, so the label is not tool-scoped the way the reference's per-tool
     // renderToolResultMessage is. Read is the only producer today; if a second
     // one appears this expectation should change alongside a tool-aware label.
-    expect(formatToolResult('SomeFutureTool', '[image]', false, undefined, { originalSize: 2048 })).toBe(
-      'Read image (2KB)'
-    )
+    expect(formatToolResult('SomeFutureTool', '[image]', false, undefined, { originalSize: 2048 })).toBe('Read image (2KB)')
   })
 
   it('lets a failed image read render as an error, not a summary', () => {
-    expect(formatToolResult('Read', 'EISDIR: illegal operation on a directory', true, undefined, {
-      originalSize: 128_000
-    })).toContain('EISDIR')
+    expect(
+      formatToolResult('Read', 'EISDIR: illegal operation on a directory', true, undefined, {
+        originalSize: 128_000
+      })
+    ).toContain('EISDIR')
   })
 })
 
@@ -158,7 +154,7 @@ describe('GatewayClient image tool_result mapping', () => {
     }
   })
 
-  const last = (t: string) => [...events].reverse().find(e => e.type === t)
+  const last = (t: string) => [...events].reverse().find((e) => e.type === t)
 
   const completeTool = async (id: string, name: string, input: unknown, resultMsg: Record<string, unknown>) => {
     proc.line({ message: { content: [{ id, input, name, type: 'tool_use' }] }, type: 'assistant' })

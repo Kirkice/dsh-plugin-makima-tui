@@ -64,7 +64,7 @@ describe('session orchestrator helpers', () => {
       { role: 'hotkey', text: 'Tab' },
       { role: 'text', text: ' model' }
     ])
-    expect(orchestratorGlobalHotkeyHintSegments.filter(s => s.role === 'hotkey').map(s => s.text)).toEqual([
+    expect(orchestratorGlobalHotkeyHintSegments.filter((s) => s.role === 'hotkey').map((s) => s.text)).toEqual([
       '↑↓',
       'Ctrl+N',
       'Ctrl+R',
@@ -87,12 +87,8 @@ describe('session orchestrator helpers', () => {
   })
 
   it('turns model picker values into session-scoped draft model args', () => {
-    expect(draftModelArgFromPickerValue('kimi-k2.6 --provider ollama-cloud --tui-session')).toBe(
-      'kimi-k2.6 --provider ollama-cloud'
-    )
-    expect(draftModelArgFromPickerValue('openai/gpt-5.5 --provider openai-codex --global')).toBe(
-      'openai/gpt-5.5 --provider openai-codex'
-    )
+    expect(draftModelArgFromPickerValue('kimi-k2.6 --provider ollama-cloud --tui-session')).toBe('kimi-k2.6 --provider ollama-cloud')
+    expect(draftModelArgFromPickerValue('openai/gpt-5.5 --provider openai-codex --global')).toBe('openai/gpt-5.5 --provider openai-codex')
   })
 
   it('highlights the current live session when the picker opens', () => {
@@ -163,9 +159,7 @@ describe('session orchestrator helpers', () => {
   })
 
   it('builds a compact title from the orchestrator prompt', () => {
-    expect(draftTitleFromPrompt('  Build the websocket orchestrator panel and make it robust.  ', 24)).toBe(
-      'Build the websocket orc…'
-    )
+    expect(draftTitleFromPrompt('  Build the websocket orchestrator panel and make it robust.  ', 24)).toBe('Build the websocket orc…')
   })
 })
 
@@ -200,8 +194,8 @@ describe('unified Sessions overlay helpers', () => {
 
     const live = [{ id: 'b', status: 'idle' }] satisfies SessionActiveItem[]
 
-    expect(resumableHistory(history, live).map(h => h.id)).toEqual(['a', 'c'])
-    expect(resumableHistory(history, []).map(h => h.id)).toEqual(['a', 'b', 'c'])
+    expect(resumableHistory(history, live).map((h) => h.id)).toEqual(['a', 'c'])
+    expect(resumableHistory(history, []).map((h) => h.id)).toEqual(['a', 'b', 'c'])
   })
 
   it('renders persisted workspace labels with a tail-preserving fallback', () => {

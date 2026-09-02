@@ -69,8 +69,7 @@ describe('statusBarSegments', () => {
       compressions: true,
       voice: true,
       bg: true,
-      subagents: true,
-      cost: true
+      subagents: true
     })
   })
 
@@ -81,26 +80,18 @@ describe('statusBarSegments', () => {
     expect(s.compactCtx).toBe(true)
     expect(s.bar).toBe(false)
     expect(s.duration).toBe(false)
-    expect(s.cost).toBe(false)
+    expect(s.subagents).toBe(false)
   })
 
   it('sheds tail segments in priority order as the terminal narrows', () => {
-    // cost is the first to go, the context bar the last of the tail.
-    const order: (keyof ReturnType<typeof statusBarSegments>)[] = [
-      'bar',
-      'duration',
-      'compressions',
-      'voice',
-      'bg',
-      'subagents',
-      'cost'
-    ]
+    // The context bar is the last status tail segment to be shed.
+    const order: (keyof ReturnType<typeof statusBarSegments>)[] = ['bar', 'duration', 'compressions', 'voice', 'bg', 'subagents']
 
     let prevCount = Infinity
 
     for (const cols of [120, 95, 87, 83, 79, 75, 71]) {
       const s = statusBarSegments(cols)
-      const visible = order.filter(k => s[k]).length
+      const visible = order.filter((k) => s[k]).length
 
       expect(visible).toBeLessThanOrEqual(prevCount)
       prevCount = visible

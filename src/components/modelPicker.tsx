@@ -82,7 +82,7 @@ export function ModelPicker({
 
   useEffect(() => {
     gw.request<ModelOptionsResponse>('model.options', sessionId ? { session_id: sessionId } : {})
-      .then(raw => {
+      .then((raw) => {
         const r = asRpcResult<ModelOptionsResponse>(raw)
 
         if (!r) {
@@ -98,7 +98,7 @@ export function ModelPicker({
         setProviderIdx(
           Math.max(
             0,
-            next.findIndex(p => p.is_current)
+            next.findIndex((p) => p.is_current)
           )
         )
         setModelIdx(0)
@@ -120,7 +120,7 @@ export function ModelPicker({
     let alive = true
     const poll = () => {
       gw.request<OpenAiCodexAuthStatus>('llm.openAiCodex.status')
-        .then(raw => {
+        .then((raw) => {
           const status = asRpcResult<OpenAiCodexAuthStatus>(raw)
 
           if (!alive) {
@@ -138,11 +138,7 @@ export function ModelPicker({
             return
           }
 
-          setProviders(prev => prev.map(p =>
-            p.slug === 'openai-codex'
-              ? { ...p, authenticated: true, warning: undefined }
-              : p
-          ))
+          setProviders((prev) => prev.map((p) => (p.slug === 'openai-codex' ? { ...p, authenticated: true, warning: undefined } : p)))
           setOauthPending(false)
           setOauthUrl('')
           setKeyError('')
@@ -166,14 +162,18 @@ export function ModelPicker({
 
   const names = useMemo(() => providerDisplayNames(providers), [providers])
   const health = useMemo(() => contextHealth(usage), [usage])
-  const healthColor = health.level === 'critical' ? t.color.error : health.level === 'watch' ? t.color.warn : health.level === 'healthy' ? t.color.ok : t.color.muted
+  const healthColor =
+    health.level === 'critical'
+      ? t.color.error
+      : health.level === 'watch'
+        ? t.color.warn
+        : health.level === 'healthy'
+          ? t.color.ok
+          : t.color.muted
 
   // Provider rows carry their display name so fuzzy filtering can match on
   // name + slug while keeping the name/provider pairing intact across ranking.
-  const providerRows = useMemo(
-    () => providers.map((p, i) => ({ provider: p, name: names[i] ?? p.name ?? p.slug })),
-    [providers, names]
-  )
+  const providerRows = useMemo(() => providers.map((p, i) => ({ provider: p, name: names[i] ?? p.name ?? p.slug })), [providers, names])
 
   // providerIdx / modelIdx always index into the *displayed* (filtered) lists.
   // With an empty filter the filtered list equals the full list, so navigation
@@ -183,11 +183,9 @@ export function ModelPicker({
       return providerRows
     }
 
-    return fuzzyRank(
-      providerRows,
-      filter,
-      row => `${row.name} ${row.provider.slug} ${(row.provider.models ?? []).join(' ')}`
-    ).map(r => r.item)
+    return fuzzyRank(providerRows, filter, (row) => `${row.name} ${row.provider.slug} ${(row.provider.models ?? []).join(' ')}`).map(
+      (r) => r.item
+    )
   }, [providerRows, filter, stage])
 
   const provider = filteredProviderRows[providerIdx]?.provider
@@ -198,7 +196,7 @@ export function ModelPicker({
       return allModels
     }
 
-    return fuzzyRank(allModels, filter, m => m).map(r => r.item)
+    return fuzzyRank(allModels, filter, (m) => m).map((r) => r.item)
   }, [allModels, filter, stage])
 
   const models = filteredModels
@@ -302,7 +300,7 @@ export function ModelPicker({
           api_key: keyInput.trim(),
           ...(sessionId ? { session_id: sessionId } : {})
         })
-          .then(raw => {
+          .then((raw) => {
             const r = asRpcResult<{ provider?: ModelOptionProvider }>(raw)
 
             if (!r?.provider) {
@@ -313,7 +311,7 @@ export function ModelPicker({
             }
 
             // Update the provider in our list with fresh data
-            setProviders(prev => prev.map(p => (p.slug === r.provider!.slug ? r.provider! : p)))
+            setProviders((prev) => prev.map((p) => (p.slug === r.provider!.slug ? r.provider! : p)))
             setKeyInput('')
             setKeySaving(false)
             setStage('model')
@@ -328,7 +326,7 @@ export function ModelPicker({
       }
 
       if (key.backspace || key.delete) {
-        setKeyInput(v => v.slice(0, -1))
+        setKeyInput((v) => v.slice(0, -1))
 
         return
       }
@@ -341,7 +339,7 @@ export function ModelPicker({
       }
 
       if (ch && !key.ctrl && !key.meta) {
-        setKeyInput(v => v + ch)
+        setKeyInput((v) => v + ch)
       }
 
       return
@@ -358,12 +356,19 @@ export function ModelPicker({
         setOauthDeviceCode(undefined)
         setKeyError('')
         gw.request<OpenAiCodexLoginResponse>('llm.openAiCodex.login', { method: 'device_code' })
-          .then(raw => {
+          .then((raw) => {
             const login = asRpcResult<OpenAiCodexLoginResponse>(raw)
             if (!login?.device_code) throw new Error('failed to start Device Code sign-in')
-            setOauthDeviceCode({ expiresAt: login.device_code.expires_at, userCode: login.device_code.user_code, verificationUri: login.device_code.verification_uri })
+            setOauthDeviceCode({
+              expiresAt: login.device_code.expires_at,
+              userCode: login.device_code.user_code,
+              verificationUri: login.device_code.verification_uri
+            })
           })
-          .catch((e: unknown) => { setKeyError(rpcErrorMessage(e)); setOauthPending(false) })
+          .catch((e: unknown) => {
+            setKeyError(rpcErrorMessage(e))
+            setOauthPending(false)
+          })
       }
       return
     }
@@ -379,30 +384,34 @@ export function ModelPicker({
 
         setKeySaving(true)
         setKeyError('')
-        const disconnect = provider.auth_type === 'oauth'
-          ? gw.request<{ disconnected?: boolean; logged_out?: boolean }>('llm.openAiCodex.logout')
-          : gw.request<{ disconnected?: boolean; logged_out?: boolean }>('model.disconnect', {
-              slug: provider.slug,
-              ...(sessionId ? { session_id: sessionId } : {})
-            })
+        const disconnect =
+          provider.auth_type === 'oauth'
+            ? gw.request<{ disconnected?: boolean; logged_out?: boolean }>('llm.openAiCodex.logout')
+            : gw.request<{ disconnected?: boolean; logged_out?: boolean }>('model.disconnect', {
+                slug: provider.slug,
+                ...(sessionId ? { session_id: sessionId } : {})
+              })
 
         disconnect
-          .then(raw => {
+          .then((raw) => {
             const r = asRpcResult<{ disconnected?: boolean; logged_out?: boolean }>(raw)
 
             if (r?.disconnected || r?.logged_out) {
               // Mark provider as unauthenticated in local state
-              setProviders(prev =>
-                prev.map(p =>
+              setProviders((prev) =>
+                prev.map((p) =>
                   p.slug === provider.slug
                     ? {
                         ...p,
                         authenticated: false,
                         models: [],
                         total_models: 0,
-                        warning: p.auth_type === 'oauth'
-                          ? 'Sign in with ChatGPT to activate'
-                          : p.key_env ? `paste ${p.key_env} to activate` : 'add the key to ~/.dsh/.credentials.yaml to activate'
+                        warning:
+                          p.auth_type === 'oauth'
+                            ? 'Sign in with ChatGPT to activate'
+                            : p.key_env
+                              ? `paste ${p.key_env} to activate`
+                              : 'add the key to ~/.dsh/.credentials.yaml to activate'
                       }
                     : p
                 )
@@ -455,13 +464,13 @@ export function ModelPicker({
     const setSel = stage === 'provider' ? setProviderIdx : stage === 'effort' ? setEffortIdx : setModelIdx
 
     if (key.upArrow && sel > 0) {
-      setSel(v => v - 1)
+      setSel((v) => v - 1)
 
       return
     }
 
     if (key.downArrow && sel < count - 1) {
-      setSel(v => v + 1)
+      setSel((v) => v + 1)
 
       return
     }
@@ -488,7 +497,7 @@ export function ModelPicker({
             setKeyError('')
             setFilter('')
             gw.request<OpenAiCodexLoginResponse>('llm.openAiCodex.login')
-              .then(raw => {
+              .then((raw) => {
                 const login = asRpcResult<OpenAiCodexLoginResponse>(raw)
                 if (!login?.authorization_url) throw new Error('failed to start ChatGPT sign-in')
                 setOauthUrl(login.authorization_url)
@@ -543,7 +552,7 @@ export function ModelPicker({
       setFilter('')
       setStage('effort')
       gw.request<EffortOptionsResponse>('model.effort_options', { model, provider: provider.slug })
-        .then(raw => {
+        .then((raw) => {
           const r = asRpcResult<EffortOptionsResponse>(raw)
           const levels = r?.supported ? (r.levels ?? []) : []
 
@@ -579,7 +588,7 @@ export function ModelPicker({
     // Backspace removes the last filter character; Esc (above) clears a
     // non-empty filter before navigating back.
     if (key.backspace || key.delete) {
-      setFilter(v => v.slice(0, -1))
+      setFilter((v) => v.slice(0, -1))
       setSel(0)
 
       return
@@ -597,7 +606,7 @@ export function ModelPicker({
     // filter. With Ctrl held, @makima-tui/ink reports `ch` as the key name ('g'),
     // not the raw control byte (see input-event.ts: input = ctrl ? name : seq).
     if (allowPersistGlobal && key.ctrl && ch === 'g') {
-      setPersistGlobal(v => !v)
+      setPersistGlobal((v) => !v)
 
       return
     }
@@ -611,7 +620,7 @@ export function ModelPicker({
 
     // Any other printable single character extends the filter.
     if (ch && !key.ctrl && !key.meta && ch.length === 1 && ch >= ' ') {
-      setFilter(v => v + ch)
+      setFilter((v) => v + ch)
       setSel(0)
     }
   })
@@ -697,7 +706,9 @@ export function ModelPicker({
           Sign in to {provider.name}
         </Text>
         <Text color={t.color.muted} wrap="truncate-end">
-          {oauthDeviceCode ? 'Open the verification page and enter the displayed code.' : 'Complete the secure ChatGPT authorization in your browser.'}
+          {oauthDeviceCode
+            ? 'Open the verification page and enter the displayed code.'
+            : 'Complete the secure ChatGPT authorization in your browser.'}
         </Text>
         <Text color={t.color.muted} wrap="truncate-end">
           {' '}
@@ -705,19 +716,31 @@ export function ModelPicker({
         {oauthDeviceCode ? (
           <>
             <Link url={oauthDeviceCode.verificationUri}>
-              <Text color={t.color.accent} wrap="truncate-end">Open ChatGPT device verification</Text>
+              <Text color={t.color.accent} wrap="truncate-end">
+                Open ChatGPT device verification
+              </Text>
             </Link>
-            <Text bold color={t.color.accent} wrap="truncate-end">Code: {oauthDeviceCode.userCode}</Text>
+            <Text bold color={t.color.accent} wrap="truncate-end">
+              Code: {oauthDeviceCode.userCode}
+            </Text>
           </>
         ) : oauthUrl ? (
           <Link url={oauthUrl}>
-            <Text color={t.color.accent} wrap="truncate-end">Open ChatGPT authorization</Text>
+            <Text color={t.color.accent} wrap="truncate-end">
+              Open ChatGPT authorization
+            </Text>
           </Link>
         ) : (
-          <Text color={t.color.muted} wrap="truncate-end">{oauthPending ? 'starting authorization…' : 'authorization was not started'}</Text>
+          <Text color={t.color.muted} wrap="truncate-end">
+            {oauthPending ? 'starting authorization…' : 'authorization was not started'}
+          </Text>
         )}
         <Text color={t.color.muted} wrap="truncate-end">
-          {oauthPending ? (oauthDeviceCode ? 'Waiting for Device Code authorization…' : 'Waiting for the loopback callback…') : 'Sign-in did not complete.'}
+          {oauthPending
+            ? oauthDeviceCode
+              ? 'Waiting for Device Code authorization…'
+              : 'Waiting for the loopback callback…'
+            : 'Sign-in did not complete.'}
         </Text>
         {keyError ? (
           <Text color={t.color.label} wrap="truncate-end">
@@ -860,7 +883,11 @@ export function ModelPicker({
 
       const suffix =
         p.authenticated === false
-          ? (p.auth_type === 'api_key' ? '(no key)' : p.auth_type === 'oauth' ? '(sign in)' : '(needs setup)')
+          ? p.auth_type === 'api_key'
+            ? '(no key)'
+            : p.auth_type === 'oauth'
+              ? '(sign in)'
+              : '(needs setup)'
           : `${modelCount} models`
 
       return `${authMark} ${name} · ${suffix}`
@@ -1004,9 +1031,7 @@ export function ModelPicker({
         persist: {allowPersistGlobal ? (persistGlobal ? 'global' : 'session') : 'session'}
         {allowPersistGlobal ? ' · ^g toggle' : ' only'}
       </Text>
-      <OverlayHint t={t}>
-        {models.length ? '↑/↓ select · Enter switch · Esc clear/back · q close' : 'Esc back · q close'}
-      </OverlayHint>
+      <OverlayHint t={t}>{models.length ? '↑/↓ select · Enter switch · Esc clear/back · q close' : 'Esc back · q close'}</OverlayHint>
     </Box>
   )
 }

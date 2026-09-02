@@ -18,12 +18,7 @@ export function initPrecisionWheel(): PrecisionWheelState {
   return { active: false, dir: 0, lastEventAtMs: 0, lastScrollAtMs: 0 }
 }
 
-export function computePrecisionWheelStep(
-  state: PrecisionWheelState,
-  dir: -1 | 1,
-  hasModifier: boolean,
-  now: number
-): PrecisionWheelStep {
+export function computePrecisionWheelStep(state: PrecisionWheelState, dir: -1 | 1, hasModifier: boolean, now: number): PrecisionWheelStep {
   const active = hasModifier || now - state.lastEventAtMs < PRECISION_WHEEL_STICKY_MS
 
   if (!active) {

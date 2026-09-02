@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest'
 
 import { startPromptLiveSession } from '../app/useMainApp.js'
+import type { GatewayRpc } from '../app/interfaces.js'
 
 describe('startPromptLiveSession', () => {
   it('starts a kept-live session with generated id/title, applies selected model, then dispatches the prompt', async () => {
     const calls: Array<[string, unknown]> = []
 
     const sid = await startPromptLiveSession({
-      dispatchSubmission: prompt => calls.push(['dispatch', prompt]),
-      maybeWarn: value => calls.push(['warn', value]),
+      dispatchSubmission: (prompt) => calls.push(['dispatch', prompt]),
+      maybeWarn: (value) => calls.push(['warn', value]),
       modelArg: 'kimi-k2.6 --provider ollama-cloud',
       newLiveSession: async (message, title) => {
         calls.push(['new', { message, title }])
@@ -17,12 +18,12 @@ describe('startPromptLiveSession', () => {
       },
       onModelSwitched: (value, result) => calls.push(['model-switched', { result, value }]),
       prompt: '  Build the thing  ',
-      rpc: async (method, params) => {
+      rpc: (async (method: string, params?: Record<string, unknown>) => {
         calls.push(['rpc', { method, params }])
 
         return { value: 'kimi-k2.6', warning: '' }
-      },
-      sys: text => calls.push(['sys', text])
+      }) as GatewayRpc,
+      sys: (text) => calls.push(['sys', text])
     })
 
     expect(sid).toBe('abc123')
@@ -54,7 +55,7 @@ describe('startPromptLiveSession', () => {
         return 'abc123'
       },
       prompt: '   ',
-      rpc: async () => ({ value: 'unused' }),
+      rpc: (async () => ({ value: 'unused' })) as GatewayRpc,
       sys: () => calls.push('sys')
     })
 

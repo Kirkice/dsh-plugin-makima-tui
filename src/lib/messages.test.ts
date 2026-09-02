@@ -11,20 +11,18 @@ describe('appendTranscriptMessage', () => {
       tools: ['Terminal("two") ✓']
     })
 
-    expect(out).toEqual([
-      { kind: 'trail', role: 'system', text: '', tools: ['Terminal("one") ✓', 'Terminal("two") ✓'] }
-    ])
+    expect(out).toEqual([{ kind: 'trail', role: 'system', text: '', tools: ['Terminal("one") ✓', 'Terminal("two") ✓'] }])
   })
 
   it('merges tool shelves into the nearest thinking shelf', () => {
-    const out = appendTranscriptMessage(
-      [{ kind: 'trail', role: 'system', text: '', thinking: 'plan', tools: ['Terminal("one") ✓'] }],
-      { kind: 'trail', role: 'system', text: '', tools: ['Terminal("two") ✓'] }
-    )
+    const out = appendTranscriptMessage([{ kind: 'trail', role: 'system', text: '', thinking: 'plan', tools: ['Terminal("one") ✓'] }], {
+      kind: 'trail',
+      role: 'system',
+      text: '',
+      tools: ['Terminal("two") ✓']
+    })
 
-    expect(out).toEqual([
-      { kind: 'trail', role: 'system', text: '', thinking: 'plan', tools: ['Terminal("one") ✓', 'Terminal("two") ✓'] }
-    ])
+    expect(out).toEqual([{ kind: 'trail', role: 'system', text: '', thinking: 'plan', tools: ['Terminal("one") ✓', 'Terminal("two") ✓'] }])
   })
 })
 
@@ -32,9 +30,7 @@ describe('appendTranscriptMessage', () => {
 
 describe('extractTag', () => {
   it('extracts simple multiline tag content', () => {
-    expect(extractTag('<tool_use_error>path is not a file: /x/src</tool_use_error>', 'tool_use_error')).toBe(
-      'path is not a file: /x/src'
-    )
+    expect(extractTag('<tool_use_error>path is not a file: /x/src</tool_use_error>', 'tool_use_error')).toBe('path is not a file: /x/src')
     expect(extractTag('<e>line1\nline2</e>', 'e')).toBe('line1\nline2')
   })
 

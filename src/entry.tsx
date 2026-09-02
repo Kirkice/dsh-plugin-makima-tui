@@ -95,7 +95,7 @@ setupGracefulExit({
     recordParentLifecycle(`${scope}: ${message.split('\n')[0]?.slice(0, 400) ?? ''}`)
     process.stderr.write(`makima-tui lifecycle ${scope}: ${message.slice(0, 2000)}\n`)
   },
-  onSignal: signal => {
+  onSignal: (signal) => {
     // The next line in the crash log is the child's `=== SIGTERM received ===`
     // (gw.kill forwards SIGTERM regardless of which signal hit us) — this is
     // what tells SIGHUP (terminal/SSH dropped) apart from a real SIGTERM.
@@ -119,9 +119,7 @@ const stopMemoryMonitor = startMemoryMonitor({
       `memory-critical process.exit(137) heap=${formatBytes(snap.heapUsed)} rss=${formatBytes(snap.rss)} dump=${dump?.heapPath ?? 'failed'}`
     )
     resetTerminalModes(process.stdout, FULLSCREEN)
-    process.stderr.write(
-      `makima-tui lifecycle: memory critical exit heap=${formatBytes(snap.heapUsed)} rss=${formatBytes(snap.rss)}\n`
-    )
+    process.stderr.write(`makima-tui lifecycle: memory critical exit heap=${formatBytes(snap.heapUsed)} rss=${formatBytes(snap.rss)}\n`)
     process.stderr.write(dumpNotice(snap, dump))
     process.stderr.write('makima tui: exiting to avoid OOM; restart to recover\n')
     process.exit(137)
@@ -131,10 +129,8 @@ const stopMemoryMonitor = startMemoryMonitor({
   // here — Node OOMs from a render-tree blowup well below the exit threshold,
   // so the only trace was a bare gateway `stdin EOF`. Persist a breadcrumb +
   // stderr line so the next such death is attributable instead of silent.
-  onWarn: snap => {
-    recordParentLifecycle(
-      `memory-warning fast heap growth heap=${formatBytes(snap.heapUsed)} rss=${formatBytes(snap.rss)}`
-    )
+  onWarn: (snap) => {
+    recordParentLifecycle(`memory-warning fast heap growth heap=${formatBytes(snap.heapUsed)} rss=${formatBytes(snap.rss)}`)
     process.stderr.write(
       `makima-tui: heap climbing fast (${formatBytes(snap.heapUsed)}) — a large tool output or long session may be straining memory\n`
     )
@@ -171,7 +167,7 @@ ink.render(<App gw={gw} />, {
   // The TUI's mouse tracking captures click events before Terminal.app's
   // own URL detection can fire, so without this hook clicks on `<Link>`
   // do nothing in any terminal where mouseTracking is on.
-  onHyperlinkClick: url => {
+  onHyperlinkClick: (url) => {
     openExternalUrl(url)
   }
 })

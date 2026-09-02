@@ -1,7 +1,7 @@
 import type { Msg, TodoItem } from '../types.js'
 
 export const isTodoDone = (todos: readonly TodoItem[]) =>
-  todos.length > 0 && todos.every(todo => todo.status === 'completed' || todo.status === 'cancelled')
+  todos.length > 0 && todos.every((todo) => todo.status === 'completed' || todo.status === 'cancelled')
 
 export const isToolShelfMessage = (msg: Msg | undefined) =>
   Boolean(msg?.kind === 'trail' && !msg.text && !msg.thinking?.trim() && msg.tools?.length)

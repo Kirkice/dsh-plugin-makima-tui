@@ -8,7 +8,7 @@ vi.mock('../lib/openExternalUrl.js', () => ({
   openExternalUrl: vi.fn(() => true)
 }))
 
-const billingCommand = billingCommands.find(cmd => cmd.name === 'billing')!
+const billingCommand = billingCommands.find((cmd) => cmd.name === 'billing')!
 
 const ownerState = (overrides: Partial<BillingStateResponse> = {}): BillingStateResponse => ({
   auto_reload: {
@@ -81,7 +81,7 @@ const buildCtx = (results: Record<string, unknown>) => {
   return { calls, ctx, rpc, run, sys }
 }
 
-const printed = (sys: ReturnType<typeof vi.fn>) => sys.mock.calls.map(c => c[0]).join('\n')
+const printed = (sys: ReturnType<typeof vi.fn>) => sys.mock.calls.map((c) => c[0]).join('\n')
 
 describe('/billing slash command (overlay-driven)', () => {
   beforeEach(() => {
@@ -255,7 +255,7 @@ describe('/billing slash command (overlay-driven)', () => {
     await run('')
     const ok = await getOverlayState().billing!.ctx.applyAutoReload(true, 20, 100)
     expect(ok).toBe(true)
-    const ar = calls.find(c => c.method === 'billing.auto_reload')
+    const ar = calls.find((c) => c.method === 'billing.auto_reload')
     expect(ar?.params).toEqual({ enabled: true, threshold: 20, top_up_amount: 100 })
   })
 
@@ -276,7 +276,7 @@ describe('/billing slash command (overlay-driven)', () => {
     await run('')
     const ok = await getOverlayState().billing!.ctx.applyAutoReload(false)
     expect(ok).toBe(true)
-    const ar = calls.find(c => c.method === 'billing.auto_reload')
+    const ar = calls.find((c) => c.method === 'billing.auto_reload')
     expect(ar?.params).toEqual({ enabled: false })
   })
 

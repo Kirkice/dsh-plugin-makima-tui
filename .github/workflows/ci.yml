@@ -10,13 +10,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
-      - run: npm i -g pnpm@10
       - run: npm ci
       - run: npm run typecheck
+      - run: npm run typecheck:test
+      - run: npm run lint
+      - run: npm run format:check
+        env:
+          FORMAT_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
       - run: npm run verify:boundary
       - run: npm test
       - name: e2e (real dsh boot in a PTY, scripted LLM)

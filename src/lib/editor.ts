@@ -26,10 +26,7 @@ const isExecutable = (path: string): boolean => {
  *   3. on Windows: `notepad.exe`
  *   4. literal `['vi']` as the last-resort POSIX floor
  */
-export const resolveEditor = (
-  env: NodeJS.ProcessEnv = process.env,
-  platform: NodeJS.Platform = process.platform
-): string[] => {
+export const resolveEditor = (env: NodeJS.ProcessEnv = process.env, platform: NodeJS.Platform = process.platform): string[] => {
   const explicit = env.VISUAL ?? env.EDITOR
 
   if (explicit?.trim()) {
@@ -41,7 +38,7 @@ export const resolveEditor = (
   }
 
   const dirs = (env.PATH ?? '').split(delimiter).filter(Boolean)
-  const found = FALLBACKS.flatMap(name => dirs.map(d => join(d, name))).find(isExecutable)
+  const found = FALLBACKS.flatMap((name) => dirs.map((d) => join(d, name))).find(isExecutable)
 
   return [found ?? 'vi']
 }

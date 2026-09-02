@@ -11,7 +11,7 @@ const LOWER_HALF = '▄'
 
 const hex = (r: number, g: number, b: number) =>
   `#${[r, g, b]
-    .map(v =>
+    .map((v) =>
       Math.max(0, Math.min(255, v | 0))
         .toString(16)
         .padStart(2, '0')

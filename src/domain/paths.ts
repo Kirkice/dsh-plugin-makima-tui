@@ -24,13 +24,7 @@ export const fmtCwdBranch = (cwd: string, branch: null | string, max = 40) => {
  * with a plain space (not a ` · ` separator). When no model is known yet the
  * caller should fall back to a plain brand string instead of calling this.
  */
-export const composeTabTitle = (
-  marker: string,
-  sessionName: string,
-  model: string,
-  cwd: string,
-  maxName = 28
-): string => {
+export const composeTabTitle = (marker: string, sessionName: string, model: string, cwd: string, maxName = 28): string => {
   const name = sessionName.trim()
   const shortName = name.length > maxName ? `${name.slice(0, maxName - 1)}…` : name
 

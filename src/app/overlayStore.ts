@@ -58,27 +58,27 @@ export const $isBlocked = computed(
   }) =>
     Boolean(
       agents ||
-      approval ||
-      billing ||
-      clarify ||
-      confirm ||
-      detailPicker ||
-      logoPicker ||
-      memoryPicker ||
-      modelPicker ||
-      pager ||
-      permissionsPicker ||
-      petPicker ||
-      planApproval ||
-      pluginsHub ||
-      providersHub ||
-      questions ||
-      secret ||
-      sessions ||
-      skillsHub ||
-      skillsMcpManager ||
-      sudo ||
-      worktreeExit
+        approval ||
+        billing ||
+        clarify ||
+        confirm ||
+        detailPicker ||
+        logoPicker ||
+        memoryPicker ||
+        modelPicker ||
+        pager ||
+        permissionsPicker ||
+        petPicker ||
+        planApproval ||
+        pluginsHub ||
+        providersHub ||
+        questions ||
+        secret ||
+        sessions ||
+        skillsHub ||
+        skillsMcpManager ||
+        sudo ||
+        worktreeExit
     )
 )
 

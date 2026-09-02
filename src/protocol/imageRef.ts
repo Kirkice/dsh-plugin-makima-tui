@@ -18,7 +18,5 @@ export function formatImageRef(id: number): string {
 
 /** Image ids still referenced by a chip in `text`. */
 export function parseImageRefs(text: string): number[] {
-  return [...text.matchAll(IMAGE_REF_RE)]
-    .map(m => Number.parseInt(m[1] ?? '0', 10))
-    .filter(id => id > 0)
+  return [...text.matchAll(IMAGE_REF_RE)].map((m) => Number.parseInt(m[1] ?? '0', 10)).filter((id) => id > 0)
 }

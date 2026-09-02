@@ -130,11 +130,7 @@ export const blockRenders = (msg: Pick<Msg, 'kind' | 'thinking' | 'todos' | 'too
  * live block list. This is the grouping predecessor — using it (instead of the
  * literal previous row) keeps hidden trails from interrupting the rhythm.
  */
-export const prevRenderedMsg = (
-  msgAt: (i: number) => Msg | undefined,
-  index: number,
-  ctx: DetailsCtx
-): Msg | undefined => {
+export const prevRenderedMsg = (msgAt: (i: number) => Msg | undefined, index: number, ctx: DetailsCtx): Msg | undefined => {
   for (let i = index - 1; i >= 0; i--) {
     const candidate = msgAt(i)
 

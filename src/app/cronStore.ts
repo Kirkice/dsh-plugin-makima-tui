@@ -43,7 +43,7 @@ export const applyCronSnapshot = (snap: CronSnapshot | null | undefined) => {
   }
 
   const jobs = Array.isArray(snap.jobs) ? snap.jobs : []
-  const fireTimes = jobs.map(j => toMs(j?.next_fire_at)).filter((t): t is number => t !== null)
+  const fireTimes = jobs.map((j) => toMs(j?.next_fire_at)).filter((t): t is number => t !== null)
   const rawWakeup = snap.wakeup
   const wakeupAt = rawWakeup ? toMs(rawWakeup.fire_at) : null
 

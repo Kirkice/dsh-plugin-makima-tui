@@ -37,7 +37,7 @@ export function MemoryPicker({ gw, onCancel, onSelect, t }: MemoryPickerProps) {
 
   useEffect(() => {
     gw.request<MemoryTargetsResponse>('memory.targets', {})
-      .then(raw => {
+      .then((raw) => {
         const r = asRpcResult<MemoryTargetsResponse>(raw)
 
         if (!r || r.ok === false || !Array.isArray(r.targets) || !r.targets.length) {
@@ -48,7 +48,12 @@ export function MemoryPicker({ gw, onCancel, onSelect, t }: MemoryPickerProps) {
         }
 
         setTargets(r.targets)
-        setIdx(Math.max(0, r.targets.findIndex(target => target.path === lastSelectedPath)))
+        setIdx(
+          Math.max(
+            0,
+            r.targets.findIndex((target) => target.path === lastSelectedPath)
+          )
+        )
         setLoading(false)
       })
       .catch((e: unknown) => {
@@ -63,11 +68,11 @@ export function MemoryPicker({ gw, onCancel, onSelect, t }: MemoryPickerProps) {
     }
 
     if (key.upArrow) {
-      return setIdx(i => Math.max(0, i - 1))
+      return setIdx((i) => Math.max(0, i - 1))
     }
 
     if (key.downArrow) {
-      return setIdx(i => Math.min(Math.max(0, targets.length - 1), i + 1))
+      return setIdx((i) => Math.min(Math.max(0, targets.length - 1), i + 1))
     }
 
     if (key.return) {
@@ -113,13 +118,7 @@ export function MemoryPicker({ gw, onCancel, onSelect, t }: MemoryPickerProps) {
         const at = offset + i === idx
 
         return (
-          <Text
-            bold={at}
-            color={at ? t.color.accent : t.color.text}
-            inverse={at}
-            key={target.path}
-            wrap="truncate-end"
-          >
+          <Text bold={at} color={at ? t.color.accent : t.color.text} inverse={at} key={target.path} wrap="truncate-end">
             {at ? '▸ ' : '  '}
             {target.label}
             {target.description ? <Text color={at ? undefined : t.color.muted}> · {target.description}</Text> : null}

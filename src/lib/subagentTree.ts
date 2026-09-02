@@ -219,7 +219,7 @@ export function sparkline(values: readonly number[]): string {
   }
 
   return values
-    .map(v => {
+    .map((v) => {
       if (v <= 0) {
         return ' '
       }
@@ -315,9 +315,9 @@ export function fmtDuration(seconds: number): string {
  * view, disk label, and diff pane.
  */
 export function topLevelSubagents(items: readonly SubagentProgress[]): SubagentProgress[] {
-  const ids = new Set(items.map(s => s.id))
+  const ids = new Set(items.map((s) => s.id))
 
-  return items.filter(s => !s.parentId || !ids.has(s.parentId))
+  return items.filter((s) => !s.parentId || !ids.has(s.parentId))
 }
 
 /**

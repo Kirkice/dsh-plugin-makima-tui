@@ -15,7 +15,7 @@ describe('OpenAI Codex Responses adapter', () => {
     const adapter = new OpenAiCodexAdapter({} as never)
     const models = await adapter.listModels('openai-codex')
 
-    expect(models.map(model => model.id)).toEqual([
+    expect(models.map((model) => model.id)).toEqual([
       'gpt-5.3-codex-spark',
       'gpt-5.4',
       'gpt-5.4-mini',
@@ -24,8 +24,8 @@ describe('OpenAI Codex Responses adapter', () => {
       'gpt-5.6-terra',
       'gpt-5.6-luna'
     ])
-    expect(models.find(model => model.id === 'gpt-5.3-codex-spark')?.inputModalities).toEqual(['text'])
-    expect(models.find(model => model.id === 'gpt-5.6-terra')?.inputModalities).toEqual(['text', 'image'])
+    expect(models.find((model) => model.id === 'gpt-5.3-codex-spark')?.inputModalities).toEqual(['text'])
+    expect(models.find((model) => model.id === 'gpt-5.6-terra')?.inputModalities).toEqual(['text', 'image'])
   })
 
   it('resolves model input modalities for image preflight', async () => {
@@ -65,36 +65,45 @@ describe('OpenAI Codex Responses adapter', () => {
       temperature: 0.2,
       tools: [{ name: 'read_file', type: 'function' }]
     })
-    expect(request.input).toEqual(expect.arrayContaining([
-      { content: [{ text: 'be concise', type: 'input_text' }], role: 'system' },
-      { content: [{ text: 'hello', type: 'input_text' }], role: 'user' },
-      { call_id: 'call-1', output: 'source', type: 'function_call_output' }
-    ]))
+    expect(request.input).toEqual(
+      expect.arrayContaining([
+        { content: [{ text: 'be concise', type: 'input_text' }], role: 'system' },
+        { content: [{ text: 'hello', type: 'input_text' }], role: 'user' },
+        { call_id: 'call-1', output: 'source', type: 'function_call_output' }
+      ])
+    )
   })
 
   it('resolves durable image attachments into Responses input_image blocks', async () => {
-    const request = await serializeRequest({
-      messages: [{
-        content: [
-          { text: '[Image #1] describe this', type: 'text' },
+    const request = await serializeRequest(
+      {
+        messages: [
           {
-            attachment: { attachmentId: 'image-1', bytes: 3, height: 1, mediaType: 'image/png', name: 'shot.png', width: 1 },
-            type: 'image'
+            content: [
+              { text: '[Image #1] describe this', type: 'text' },
+              {
+                attachment: { attachmentId: 'image-1', bytes: 3, height: 1, mediaType: 'image/png', name: 'shot.png', width: 1 },
+                type: 'image'
+              }
+            ],
+            role: 'user'
           }
         ],
-        role: 'user'
-      }],
-      model: 'gpt-5.6-terra',
-      signal: new AbortController().signal
-    } as unknown as GenerateOptions, async ref => ({ data: new Uint8Array([1, 2, 3]), ref }))
+        model: 'gpt-5.6-terra',
+        signal: new AbortController().signal
+      } as unknown as GenerateOptions,
+      async (ref) => ({ data: new Uint8Array([1, 2, 3]), ref })
+    )
 
-    expect(request.input).toEqual([{
-      content: [
-        { text: '[Image #1] describe this', type: 'input_text' },
-        { image_url: 'data:image/png;base64,AQID', type: 'input_image' }
-      ],
-      role: 'user'
-    }])
+    expect(request.input).toEqual([
+      {
+        content: [
+          { text: '[Image #1] describe this', type: 'input_text' },
+          { image_url: 'data:image/png;base64,AQID', type: 'input_image' }
+        ],
+        role: 'user'
+      }
+    ])
   })
 
   it('parses split SSE frames and ignores the DONE sentinel', async () => {
@@ -114,20 +123,25 @@ describe('OpenAI Codex Responses adapter', () => {
       yield { delta: 'think', type: 'response.reasoning.delta' }
       yield { delta: 'answer', type: 'response.output_text.delta' }
       yield { item: { arguments: '', call_id: 'call-1', name: 'ping', type: 'function_call' }, type: 'response.output_item.added' }
-      yield { response: { usage: { input_tokens: 10, output_tokens: 20, output_tokens_details: { reasoning_tokens: 5 } } }, type: 'response.completed' }
+      yield {
+        response: { usage: { input_tokens: 10, output_tokens: 20, output_tokens_details: { reasoning_tokens: 5 } } },
+        type: 'response.completed'
+      }
     }
 
     const chunks = await collect(translateResponseEvents(events()))
 
-    expect(chunks).toEqual(expect.arrayContaining([
-      { blockType: 'reasoning', index: 0, type: 'block-start' },
-      { index: 0, text: 'think', type: 'reasoning-delta' },
-      { blockType: 'text', index: 1, type: 'block-start' },
-      { index: 1, text: 'answer', type: 'text-delta' },
-      { blockType: 'tool-call', index: 2, type: 'block-start' },
-      { type: 'usage', usage: { inputTokens: 10, outputTokens: 20, reasoningTokens: 5 } },
-      { reason: { kind: 'stop' }, type: 'finish' }
-    ]))
+    expect(chunks).toEqual(
+      expect.arrayContaining([
+        { blockType: 'reasoning', index: 0, type: 'block-start' },
+        { index: 0, text: 'think', type: 'reasoning-delta' },
+        { blockType: 'text', index: 1, type: 'block-start' },
+        { index: 1, text: 'answer', type: 'text-delta' },
+        { blockType: 'tool-call', index: 2, type: 'block-start' },
+        { type: 'usage', usage: { inputTokens: 10, outputTokens: 20, reasoningTokens: 5 } },
+        { reason: { kind: 'stop' }, type: 'finish' }
+      ])
+    )
     expect(chunks).toContainEqual({
       block: { arguments: '', id: 'call-1', name: 'ping', type: 'tool-call' },
       index: 2,

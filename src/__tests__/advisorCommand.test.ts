@@ -28,7 +28,7 @@ class FakeProc extends EventEmitter {
 
   constructor() {
     super()
-    this.stdin.on('data', chunk => {
+    this.stdin.on('data', (chunk) => {
       for (const line of String(chunk).split('\n')) {
         if (line.trim()) {
           this.sent.push(JSON.parse(line))
@@ -42,7 +42,7 @@ class FakeProc extends EventEmitter {
   }
 }
 
-const flush = () => new Promise(resolve => setTimeout(resolve, 0))
+const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 describe('/advisor gateway adapter', () => {
   const prevWs = process.env.MAKIMA_TUI_WORKSPACE
@@ -65,8 +65,11 @@ describe('/advisor gateway adapter', () => {
   afterEach(() => {
     gw.kill()
 
-    if (prevWs === undefined) {delete process.env.MAKIMA_TUI_WORKSPACE}
-    else {process.env.MAKIMA_TUI_WORKSPACE = prevWs}
+    if (prevWs === undefined) {
+      delete process.env.MAKIMA_TUI_WORKSPACE
+    } else {
+      process.env.MAKIMA_TUI_WORKSPACE = prevWs
+    }
   })
 
   const replyToLastControl = async (response: unknown) => {

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createSlashHandler } from '../app/createSlashHandler.js'
+import type { SlashHandlerContext } from '../app/interfaces.js'
 import { getOverlayState, resetOverlayState } from '../app/overlayStore.js'
 import { DASHBOARD_EXIT_DISABLED_MESSAGE, DASHBOARD_UPDATE_DISABLED_MESSAGE } from '../app/slash/commands/core.js'
 import { getUiState, patchUiState, resetUiState } from '../app/uiStore.js'
@@ -11,7 +12,7 @@ import { TUI_SESSION_MODEL_FLAG } from '../domain/slash.js'
 // so toggling process.env in a test body can't move it. Mock just that one
 // export (everything else stays real) and flip the holder per test.
 const envState = { dashboardTuiMode: false }
-vi.mock('../config/env.js', async importActual => {
+vi.mock('../config/env.js', async (importActual) => {
   const actual = await importActual<typeof EnvModule>()
 
   return {
@@ -237,9 +238,7 @@ describe('createSlashHandler', () => {
       }
     })
 
-    expect(
-      createSlashHandler(ctx)(`/model anthropic/claude-sonnet-4.6 --provider openrouter ${TUI_SESSION_MODEL_FLAG}`)
-    ).toBe(true)
+    expect(createSlashHandler(ctx)(`/model anthropic/claude-sonnet-4.6 --provider openrouter ${TUI_SESSION_MODEL_FLAG}`)).toBe(true)
     expect(ctx.gateway.rpc).toHaveBeenCalledWith('config.set', {
       confirm_expensive_model: false,
       key: 'model',
@@ -358,10 +357,7 @@ describe('createSlashHandler', () => {
     resetOverlayState()
     expect(createSlashHandler(ctx)('/pet toggle')).toBe(true)
     expect(getOverlayState().petPicker).toBe(false)
-    expect(ctx.gateway.gw.request).toHaveBeenCalledWith(
-      'slash.exec',
-      expect.objectContaining({ command: 'pet toggle' })
-    )
+    expect(ctx.gateway.gw.request).toHaveBeenCalledWith('slash.exec', expect.objectContaining({ command: 'pet toggle' }))
   })
 
   it('routes /pet <slug> to the slash worker without opening the picker', () => {
@@ -501,9 +497,7 @@ describe('createSlashHandler', () => {
     await vi.waitFor(() => {
       expect(ctx.transcript.sys).toHaveBeenCalledWith('  Record key: Ctrl+Space')
     })
-    expect(ctx.voice.setVoiceRecordKey).toHaveBeenCalledWith(
-      expect.objectContaining({ ch: 'space', mod: 'ctrl', named: 'space' })
-    )
+    expect(ctx.voice.setVoiceRecordKey).toHaveBeenCalledWith(expect.objectContaining({ ch: 'space', mod: 'ctrl', named: 'space' }))
   })
 
   it('/voice on renders the configured binding for the start/stop hint', async () => {
@@ -639,9 +633,7 @@ describe('createSlashHandler', () => {
     const ctx = buildCtx({ gateway: { ...buildGateway(), rpc } })
 
     expect(createSlashHandler(ctx)('/browser connect')).toBe(true)
-    expect(ctx.transcript.sys).toHaveBeenCalledWith(
-      'checking Chromium-family browser remote debugging at http://127.0.0.1:9222...'
-    )
+    expect(ctx.transcript.sys).toHaveBeenCalledWith('checking Chromium-family browser remote debugging at http://127.0.0.1:9222...')
 
     await vi.waitFor(() => {
       expect(ctx.transcript.sys).toHaveBeenCalledWith(
@@ -695,7 +687,7 @@ describe('createSlashHandler', () => {
               slashExecCalls += 1
 
               if (slashExecCalls === 1) {
-                return new Promise<{ output?: string }>(res => {
+                return new Promise<{ output?: string }>((res) => {
                   resolveLate = res
                 })
               }
@@ -862,9 +854,7 @@ describe('createSlashHandler', () => {
     expect(h('/goal complete all the steps and provide a final report')).toBe(true)
 
     await vi.waitFor(() => {
-      expect(ctx.transcript.sys).toHaveBeenCalledWith(
-        '⊙ Goal set (20-turn budget): complete all the steps and provide a final report'
-      )
+      expect(ctx.transcript.sys).toHaveBeenCalledWith('⊙ Goal set (20-turn budget): complete all the steps and provide a final report')
     })
     // The payload is submitted without a user-bubble echo (showUserMessage:
     // false) — the typed slash line is already in the transcript.
@@ -1015,9 +1005,7 @@ describe('createSlashHandler', () => {
     })
 
     const rpc = vi.fn((method: string) =>
-      Promise.resolve(
-        method === 'config.set' ? { ok: true, provider: 'deepseek', value: 'deepseek-v4-flash' } : { ok: true }
-      )
+      Promise.resolve(method === 'config.set' ? { ok: true, provider: 'deepseek', value: 'deepseek-v4-flash' } : { ok: true })
     )
 
     const ctx = buildCtx({ gateway: { ...buildGateway(), rpc } })
@@ -1058,16 +1046,20 @@ describe('createSlashHandler', () => {
   })
 })
 
-const buildCtx = (overrides: Partial<Ctx> = {}): Ctx => ({
-  ...overrides,
-  slashFlightRef: overrides.slashFlightRef ?? { current: {} },
-  composer: { ...buildComposer(), ...overrides.composer },
-  gateway: { ...buildGateway(), ...overrides.gateway },
-  local: { ...buildLocal(), ...overrides.local },
-  session: { ...buildSession(), ...overrides.session },
-  transcript: { ...buildTranscript(), ...overrides.transcript },
-  voice: { ...buildVoice(), ...overrides.voice }
-})
+// Individual cases intentionally override narrow mock signatures. Keep this
+// fixture boundary permissive while exposing the production context to the
+// command handler itself.
+const buildCtx = (overrides: Record<string, any> = {}): Ctx & SlashHandlerContext =>
+  ({
+    ...overrides,
+    slashFlightRef: overrides.slashFlightRef ?? { current: {} },
+    composer: { ...buildComposer(), ...overrides.composer },
+    gateway: { ...buildGateway(), ...overrides.gateway },
+    local: { ...buildLocal(), ...overrides.local },
+    session: { ...buildSession(), ...overrides.session },
+    transcript: { ...buildTranscript(), ...overrides.transcript },
+    voice: { ...buildVoice(), ...overrides.voice }
+  }) as unknown as Ctx & SlashHandlerContext
 
 const buildComposer = () => ({
   enqueue: vi.fn(),
@@ -1115,7 +1107,7 @@ const buildTranscript = () => ({
   send: vi.fn(),
   setHistoryItems: vi.fn(),
   sys: vi.fn(),
-  trimLastExchange: vi.fn(items => items)
+  trimLastExchange: vi.fn((items) => items)
 })
 
 const buildVoice = () => ({

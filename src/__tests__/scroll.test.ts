@@ -2,6 +2,17 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { scrollWithSelectionBy } from '../app/scroll.js'
 
+const makeSelection = () => ({
+  captureScrolledRows: vi.fn(),
+  clearSelection: vi.fn(),
+  copySelection: vi.fn(async () => ''),
+  copySelectionNoClear: vi.fn(async () => ''),
+  getState: vi.fn(() => null),
+  shiftAnchor: vi.fn(),
+  shiftSelection: vi.fn(),
+  version: vi.fn(() => 0)
+})
+
 function makeScroll(overrides: Partial<Record<string, unknown>> = {}) {
   const getScrollHeight = (overrides.getScrollHeight as (() => number) | undefined) ?? vi.fn(() => 100)
 
@@ -25,12 +36,7 @@ describe('scrollWithSelectionBy', () => {
       getViewportHeight: vi.fn(() => 20)
     })
 
-    const selection = {
-      captureScrolledRows: vi.fn(),
-      getState: vi.fn(() => null),
-      shiftAnchor: vi.fn(),
-      shiftSelection: vi.fn()
-    }
+    const selection = makeSelection()
 
     scrollWithSelectionBy(10, { scrollRef: { current: s as never }, selection })
 
@@ -45,12 +51,7 @@ describe('scrollWithSelectionBy', () => {
       getViewportHeight: vi.fn(() => 20)
     })
 
-    const selection = {
-      captureScrolledRows: vi.fn(),
-      getState: vi.fn(() => null),
-      shiftAnchor: vi.fn(),
-      shiftSelection: vi.fn()
-    }
+    const selection = makeSelection()
 
     scrollWithSelectionBy(10, { scrollRef: { current: s as never }, selection })
 
@@ -66,12 +67,7 @@ describe('scrollWithSelectionBy', () => {
       getViewportHeight: vi.fn(() => 20)
     })
 
-    const selection = {
-      captureScrolledRows: vi.fn(),
-      getState: vi.fn(() => null),
-      shiftAnchor: vi.fn(),
-      shiftSelection: vi.fn()
-    }
+    const selection = makeSelection()
 
     scrollWithSelectionBy(10, { scrollRef: { current: s as never }, selection })
 
@@ -85,12 +81,7 @@ describe('scrollWithSelectionBy', () => {
       getViewportHeight: vi.fn(() => 20)
     })
 
-    const selection = {
-      captureScrolledRows: vi.fn(),
-      getState: vi.fn(() => null),
-      shiftAnchor: vi.fn(),
-      shiftSelection: vi.fn()
-    }
+    const selection = makeSelection()
 
     scrollWithSelectionBy(10, { scrollRef: { current: s as never }, selection })
 

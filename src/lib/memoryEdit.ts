@@ -96,8 +96,7 @@ export async function openMemoryFileInEditor(path: string, deps: OpenMemoryFileD
   const env = deps.env ?? process.env
   const home = deps.home ?? homedir()
 
-  const run =
-    deps.spawn ?? ((cmd: string, args: string[]) => spawnSync(cmd, args, { stdio: 'inherit' }))
+  const run = deps.spawn ?? ((cmd: string, args: string[]) => spawnSync(cmd, args, { stdio: 'inherit' }))
 
   try {
     ensureMemoryFile(path, home)

@@ -41,18 +41,17 @@ export function useBackgroundTheme(): void {
     // The querier is timeout-free (a send() stays pending until flush()'s DA1
     // sentinel). Race a short timer so a terminal that never answers OSC 11
     // doesn't hold the theme update; flush() then drains the pending query.
-    const timeout = new Promise<undefined>(resolve => setTimeout(() => resolve(undefined), 600))
+    const timeout = new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 600))
     const query = querier.send<OscResponse>({
       request: OSC11_BG_QUERY,
-      match: (r): r is OscResponse =>
-        !!r && typeof r === 'object' && (r as OscResponse).type === 'osc' && (r as OscResponse).code === 11
+      match: (r): r is OscResponse => !!r && typeof r === 'object' && (r as OscResponse).type === 'osc' && (r as OscResponse).code === 11
     })
 
     // Detection is async by design: the UI paints once in the default theme,
     // then flips when the reply lands (the Banner reads $uiState reactively, so
     // it repaints). A ≤600ms flash beats blocking startup on a terminal
     // round-trip — do NOT make this synchronous.
-    void Promise.race([query, timeout]).then(response => {
+    void Promise.race([query, timeout]).then((response) => {
       void querier.flush()
 
       if (cancelled || !response) {

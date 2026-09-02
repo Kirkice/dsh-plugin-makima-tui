@@ -28,7 +28,7 @@ describe('collectDetailTargets', () => {
     const ids = new Map(messages.map((message, index) => [message, `m${index}`]))
     const expanded = { 'm3:tool:0': true }
 
-    expect(collectDetailTargets(messages, message => ids.get(message)!, expanded)).toEqual([
+    expect(collectDetailTargets(messages, (message) => ids.get(message)!, expanded)).toEqual([
       { expanded: false, key: 'm3:thinking', label: 'Turn 2 · Reasoning' },
       { expanded: true, key: 'm3:tool:0', label: 'Turn 2 · Grep(foo)' },
       { expanded: false, key: 'm1:thinking', label: 'Turn 1 · Reasoning' },

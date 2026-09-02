@@ -2,7 +2,13 @@ import type { Context } from '@deepseek-ai/cordis'
 
 import { OpenAiCodexAdapter } from './openAiCodexAdapter.js'
 import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
-import { OpenAiCodexAuthManager, OPENAI_CODEX_PROVIDER, openAiCodexOAuthConfig, type OpenAiCodexAuthView, type OAuthLogin } from './openAiCodexAuth.js'
+import {
+  OpenAiCodexAuthManager,
+  OPENAI_CODEX_PROVIDER,
+  openAiCodexOAuthConfig,
+  type OpenAiCodexAuthView,
+  type OAuthLogin
+} from './openAiCodexAuth.js'
 import { openExternalUrl } from './openExternalUrl.js'
 
 type LoginMethod = 'browser' | 'device_code'
@@ -31,7 +37,7 @@ export function installOpenAiCodex(ctx: Context): void {
   // Makima itself only requires the agent registry. Register the OAuth adapter
   // in a child lifecycle so Cordis waits for the optional LLM service instead
   // of reading ctx.llm while the parent plugin is still being applied.
-  ctx.inject(['llm'], llmCtx => {
+  ctx.inject(['llm'], (llmCtx) => {
     const attachments = llmCtx.get('attachments') as
       | { readImage?: (ref: ImageAttachmentRef, signal?: AbortSignal) => Promise<{ data: Uint8Array; ref: ImageAttachmentRef }> }
       | undefined
@@ -47,7 +53,9 @@ export function installOpenAiCodex(ctx: Context): void {
   })
 }
 
-export async function openAiCodexStatus(): Promise<OpenAiCodexAuthView & { device_code_available?: boolean; login_error?: string; login_method?: LoginMethod; login_pending?: boolean }> {
+export async function openAiCodexStatus(): Promise<
+  OpenAiCodexAuthView & { device_code_available?: boolean; login_error?: string; login_method?: LoginMethod; login_pending?: boolean }
+> {
   const status = manager ? await manager.status() : { accountIdPresent: false, authenticated: false }
   return {
     ...status,
@@ -71,12 +79,25 @@ export async function startOpenAiCodexLogin(method: LoginMethod = 'browser'): Pr
       loginError = `Could not open the browser automatically${detail}. Open the authorization URL shown below instead.`
     }
   }
-  void active.complete()
-    .catch((error: unknown) => { loginError = error instanceof Error ? error.message : 'OpenAI Codex sign-in failed' })
-    .finally(() => { if (login === active) login = undefined })
+  void active
+    .complete()
+    .catch((error: unknown) => {
+      loginError = error instanceof Error ? error.message : 'OpenAI Codex sign-in failed'
+    })
+    .finally(() => {
+      if (login === active) login = undefined
+    })
   return {
     ...(active.authorizationUrl ? { authorization_url: active.authorizationUrl } : {}),
-    ...(active.deviceCode ? { device_code: { expires_at: active.deviceCode.expiresAt, user_code: active.deviceCode.userCode, verification_uri: active.deviceCode.verificationUri } } : {}),
+    ...(active.deviceCode
+      ? {
+          device_code: {
+            expires_at: active.deviceCode.expiresAt,
+            user_code: active.deviceCode.userCode,
+            verification_uri: active.deviceCode.verificationUri
+          }
+        }
+      : {}),
     method: active.method
   }
 }

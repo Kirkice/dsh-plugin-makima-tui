@@ -335,9 +335,7 @@ describe('applyDisplay → voice.record_key (#18994)', () => {
 
     applyDisplay({ config: { display: {}, voice: { record_key: 'ctrl+space' } } }, setBell, setVoiceRecordKey)
 
-    expect(setVoiceRecordKey).toHaveBeenCalledWith(
-      expect.objectContaining({ ch: 'space', mod: 'ctrl', named: 'space', raw: 'ctrl+space' })
-    )
+    expect(setVoiceRecordKey).toHaveBeenCalledWith(expect.objectContaining({ ch: 'space', mod: 'ctrl', named: 'space', raw: 'ctrl+space' }))
   })
 
   it('falls back to the documented default when voice.record_key is missing', () => {
@@ -415,9 +413,7 @@ describe('hydrateFullConfig', () => {
     gw.request = vi.fn(() => Promise.resolve({ config: { display: {}, voice: { record_key: 'alt+space' } } }))
 
     await hydrateFullConfig(gw, setBell, setVoiceRecordKey)
-    expect(setVoiceRecordKey).toHaveBeenLastCalledWith(
-      expect.objectContaining({ ch: 'space', mod: 'alt', named: 'space' })
-    )
+    expect(setVoiceRecordKey).toHaveBeenLastCalledWith(expect.objectContaining({ ch: 'space', mod: 'alt', named: 'space' }))
   })
 
   it('leaves cached voiceRecordKey untouched when the RPC fails', async () => {

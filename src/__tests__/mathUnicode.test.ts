@@ -45,9 +45,7 @@ describe('texToUnicode — symbols', () => {
 describe('texToUnicode — blackboard / calligraphic / fraktur', () => {
   it('renders \\mathbb capitals', () => {
     expect(texToUnicode('\\mathbb{R}')).toBe('ℝ')
-    expect(texToUnicode('\\mathbb{N} \\subset \\mathbb{Z} \\subset \\mathbb{Q} \\subset \\mathbb{R}')).toBe(
-      'ℕ ⊂ ℤ ⊂ ℚ ⊂ ℝ'
-    )
+    expect(texToUnicode('\\mathbb{N} \\subset \\mathbb{Z} \\subset \\mathbb{Q} \\subset \\mathbb{R}')).toBe('ℕ ⊂ ℤ ⊂ ℚ ⊂ ℝ')
   })
 
   it('renders \\mathcal and \\mathfrak', () => {

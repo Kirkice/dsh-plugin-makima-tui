@@ -21,15 +21,7 @@ export interface SpawnDiffPair {
 
 const HISTORY_LIMIT = 10
 
-const KNOWN_SUBAGENT_STATUSES = new Set<SubagentStatus>([
-  'completed',
-  'error',
-  'failed',
-  'interrupted',
-  'queued',
-  'running',
-  'timeout'
-])
+const KNOWN_SUBAGENT_STATUSES = new Set<SubagentStatus>(['completed', 'error', 'failed', 'interrupted', 'queued', 'running', 'timeout'])
 
 const normalizeSubagentStatus = (status: unknown, fallback: SubagentStatus): SubagentStatus => {
   if (typeof status !== 'string') {
@@ -60,16 +52,13 @@ export const setDiffPair = (pair: SpawnDiffPair) => $spawnDiff.set(pair)
  * Disk persistence across process restarts is a natural extension but
  * adds RPC surface for a less-common path.
  */
-export const pushSnapshot = (
-  subagents: readonly SubagentProgress[],
-  meta: { sessionId?: null | string; startedAt?: null | number }
-) => {
+export const pushSnapshot = (subagents: readonly SubagentProgress[], meta: { sessionId?: null | string; startedAt?: null | number }) => {
   if (!subagents.length) {
     return
   }
 
   const now = Date.now()
-  const started = meta.startedAt ?? Math.min(...subagents.map(s => s.startedAt ?? now))
+  const started = meta.startedAt ?? Math.min(...subagents.map((s) => s.startedAt ?? now))
 
   const snap: SpawnSnapshot = {
     finishedAt: now,
@@ -77,7 +66,7 @@ export const pushSnapshot = (
     label: summarizeLabel(subagents),
     sessionId: meta.sessionId ?? null,
     startedAt: Number.isFinite(started) ? started : now,
-    subagents: subagents.map(item => ({ ...item }))
+    subagents: subagents.map((item) => ({ ...item }))
   }
 
   const next = [snap, ...$spawnHistory.get()].slice(0, HISTORY_LIMIT)
@@ -86,9 +75,9 @@ export const pushSnapshot = (
 
 function summarizeLabel(subagents: readonly SubagentProgress[]): string {
   const top = subagents
-    .filter(s => s.parentId == null || subagents.every(o => o.id !== s.parentId))
+    .filter((s) => s.parentId == null || subagents.every((o) => o.id !== s.parentId))
     .slice(0, 2)
-    .map(s => s.goal || 'subagent')
+    .map((s) => s.goal || 'subagent')
     .join(' · ')
 
   return top || `${subagents.length} agent${subagents.length === 1 ? '' : 's'}`
@@ -142,7 +131,7 @@ function normaliseSubagent(raw: unknown): SubagentProgress {
     inputTokens: n(o.inputTokens),
     iteration: n(o.iteration),
     model: s(o.model),
-    notes: (arr<string>(o.notes) ?? []).filter(x => typeof x === 'string'),
+    notes: (arr<string>(o.notes) ?? []).filter((x) => typeof x === 'string'),
     outputTail: arr(o.outputTail) as SubagentProgress['outputTail'],
     outputTokens: n(o.outputTokens),
     parentId: s(o.parentId) ?? null,
@@ -151,9 +140,9 @@ function normaliseSubagent(raw: unknown): SubagentProgress {
     status: normalizeSubagentStatus(o.status, 'completed'),
     summary: s(o.summary),
     taskCount: typeof o.taskCount === 'number' ? o.taskCount : 1,
-    thinking: (arr<string>(o.thinking) ?? []).filter(x => typeof x === 'string'),
+    thinking: (arr<string>(o.thinking) ?? []).filter((x) => typeof x === 'string'),
     toolCount: typeof o.toolCount === 'number' ? o.toolCount : 0,
-    tools: (arr<string>(o.tools) ?? []).filter(x => typeof x === 'string'),
+    tools: (arr<string>(o.tools) ?? []).filter((x) => typeof x === 'string'),
     toolsets: arr<string>(o.toolsets)
   }
 }

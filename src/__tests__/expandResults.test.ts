@@ -45,7 +45,7 @@ const renderToString = (element: React.ReactElement): string => {
   Object.assign(stdout, { columns: 100, isTTY: false, rows: 44 })
   Object.assign(stdin, { isTTY: false })
   Object.assign(stderr, { isTTY: false })
-  stdout.on('data', chunk => {
+  stdout.on('data', (chunk) => {
     output += chunk.toString()
   })
 
@@ -75,7 +75,7 @@ describe('GatewayClient raw result retention', () => {
     gw.start()
     gw.drain()
 
-    const last = (t: string) => [...events].reverse().find(e => e.type === t)
+    const last = (t: string) => [...events].reverse().find((e) => e.type === t)
 
     proc.line({ message: { content: [{ id: 't1', input, name, type: 'tool_use' }] }, type: 'assistant' })
     await vi.waitFor(() => expect(last('tool.start')).toBeTruthy())
@@ -145,7 +145,7 @@ describe('verbose sibling pipeline', () => {
     turnController.recordToolComplete('t2', 'Read', undefined, undefined, 0.1, undefined, 'Read 3 lines')
 
     const { finalMessages } = turnController.recordMessageComplete({ text: 'done' })
-    const shelf = finalMessages.find(msg => msg.tools?.length)
+    const shelf = finalMessages.find((msg) => msg.tools?.length)
 
     expect(shelf?.tools).toHaveLength(2)
     expect(shelf?.toolsVerbose).toHaveLength(2)
@@ -185,11 +185,11 @@ describe('verbose sibling pipeline', () => {
     )
 
     const { finalMessages } = turnController.recordMessageComplete({ text: 'done' })
-    const shelf = finalMessages.find(msg => (msg.tools?.length ?? 0) >= 2)!
+    const shelf = finalMessages.find((msg) => (msg.tools?.length ?? 0) >= 2)!
 
     // The Bash verbose sibling stays aligned to the Bash tool (index 1),
     // not shifted onto the Write row by the unpaired fallback push.
-    const bashIdx = shelf.tools!.findIndex(line => line.startsWith('Bash'))
+    const bashIdx = shelf.tools!.findIndex((line) => line.startsWith('Bash'))
     expect(shelf.toolsVerbose?.[bashIdx]).toContain('Result:\n1\n2\n3\n4\n5\n6')
 
     turnController.recordError()
@@ -235,9 +235,7 @@ describe('expanded rendering', () => {
 
   it('collapsed shows the head of the result; expanded swaps in all of it', () => {
     const collapsed = stripAnsi(
-      renderToString(
-        React.createElement(ToolTrail, { detailsMode: 'collapsed', t: DEFAULT_THEME, trail, verboseTrail })
-      )
+      renderToString(React.createElement(ToolTrail, { detailsMode: 'collapsed', t: DEFAULT_THEME, trail, verboseTrail }))
     )
 
     // Compact mode groups successful shell/read/search exploration into an
@@ -258,10 +256,7 @@ describe('expanded rendering', () => {
   })
 
   it('expands only the selected tool block', () => {
-    const twoTrail = [
-      'Bash(seq 6) :: 1\n2\n3\n… +3 lines ✓',
-      'Bash(seq 9) :: alpha\nbeta\ngamma\n… +3 lines ✓'
-    ]
+    const twoTrail = ['Bash(seq 6) :: 1\n2\n3\n… +3 lines ✓', 'Bash(seq 9) :: alpha\nbeta\ngamma\n… +3 lines ✓']
     const twoVerbose = [
       'Bash(seq 6) :: Result:\n1\n2\n3\n4\n5\n6 ✓',
       'Bash(seq 9) :: Result:\nalpha\nbeta\ngamma\nUNIQUE_HIDDEN_RESULT\nepsilon\nzeta ✓'
@@ -311,10 +306,7 @@ describe('expanded rendering', () => {
           detailScope: 'message',
           detailsMode: 'expanded',
           t: DEFAULT_THEME,
-          trail: [
-            'Bash(seq 6) :: 1\n2\n3\n… +3 lines ✓',
-            'Bash(seq 9) :: alpha\nbeta\ngamma\n… +3 lines ✓'
-          ],
+          trail: ['Bash(seq 6) :: 1\n2\n3\n… +3 lines ✓', 'Bash(seq 9) :: alpha\nbeta\ngamma\n… +3 lines ✓'],
           verboseTrail: [
             'Bash(seq 6) :: Result:\n1\n2\n3\n4\n5\n6 ✓',
             'Bash(seq 9) :: Result:\nalpha\nbeta\ngamma\nUNIQUE_HIDDEN_RESULT\nepsilon\nzeta ✓'

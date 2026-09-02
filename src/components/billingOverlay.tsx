@@ -172,11 +172,11 @@ function OverviewScreen({ ctx, onClose, onPatch, s, t }: ScreenProps) {
     }
 
     if (key.upArrow && sel > 0) {
-      setSel(v => v - 1)
+      setSel((v) => v - 1)
     }
 
     if (key.downArrow && sel < items.length - 1) {
-      setSel(v => v + 1)
+      setSel((v) => v + 1)
     }
 
     if (key.return) {
@@ -295,11 +295,11 @@ function BuyScreen({ ctx, onPatch, s, t }: ScreenProps) {
     }
 
     if (key.upArrow && sel > 0) {
-      setSel(v => v - 1)
+      setSel((v) => v - 1)
     }
 
     if (key.downArrow && sel < rows.length - 1) {
-      setSel(v => v + 1)
+      setSel((v) => v + 1)
     }
 
     if (key.return) {
@@ -493,7 +493,7 @@ function AutoReloadScreen({ ctx, onClose, onPatch, s, t }: ScreenProps) {
       return
     }
 
-    void ctx.applyAutoReload(true, Number(pair.threshold), Number(pair.reloadTo)).then(ok => {
+    void ctx.applyAutoReload(true, Number(pair.threshold), Number(pair.reloadTo)).then((ok) => {
       if (ok) {
         ctx.sys(`✅ Auto-reload on: below $${pair.threshold} → reload to $${pair.reloadTo}.`)
       }
@@ -502,7 +502,7 @@ function AutoReloadScreen({ ctx, onClose, onPatch, s, t }: ScreenProps) {
   }
 
   const turnOff = () => {
-    void ctx.applyAutoReload(false).then(ok => {
+    void ctx.applyAutoReload(false).then((ok) => {
       if (ok) {
         ctx.sys('✅ Auto-reload turned off.')
       }
@@ -528,12 +528,12 @@ function AutoReloadScreen({ ctx, onClose, onPatch, s, t }: ScreenProps) {
     }
 
     if (key.upArrow && row > 0) {
-      setRow(v => v - 1)
+      setRow((v) => v - 1)
       setField(row - 1 === 0 ? 'threshold' : 'reloadTo')
     }
 
     if (key.downArrow && row < FIELD_ROWS + actionRows.length - 1) {
-      setRow(v => v + 1)
+      setRow((v) => v + 1)
       setField(row + 1 === 0 ? 'threshold' : 'reloadTo')
     }
 
@@ -599,8 +599,8 @@ function AutoReloadScreen({ ctx, onClose, onPatch, s, t }: ScreenProps) {
       {fieldBox('Reload balance to:', reloadTo, setReloadTo, row === 1, 'reloadTo')}
       <Text />
       <Text color={t.color.muted}>
-        By confirming, you authorize Nous Research to charge {s.card ? s.card.masked : 'your card'} whenever your
-        balance falls below the threshold. Turn off any time here or on the portal.
+        By confirming, you authorize Nous Research to charge {s.card ? s.card.masked : 'your card'} whenever your balance falls below the
+        threshold. Turn off any time here or on the portal.
       </Text>
       {error && <Text color={t.color.error}>{error}</Text>}
       <Text />
@@ -641,11 +641,11 @@ function LimitScreen({ ctx, onClose, onPatch, s, t }: ScreenProps) {
     }
 
     if (key.upArrow && sel > 0) {
-      setSel(v => v - 1)
+      setSel((v) => v - 1)
     }
 
     if (key.downArrow && sel < rows.length - 1) {
-      setSel(v => v + 1)
+      setSel((v) => v + 1)
     }
 
     if (key.return) {

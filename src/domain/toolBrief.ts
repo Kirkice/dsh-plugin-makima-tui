@@ -244,7 +244,7 @@ export const briefText = (counts: BriefCounts, live = false): string => {
     return ''
   }
 
-  return `${clauses.map(c => `${c.verb} ${c.count} ${c.noun}`).join(', ')}${live ? '…' : ''}`
+  return `${clauses.map((c) => `${c.verb} ${c.count} ${c.noun}`).join(', ')}${live ? '…' : ''}`
 }
 
 /**
@@ -264,11 +264,7 @@ export interface BriefRun<T> {
   kind: 'brief' | 'flat'
 }
 
-export const briefRuns = <T>(
-  items: readonly T[],
-  callOf: (item: T) => string,
-  standalone?: (item: T) => boolean
-): BriefRun<T>[] => {
+export const briefRuns = <T>(items: readonly T[], callOf: (item: T) => string, standalone?: (item: T) => boolean): BriefRun<T>[] => {
   const runs: BriefRun<T>[] = []
 
   for (const item of items) {

@@ -17,7 +17,7 @@ const packed = execFileSync(platform() === 'win32' ? 'npm.cmd' : 'npm', ['pack',
   cwd: root,
   encoding: 'utf8',
   shell: platform() === 'win32',
-  stdio: ['ignore', 'pipe', 'inherit'],
+  stdio: ['ignore', 'pipe', 'inherit']
 }).trim()
 
 console.log(resolve(output, packed))

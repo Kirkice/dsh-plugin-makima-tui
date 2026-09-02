@@ -10,7 +10,7 @@ export const debugCommands: SlashCommand[] = [
 
       ctx.transcript.sys(`writing heap dump (heap ${formatBytes(heapUsed)} · rss ${formatBytes(rss)})…`)
 
-      void performHeapDump('manual').then(r => {
+      void performHeapDump('manual').then((r) => {
         if (ctx.stale()) {
           return
         }

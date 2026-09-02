@@ -139,11 +139,7 @@ function xtermEightBitRgb(colorNumber: number): [number, number, number] {
   if (colorNumber >= 16) {
     const offset = colorNumber - 16
 
-    return [
-      XTERM_6_LEVELS[Math.floor(offset / 36) % 6]!,
-      XTERM_6_LEVELS[Math.floor(offset / 6) % 6]!,
-      XTERM_6_LEVELS[offset % 6]!
-    ]
+    return [XTERM_6_LEVELS[Math.floor(offset / 36) % 6]!, XTERM_6_LEVELS[Math.floor(offset / 6) % 6]!, XTERM_6_LEVELS[offset % 6]!]
   }
 
   return [0, 0, 0]
@@ -174,8 +170,7 @@ function rgbToHsl(red: number, green: number, blue: number): [number, number, nu
   const delta = max - min
   const saturation = lightness > 0.5 ? delta / (2 - max - min) : delta / (max + min)
 
-  const hue =
-    max === rn ? (gn - bn) / delta + (gn < bn ? 6 : 0) : max === gn ? (bn - rn) / delta + 2 : (rn - gn) / delta + 4
+  const hue = max === rn ? (gn - bn) / delta + (gn < bn ? 6 : 0) : max === gn ? (bn - rn) / delta + 2 : (rn - gn) / delta + 4
 
   return [hue / 6, saturation, lightness]
 }
@@ -217,11 +212,7 @@ function bestReadableAnsiColor(red: number, green: number, blue: number): number
       continue
     }
 
-    const [candidateHue, candidateSaturation, candidateLightness] = rgbToHsl(
-      candidateRed,
-      candidateGreen,
-      candidateBlue
-    )
+    const [candidateHue, candidateSaturation, candidateLightness] = rgbToHsl(candidateRed, candidateGreen, candidateBlue)
 
     const saturationFloorPenalty =
       candidateSaturation < ANSI_LIGHT_MIN_SATURATION ? (ANSI_LIGHT_MIN_SATURATION - candidateSaturation) * 3 : 0
@@ -325,8 +316,10 @@ export const DARK_THEME: Theme = {
     bashBorder: '#A78BFA',
     promptBorder: '#302B45',
 
-    diffAdded: '#17362B',
-    diffRemoved: '#3D202D',
+    // Darker diff bands preserve the green/red semantic cue while improving
+    // contrast for both normal text and highlighted changed words.
+    diffAdded: '#10261E',
+    diffRemoved: '#2C1720',
     diffAddedWord: '#63E6A3',
     diffRemovedWord: '#FF718D',
     shellDollar: '#59D9FF'
@@ -641,8 +634,7 @@ export function fromSkin(
   const completionBg = c('completion_menu_bg') ?? d.color.completionBg
 
   const completionCurrentBg =
-    c('completion_menu_current_bg') ??
-    (hasSkinColors ? mix(completionBg, bannerAccent, 0.25) : d.color.completionCurrentBg)
+    c('completion_menu_current_bg') ?? (hasSkinColors ? mix(completionBg, bannerAccent, 0.25) : d.color.completionCurrentBg)
 
   const completionMetaBg = c('completion_menu_meta_bg') ?? completionBg
   const completionMetaCurrentBg = c('completion_menu_meta_current_bg') ?? completionCurrentBg
@@ -681,10 +673,7 @@ export function fromSkin(
         statusWarn: c('ui_warn') ?? d.color.statusWarn,
         statusBad: d.color.statusBad,
         statusCritical: d.color.statusCritical,
-        selectionBg:
-          c('selection_bg') ??
-          c('completion_menu_current_bg') ??
-          (hasSkinColors ? completionCurrentBg : d.color.selectionBg),
+        selectionBg: c('selection_bg') ?? c('completion_menu_current_bg') ?? (hasSkinColors ? completionCurrentBg : d.color.selectionBg),
         userMessageBackground: c('user_message_bg') ?? d.color.userMessageBackground,
 
         claudeShimmer: d.color.claudeShimmer,

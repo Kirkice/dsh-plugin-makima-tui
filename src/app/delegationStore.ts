@@ -23,8 +23,7 @@ export const $delegationState = atom<DelegationState>(buildState())
 
 export const getDelegationState = () => $delegationState.get()
 
-export const patchDelegationState = (next: Partial<DelegationState>) =>
-  $delegationState.set({ ...$delegationState.get(), ...next })
+export const patchDelegationState = (next: Partial<DelegationState>) => $delegationState.set({ ...$delegationState.get(), ...next })
 
 export const resetDelegationState = () => $delegationState.set(buildState())
 

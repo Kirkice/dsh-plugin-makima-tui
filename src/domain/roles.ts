@@ -6,8 +6,8 @@ import type { Role } from '../types.js'
 // Assistant prose stays neutral and high-contrast; user-authored text uses the
 // warm command tone so alternating turns remain legible in dense transcripts.
 export const ROLE: Record<Role, (t: Theme) => { body: string; glyph: string; prefix: string }> = {
-  assistant: t => ({ body: t.color.text, glyph: '›', prefix: t.color.highlight }),
-  system: t => ({ body: '', glyph: '·', prefix: t.color.muted }),
-  tool: t => ({ body: t.color.muted, glyph: '›', prefix: t.color.ok }),
-  user: t => ({ body: t.color.user, glyph: '❯', prefix: t.color.user })
+  assistant: (t) => ({ body: t.color.text, glyph: '›', prefix: t.color.highlight }),
+  system: (t) => ({ body: '', glyph: '·', prefix: t.color.muted }),
+  tool: (t) => ({ body: t.color.muted, glyph: '›', prefix: t.color.ok }),
+  user: (t) => ({ body: t.color.user, glyph: '❯', prefix: t.color.user })
 }

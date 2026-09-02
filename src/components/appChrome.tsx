@@ -149,11 +149,11 @@ function FaceTicker({
   const { intervalMs, showVerb } = renderIndicator(style, 0)
 
   useEffect(() => {
-    const glyph = setInterval(() => setTick(n => n + 1), intervalMs)
+    const glyph = setInterval(() => setTick((n) => n + 1), intervalMs)
     const clock = setInterval(() => setNow(Date.now()), 1000)
     // Verb timer is gated on `showVerb` — `unicode` style hides the verb
     // entirely, so cycling `verbTick` would be an avoidable re-render.
-    const verb = showVerb ? setInterval(() => setVerbTick(n => n + 1), FACE_TICK_MS) : null
+    const verb = showVerb ? setInterval(() => setVerbTick((n) => n + 1), FACE_TICK_MS) : null
 
     return () => {
       clearInterval(glyph)
@@ -299,7 +299,7 @@ function SpawnHud({ t }: { t: Theme }) {
   // Tight HUD that only appears when the session is actually fanning out.
   // Colour escalates to warn/error as depth or concurrency approaches the cap.
   const delegation = useStore($delegationState)
-  const subagents = useTurnSelector(state => state.subagents)
+  const subagents = useTurnSelector((state) => state.subagents)
 
   const tree = useMemo(() => buildSubagentTree(subagents), [subagents])
   const totals = useMemo(() => treeTotals(tree), [tree])
@@ -403,9 +403,7 @@ const shortModelLabel = (model: string) =>
     .trim()
 
 const modelLabel = (model: string, effort?: string, fast?: boolean, nano?: boolean) =>
-  [shortModelLabel(model), effortLabel(effort), fast ? 'fast' : '', nano ? 'nano' : '']
-    .filter(Boolean)
-    .join(' ')
+  [shortModelLabel(model), effortLabel(effort), fast ? 'fast' : '', nano ? 'nano' : ''].filter(Boolean).join(' ')
 
 export function GoodVibesHeart({ tick, t }: { tick: number; t: Theme }) {
   const [active, setActive] = useState(false)
@@ -488,11 +486,7 @@ export function StatusRule({
   // yields first. The busy face width depends on the active /indicator style
   // (kaomoji is wide + verb; unicode is a bare 1-col spinner). When a notice
   // occupies the slot it reserves only `noticeReserve` (it shrinks/truncates).
-  const slotWidth = busy
-    ? busyIndicatorWidth(indicatorStyle, turnStartedAt != null)
-    : showNotice
-      ? noticeReserve
-      : stringWidth(status)
+  const slotWidth = busy ? busyIndicatorWidth(indicatorStyle, turnStartedAt != null) : showNotice ? noticeReserve : stringWidth(status)
 
   const essentialWidth =
     stringWidth('─ ') +
@@ -529,9 +523,7 @@ export function StatusRule({
   // math (display formatting) — never parseFloat a *_usd. Signed: a mid-session top-up that
   // raises remaining nets a negative Δ (honest).
   const devCreditsText =
-    typeof usage.dev_credits_spent_micros === 'number'
-      ? `Δ ${(usage.dev_credits_spent_micros / 10000).toFixed(1)}¢`
-      : ''
+    typeof usage.dev_credits_spent_micros === 'number' ? `Δ ${(usage.dev_credits_spent_micros / 10000).toFixed(1)}¢` : ''
 
   const showBar = !!bar && fits(SEP + stringWidth(`[${bar}] ${pct != null ? `${pct}%` : ''}`))
   const showDuration = segs.duration && !!sessionStartedAt && fits(SEP + MAX_DURATION_WIDTH)
@@ -539,8 +531,7 @@ export function StatusRule({
   // Idle clock — time since the last final agent response. Hidden while busy
   // (the FaceTicker's elapsed tail covers the live turn) and before the first
   // turn completes. Shares the duration breakpoint and width reservation.
-  const showIdle =
-    segs.duration && !busy && lastTurnEndedAt != null && fits(SEP + stringWidth('✓ ') + MAX_DURATION_WIDTH)
+  const showIdle = segs.duration && !busy && lastTurnEndedAt != null && fits(SEP + stringWidth('✓ ') + MAX_DURATION_WIDTH)
 
   const showCompressions = segs.compressions && compressions > 0 && fits(SEP + stringWidth(`cmp ${compressions}`))
   const showVoice = segs.voice && !!voiceLabel && fits(SEP + stringWidth(voiceLabel))
@@ -555,8 +546,7 @@ export function StatusRule({
   // spell out that the agent resumes on its own — no spinner, nothing to poll.
   // Width-budgeted like every tail segment, so it drops first on a tight
   // terminal where ⛓ already carries the signal.
-  const resumeHintText =
-    subagentCount === 1 ? '↩ resumes when subagent finishes' : `↩ resumes when ${subagentCount} subagents finish`
+  const resumeHintText = subagentCount === 1 ? '↩ resumes when subagent finishes' : `↩ resumes when ${subagentCount} subagents finish`
 
   const showResumeHint = !busy && subagentCount > 0 && fits(SEP + stringWidth(resumeHintText))
   // Dev-gated readout (MAKIMA_TUI_DEV_CREDITS), lowest priority,
@@ -642,16 +632,12 @@ export function StatusRule({
         {showCompressions ? (
           <Text color={t.color.muted} wrap="truncate-end">
             {' │ '}
-            <Text color={compressions >= 10 ? t.color.error : compressions >= 5 ? t.color.warn : t.color.muted}>
-              cmp {compressions}
-            </Text>
+            <Text color={compressions >= 10 ? t.color.error : compressions >= 5 ? t.color.warn : t.color.muted}>cmp {compressions}</Text>
           </Text>
         ) : null}
         {showVoice ? (
           <Text
-            color={
-              voiceLabel!.startsWith('●') ? t.color.error : voiceLabel!.startsWith('◉') ? t.color.warn : t.color.muted
-            }
+            color={voiceLabel!.startsWith('●') ? t.color.error : voiceLabel!.startsWith('◉') ? t.color.warn : t.color.muted}
             wrap="truncate-end"
           >
             {' │ '}
@@ -704,15 +690,7 @@ export function StatusRule({
 
 export function FloatBox({ children, color }: { children: ReactNode; color: string }) {
   return (
-    <Box
-      alignSelf="flex-start"
-      borderColor={color}
-      borderStyle="double"
-      flexDirection="column"
-      marginTop={1}
-      opaque
-      paddingX={1}
-    >
+    <Box alignSelf="flex-start" borderColor={color} borderStyle="double" flexDirection="column" marginTop={1} opaque paddingX={1}>
       {children}
     </Box>
   )
@@ -807,9 +785,7 @@ export function TranscriptScrollbar({ scrollRef, t }: TranscriptScrollbarProps) 
               {`${'│\n'.repeat(Math.max(0, thumbTop - 1))}${thumbTop > 0 ? '│' : ''}`}
             </Text>
           ) : null}
-          {thumb > 0 ? (
-            <Text color={thumbColor}>{`${'┃\n'.repeat(Math.max(0, thumb - 1))}${thumb > 0 ? '┃' : ''}`}</Text>
-          ) : null}
+          {thumb > 0 ? <Text color={thumbColor}>{`${'┃\n'.repeat(Math.max(0, thumb - 1))}${thumb > 0 ? '┃' : ''}`}</Text> : null}
           {vp - thumbTop - thumb > 0 ? (
             <Text color={trackColor} dim={!hover}>
               {`${'│\n'.repeat(Math.max(0, vp - thumbTop - thumb - 1))}${vp - thumbTop - thumb > 0 ? '│' : ''}`}

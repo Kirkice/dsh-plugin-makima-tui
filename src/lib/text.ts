@@ -52,7 +52,7 @@ const renderEstimateLine = (line: string) => {
     return trimmed
       .split('|')
       .filter(Boolean)
-      .map(cell => cell.trim())
+      .map((cell) => cell.trim())
       .join('  ')
   }
 
@@ -85,11 +85,7 @@ export const estimateTokensRough = (text: string) => (!text ? 0 : (text.length +
 export const edgePreview = (s: string, head = 16, tail = 28) => {
   const one = s.replace(WS_RE, ' ').trim().replace(/\]\]/g, '] ]')
 
-  return !one
-    ? ''
-    : one.length <= head + tail + 4
-      ? one
-      : `${one.slice(0, head).trimEnd()}.. ${one.slice(-tail).trimStart()}`
+  return !one ? '' : one.length <= head + tail + 4 ? one : `${one.slice(0, head).trimEnd()}.. ${one.slice(-tail).trimStart()}`
 }
 
 export const pasteTokenLabel = (text: string, lineCount: number) => {
@@ -112,8 +108,8 @@ const THINKING_STATUS_CHUNK_RE = new RegExp(`[^A-Za-z\n]+\\s*(?:${VERBS.join('|'
 export const cleanThinkingText = (reasoning: string) =>
   reasoning
     .split('\n')
-    .map(line => line.replace(THINKING_STATUS_CHUNK_RE, '').trim())
-    .filter(line => line && !THINKING_STATUS_RE.test(line.replace(/\.\.\.$/, '').trim()))
+    .map((line) => line.replace(THINKING_STATUS_CHUNK_RE, '').trim())
+    .filter((line) => line && !THINKING_STATUS_RE.test(line.replace(/\.\.\.$/, '').trim()))
     .join('\n')
     .replace(/([^\n])(?=\*\*[^*\n][^\n]*?\*\*)/g, '$1\n\n')
     .replace(/\n{3,}/g, '\n\n')
@@ -125,16 +121,10 @@ export const thinkingPreview = (reasoning: string, mode: ThinkingMode, max: numb
   return !raw || mode === 'collapsed' ? '' : mode === 'full' ? raw : compactPreview(raw.replace(WS_RE, ' '), max)
 }
 
-export const boundedLiveRenderText = (
-  text: string,
-  { maxChars = LIVE_RENDER_MAX_CHARS, maxLines = LIVE_RENDER_MAX_LINES } = {}
-) => boundedRenderText(text, 'showing live tail', { maxChars, maxLines })
+export const boundedLiveRenderText = (text: string, { maxChars = LIVE_RENDER_MAX_CHARS, maxLines = LIVE_RENDER_MAX_LINES } = {}) =>
+  boundedRenderText(text, 'showing live tail', { maxChars, maxLines })
 
-const boundedRenderText = (
-  text: string,
-  labelPrefix: string,
-  { maxChars, maxLines }: { maxChars: number; maxLines: number }
-) => {
+const boundedRenderText = (text: string, labelPrefix: string, { maxChars, maxLines }: { maxChars: number; maxLines: number }) => {
   if (text.length <= maxChars && text.split('\n', maxLines + 1).length <= maxLines) {
     return text
   }
@@ -192,7 +182,7 @@ export const toolTrailLabel = (name: string) =>
   name
     .split('_')
     .filter(Boolean)
-    .map(p => p[0]!.toUpperCase() + p.slice(1))
+    .map((p) => p[0]!.toUpperCase() + p.slice(1))
     .join(' ') || name
 
 export const formatToolCall = (name: string, context = '') => {
@@ -227,9 +217,8 @@ export const buildToolTrailLine = (
   // result the gateway retained no raw copy of expands to the same truncated
   // text, and pointing at a key that changes nothing is worse than silence.
   const dropped = lines.length - TRAIL_DETAIL_MAX_LINES
-  const detail = (dropped > 0
-    ? [...lines.slice(0, TRAIL_DETAIL_MAX_LINES), `… +${fmtK(dropped)} ${dropped === 1 ? 'line' : 'lines'}`]
-    : lines
+  const detail = (
+    dropped > 0 ? [...lines.slice(0, TRAIL_DETAIL_MAX_LINES), `… +${fmtK(dropped)} ${dropped === 1 ? 'line' : 'lines'}`] : lines
   )
     .join('\n')
     .trim()
@@ -262,10 +251,7 @@ const headTruncate = (body: string): string => {
   // report the head's line count (a constant ~cap) instead of what was dropped.
   const omittedLines = countNewlines(body, body.length) - countNewlines(body, body.length - omittedChars)
 
-  const marker =
-    omittedLines > 0
-      ? `\n… +${fmtK(omittedLines)} lines omitted`
-      : `\n… +${fmtK(omittedChars)} chars omitted`
+  const marker = omittedLines > 0 ? `\n… +${fmtK(omittedLines)} lines omitted` : `\n… +${fmtK(omittedChars)} chars omitted`
 
   return head.replace(/\n+$/, '') + marker
 }
@@ -288,9 +274,7 @@ export const buildVerboseToolTrailLine = (
   argsText?: string,
   resultText?: string
 ) => {
-  const detail = [verboseToolBlock('Args', argsText), verboseToolBlock(error ? 'Error' : 'Result', resultText)]
-    .filter(Boolean)
-    .join('\n')
+  const detail = [verboseToolBlock('Args', argsText), verboseToolBlock(error ? 'Error' : 'Result', resultText)].filter(Boolean).join('\n')
 
   const took = duration !== undefined ? ` (${duration.toFixed(1)}s)` : ''
 
@@ -419,9 +403,8 @@ export const flat = (r: Record<string, string[]>) => Object.values(r).flat()
 
 const COMPACT_NUMBER = new Intl.NumberFormat('en-US', { maximumFractionDigits: 1, notation: 'compact' })
 
-export const fmtK = (n: number) => COMPACT_NUMBER.format(n).replace(/[KMBT]$/, s => s.toLowerCase())
+export const fmtK = (n: number) => COMPACT_NUMBER.format(n).replace(/[KMBT]$/, (s) => s.toLowerCase())
 
 export const pick = <T>(a: T[]) => a[Math.floor(Math.random() * a.length)]!
 
-export const isPasteBackedText = (text: string) =>
-  /\[\[paste:\d+(?:[^\n]*?)\]\]|\[paste #\d+ (?:attached|excerpt)(?:[^\n]*?)\]/.test(text)
+export const isPasteBackedText = (text: string) => /\[\[paste:\d+(?:[^\n]*?)\]\]|\[paste #\d+ (?:attached|excerpt)(?:[^\n]*?)\]/.test(text)

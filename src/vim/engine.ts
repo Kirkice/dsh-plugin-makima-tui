@@ -213,22 +213,38 @@ export function isLinewiseMotion(key: string): boolean {
 /** Resolve a single motion key to a target offset (count applied by caller). */
 export function resolveMotion(key: string, value: string, cursor: number): number {
   switch (key) {
-    case 'h': return left(value, cursor)
-    case 'l': return right(value, cursor)
-    case 'j': return downLine(value, cursor)
-    case 'k': return upLine(value, cursor)
-    case 'w': return nextWord(value, cursor)
-    case 'W': return nextWORD(value, cursor)
-    case 'b': return prevWord(value, cursor)
-    case 'B': return prevWORD(value, cursor)
-    case 'e': return endOfWord(value, cursor)
-    case 'E': return endOfWORD(value, cursor)
-    case '0': return startOfLine(value, cursor)
-    case '^': return firstNonBlank(value, cursor)
-    case '$': return endOfLine(value, cursor)
-    case 'G': return Math.max(0, value.length ? value.lastIndexOf('\n') + 1 : 0)
-    case 'gg': return 0
-    default: return cursor
+    case 'h':
+      return left(value, cursor)
+    case 'l':
+      return right(value, cursor)
+    case 'j':
+      return downLine(value, cursor)
+    case 'k':
+      return upLine(value, cursor)
+    case 'w':
+      return nextWord(value, cursor)
+    case 'W':
+      return nextWORD(value, cursor)
+    case 'b':
+      return prevWord(value, cursor)
+    case 'B':
+      return prevWORD(value, cursor)
+    case 'e':
+      return endOfWord(value, cursor)
+    case 'E':
+      return endOfWORD(value, cursor)
+    case '0':
+      return startOfLine(value, cursor)
+    case '^':
+      return firstNonBlank(value, cursor)
+    case '$':
+      return endOfLine(value, cursor)
+    case 'G':
+      return Math.max(0, value.length ? value.lastIndexOf('\n') + 1 : 0)
+    case 'gg':
+      return 0
+    default:
+      return cursor
   }
 }
 
@@ -246,9 +262,7 @@ export function applyMotion(key: string, value: string, cursor: number, count: n
 // ── operators: (buffer, motion) → new buffer ─────────────────────────────────
 
 /** The [start, end) span an operator+motion deletes. */
-export function operatorSpan(
-  key: string, value: string, cursor: number, count: number,
-): { start: number; end: number } {
+export function operatorSpan(key: string, value: string, cursor: number, count: number): { start: number; end: number } {
   if (isLinewiseMotion(key)) {
     // linewise: from the current line's start THROUGH the line the motion
     // lands on (dj = 2 lines, dG = to last line), inclusive, plus the trailing
@@ -256,7 +270,8 @@ export function operatorSpan(
     const target = applyMotion(key, value, cursor, count)
     let start = Math.min(lineStart(value, cursor), lineStart(value, target))
     let end = Math.max(lineEnd(value, cursor), lineEnd(value, target))
-    if (end < value.length) end += 1 // eat the trailing newline
+    if (end < value.length)
+      end += 1 // eat the trailing newline
     else if (start > 0 && value[start - 1] === '\n') start -= 1 // at EOF, eat the preceding one
     return { start, end }
   }
@@ -335,15 +350,14 @@ export function dispatchNormal(state: VimState, buffer: Buffer, key: string): Di
         const newValue = buffer.value.slice(0, span.start) + buffer.value.slice(span.end)
         return {
           state: { mode: op === 'c' ? 'insert' : 'normal', pendingOperator: null, count: 0, pendingG: false },
-          buffer: op === 'c' ? { value: newValue, cursor: span.start }
-            : { value: newValue, cursor: clampNormal(newValue, span.start) },
-          handled: true,
+          buffer: op === 'c' ? { value: newValue, cursor: span.start } : { value: newValue, cursor: clampNormal(newValue, span.start) },
+          handled: true
         }
       }
       return {
         state: { ...cleared, count: 0 },
         buffer: { ...buffer, cursor: 0 },
-        handled: true,
+        handled: true
       }
     }
     // `g` + other → cancel the prefix and swallow (minimal: no other g-commands)
@@ -358,7 +372,7 @@ export function dispatchNormal(state: VimState, buffer: Buffer, key: string): Di
     return {
       state: { ...state, count: state.count * 10 + Number(key) },
       buffer,
-      handled: true,
+      handled: true
     }
   }
   const count = state.count || 1
@@ -372,7 +386,7 @@ export function dispatchNormal(state: VimState, buffer: Buffer, key: string): Di
       return {
         state: { mode: op === 'c' ? 'insert' : 'normal', pendingOperator: null, count: 0, pendingG: false },
         buffer: nb,
-        handled: true,
+        handled: true
       }
     }
     if (MOTION_KEYS.has(key)) {
@@ -399,7 +413,7 @@ export function dispatchNormal(state: VimState, buffer: Buffer, key: string): Di
       return {
         state: { mode: op === 'c' ? 'insert' : 'normal', pendingOperator: null, count: 0, pendingG: false },
         buffer: op === 'c' ? nb : { ...nb, cursor: clampNormal(newValue, nb.cursor) },
-        handled: true,
+        handled: true
       }
     }
     // invalid motion after operator → cancel the operator
@@ -412,7 +426,7 @@ export function dispatchNormal(state: VimState, buffer: Buffer, key: string): Di
     return {
       state: { ...state, count: 0 },
       buffer: { ...buffer, cursor: clampNormal(buffer.value, cur) },
-      handled: true,
+      handled: true
     }
   }
 
@@ -423,39 +437,42 @@ export function dispatchNormal(state: VimState, buffer: Buffer, key: string): Di
       return {
         state: { mode: 'insert', pendingOperator: null, count: 0, pendingG: false },
         buffer: { ...buffer, cursor: Math.min(buffer.cursor + 1, buffer.value.length) },
-        handled: true,
+        handled: true
       }
     case 'I': // insert at first non-blank
       return {
         state: { mode: 'insert', pendingOperator: null, count: 0, pendingG: false },
         buffer: { ...buffer, cursor: firstNonBlank(buffer.value, buffer.cursor) },
-        handled: true,
+        handled: true
       }
     case 'A': // insert at end of line
       return {
         state: { mode: 'insert', pendingOperator: null, count: 0, pendingG: false },
         buffer: { ...buffer, cursor: lineEnd(buffer.value, buffer.cursor) },
-        handled: true,
+        handled: true
       }
-    case 'o': { // open a line below
+    case 'o': {
+      // open a line below
       const le = lineEnd(buffer.value, buffer.cursor)
       const nv = buffer.value.slice(0, le) + '\n' + buffer.value.slice(le)
       return {
         state: { mode: 'insert', pendingOperator: null, count: 0, pendingG: false },
         buffer: { value: nv, cursor: le + 1 },
-        handled: true,
+        handled: true
       }
     }
-    case 'O': { // open a line above
+    case 'O': {
+      // open a line above
       const ls = lineStart(buffer.value, buffer.cursor)
       const nv = buffer.value.slice(0, ls) + '\n' + buffer.value.slice(ls)
       return {
         state: { mode: 'insert', pendingOperator: null, count: 0, pendingG: false },
         buffer: { value: nv, cursor: ls },
-        handled: true,
+        handled: true
       }
     }
-    case 'x': { // delete char under cursor (by CODE POINT — never split a pair)
+    case 'x': {
+      // delete char under cursor (by CODE POINT — never split a pair)
       if (buffer.cursor >= buffer.value.length) return { state: { ...state, count: 0 }, buffer, handled: true }
       let end = buffer.cursor
       for (let i = 0; i < count && end < buffer.value.length && buffer.value[end] !== '\n'; i++) {
@@ -465,7 +482,7 @@ export function dispatchNormal(state: VimState, buffer: Buffer, key: string): Di
       return {
         state: { ...state, count: 0 },
         buffer: { value: nv, cursor: clampNormal(nv, buffer.cursor) },
-        handled: true,
+        handled: true
       }
     }
     case 'd':
@@ -473,15 +490,21 @@ export function dispatchNormal(state: VimState, buffer: Buffer, key: string): Di
       // PRESERVE the count into the pending-operator state so `2dw` deletes two
       // words (the count before an operator applies to the operator+motion).
       return { state: { ...state, pendingOperator: key as Operator, count: state.count }, buffer, handled: true }
-    case 'D': { // delete to end of line
+    case 'D': {
+      // delete to end of line
       const le = lineEnd(buffer.value, buffer.cursor)
       const nv = buffer.value.slice(0, buffer.cursor) + buffer.value.slice(le)
       return { state: { ...state, count: 0 }, buffer: { value: nv, cursor: clampNormal(nv, buffer.cursor) }, handled: true }
     }
-    case 'C': { // change to end of line
+    case 'C': {
+      // change to end of line
       const le = lineEnd(buffer.value, buffer.cursor)
       const nv = buffer.value.slice(0, buffer.cursor) + buffer.value.slice(le)
-      return { state: { mode: 'insert', pendingOperator: null, count: 0, pendingG: false }, buffer: { value: nv, cursor: buffer.cursor }, handled: true }
+      return {
+        state: { mode: 'insert', pendingOperator: null, count: 0, pendingG: false },
+        buffer: { value: nv, cursor: buffer.cursor },
+        handled: true
+      }
     }
     default:
       // unknown key in NORMAL: consume it (vim swallows unmapped keys), reset count

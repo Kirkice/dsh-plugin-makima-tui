@@ -28,7 +28,7 @@ describe('syntax highlighter', () => {
 
   it('paints keywords, strings, and numbers with the local syntax palette', () => {
     const tokens = highlightLine(`const x = 'hi' + 42`, 'ts', t)
-    const colors = tokens.map(tok => tok[0])
+    const colors = tokens.map((tok) => tok[0])
 
     expect(colors).toContain('#C792EA') // const
     expect(colors).toContain('#C3E88D') // 'hi'
@@ -37,7 +37,7 @@ describe('syntax highlighter', () => {
 
   it('paints C++ keywords and types', () => {
     const tokens = highlightLine('class Widget { int count = 42; };', 'cpp', t)
-    const colors = tokens.map(tok => tok[0])
+    const colors = tokens.map((tok) => tok[0])
 
     expect(colors).toContain('#FFCB6B') // class
     expect(colors).toContain('#C792EA') // int
@@ -59,7 +59,7 @@ describe('syntax highlighter', () => {
 
 describe('plugin slash commands', () => {
   it('advertises /plugins and its singular alias as an interactive manager with runtime status mode', () => {
-    const byName = new Map(SLASHES.map(command => [command.name, command]))
+    const byName = new Map(SLASHES.map((command) => [command.name, command]))
 
     expect([...byName.keys()]).toEqual(expect.arrayContaining(['/plugin', '/plugins']))
     expect(byName.get('/plugins')?.hint).toBe('[runtime]')

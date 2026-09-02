@@ -20,7 +20,9 @@ export const HeaderPanel = memo(function HeaderPanel({ cols, cwdLabel, status }:
   return (
     <Box flexDirection="column" flexShrink={0} paddingX={1} paddingTop={1}>
       <Box flexDirection="row" justifyContent="space-between" width="100%">
-        <Text bold color={t.color.primary}>makima tui</Text>
+        <Text bold color={t.color.primary}>
+          makima tui
+        </Text>
         <Text color={ui.busy ? t.color.warn : t.color.ok}>{ui.busy ? '● working' : '○ ready'}</Text>
       </Box>
       <Box flexDirection="row" flexWrap="wrap" width="100%">
@@ -29,7 +31,11 @@ export const HeaderPanel = memo(function HeaderPanel({ cols, cwdLabel, status }:
         {!compact && <Text color={t.color.muted}> · {path}</Text>}
         {!narrow && title !== 'new session' && <Text color={t.color.muted}> · {title}</Text>}
       </Box>
-      {status && ui.busy && <Text color={t.color.muted} wrap="truncate-end">{status}</Text>}
+      {status && ui.busy && (
+        <Text color={t.color.muted} wrap="truncate-end">
+          {status}
+        </Text>
+      )}
     </Box>
   )
 })

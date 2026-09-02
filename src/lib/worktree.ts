@@ -37,10 +37,7 @@ export interface WorktreeStatusResponse {
 }
 
 /** Pure parser — exported for tests; getWorktreeSession() feeds it process env. */
-export function parseWorktreeSession(
-  env: Record<string, string | undefined>,
-  ppid: number
-): null | WorktreeSessionInfo {
+export function parseWorktreeSession(env: Record<string, string | undefined>, ppid: number): null | WorktreeSessionInfo {
   const name = env.MAKIMA_TUI_WORKTREE_NAME
   const path = env.MAKIMA_TUI_WORKTREE_PATH
   const branch = env.MAKIMA_TUI_WORKTREE_BRANCH
@@ -76,9 +73,7 @@ export function resetWorktreeSessionCacheForTesting(): void {
   cached = undefined
 }
 
-export type WorktreeExitPlan =
-  | { kind: 'dialog'; removeIsDanger: boolean; subtitle: string }
-  | { kind: 'silent-remove' }
+export type WorktreeExitPlan = { kind: 'dialog'; removeIsDanger: boolean; subtitle: string } | { kind: 'silent-remove' }
 
 /**
  * Decide the exit flow from a `worktree_status` reply — the TS reference's
@@ -98,8 +93,7 @@ export function planWorktreeExit(status: WorktreeStatusResponse, branch: string)
   let subtitle: string
 
   if (!gitOk) {
-    subtitle =
-      'Could not inspect the worktree (git failed). Keep it to be safe, or remove it if you are sure.'
+    subtitle = 'Could not inspect the worktree (git failed). Keep it to be safe, or remove it if you are sure.'
   } else if (dirty > 0 && commits > 0) {
     subtitle =
       `You have ${dirty} uncommitted ${dirty === 1 ? 'file' : 'files'} and ` +

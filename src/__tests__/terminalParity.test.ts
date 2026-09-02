@@ -11,7 +11,7 @@ describe('terminalParityHints', () => {
       TMUX: '/tmp/tmux-1/default,1,0'
     } as NodeJS.ProcessEnv)
 
-    expect(hints.map(h => h.key)).toEqual(expect.arrayContaining(['apple-terminal', 'remote', 'tmux']))
+    expect(hints.map((h) => h.key)).toEqual(expect.arrayContaining(['apple-terminal', 'remote', 'tmux']))
   })
 
   it('suggests IDE setup only for VS Code-family terminals that still need bindings', async () => {
@@ -22,7 +22,7 @@ describe('terminalParityHints', () => {
       homeDir: '/tmp/fake-home'
     })
 
-    expect(hints.some(h => h.key === 'ide-setup')).toBe(true)
+    expect(hints.some((h) => h.key === 'ide-setup')).toBe(true)
   })
 
   it('suppresses IDE setup hint when keybindings are already configured', async () => {
@@ -72,6 +72,6 @@ describe('terminalParityHints', () => {
       homeDir: '/tmp/fake-home'
     })
 
-    expect(hints.some(h => h.key === 'ide-setup')).toBe(false)
+    expect(hints.some((h) => h.key === 'ide-setup')).toBe(false)
   })
 })

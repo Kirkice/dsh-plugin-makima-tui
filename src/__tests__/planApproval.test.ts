@@ -8,7 +8,7 @@ describe('planApprovalOptions — ExitPlanModePermissionRequest option arms', ()
   it('puts the manual-approval handoff first and labels elevated execution clearly', () => {
     const opts = planApprovalOptions(false)
 
-    expect(opts.map(o => o.choice)).toEqual(['default', 'accept-edits', 'deny'])
+    expect(opts.map((o) => o.choice)).toEqual(['default', 'accept-edits', 'deny'])
     expect(opts[0]!.label).toBe('Execute with manual approvals (recommended)')
     expect(opts[1]!.label).toBe('Execute and auto-accept edits (elevated)')
     expect(opts[2]!.label).toBe('Keep planning and provide feedback')
@@ -17,7 +17,7 @@ describe('planApprovalOptions — ExitPlanModePermissionRequest option arms', ()
   it('keeps manual approval recommended when bypass is available', () => {
     const opts = planApprovalOptions(true)
 
-    expect(opts.map(o => o.choice)).toEqual(['default', 'bypass', 'deny'])
+    expect(opts.map((o) => o.choice)).toEqual(['default', 'bypass', 'deny'])
     expect(opts[1]!.label).toBe('Execute and bypass permissions (elevated)')
   })
 })
@@ -60,12 +60,12 @@ describe('gatewayClient plan-approval routing', () => {
       request_id: 'r1'
     })
 
-    const ev = events.find(e => e.type === 'plan.approval')
+    const ev = events.find((e) => e.type === 'plan.approval')
 
     expect(ev).toBeTruthy()
     expect(ev.payload).toEqual({ bypass_available: true, plan: '# The Plan', plan_file_path: '/plans/x.md' })
     // No generic approval box for the plan dialog.
-    expect(events.find(e => e.type === 'approval.request')).toBeUndefined()
+    expect(events.find((e) => e.type === 'approval.request')).toBeUndefined()
   })
 
   it('keeps other tools on the generic approval box', () => {
@@ -76,8 +76,8 @@ describe('gatewayClient plan-approval routing', () => {
       request_id: 'r2'
     })
 
-    expect(events.find(e => e.type === 'approval.request')).toBeTruthy()
-    expect(events.find(e => e.type === 'plan.approval')).toBeUndefined()
+    expect(events.find((e) => e.type === 'approval.request')).toBeTruthy()
+    expect(events.find((e) => e.type === 'plan.approval')).toBeUndefined()
   })
 
   it.each([
@@ -94,7 +94,7 @@ describe('gatewayClient plan-approval routing', () => {
 
     await gw.request('planApproval.respond', { choice })
 
-    const resp = sent.find(m => m.type === 'control_response')
+    const resp = sent.find((m) => m.type === 'control_response')
 
     expect(resp.response.request_id).toBe('r3')
     expect(resp.response.response.behavior).toBe('allow')
@@ -111,7 +111,7 @@ describe('gatewayClient plan-approval routing', () => {
 
     await gw.request('planApproval.respond', { choice: 'deny', feedback: 'also update the README' })
 
-    const resp = sent.find(m => m.type === 'control_response')
+    const resp = sent.find((m) => m.type === 'control_response')
 
     expect(resp.response.response).toEqual({ behavior: 'deny', message: 'also update the README' })
   })
@@ -121,7 +121,7 @@ describe('gatewayClient plan-approval routing', () => {
 
     gw.dispatch({ permission_mode: 'acceptEdits', subtype: 'status', type: 'system' })
 
-    const ev = events.find(e => e.type === 'permission.mode')
+    const ev = events.find((e) => e.type === 'permission.mode')
 
     expect(ev?.payload).toEqual({ mode: 'acceptEdits' })
   })
@@ -162,8 +162,7 @@ describe('/plan slash — CC semantics', () => {
   it('submits the description as a prompt when given an argument', async () => {
     const gw = mkClient()
 
-    gw.controlQuery = (subtype: string) =>
-      Promise.resolve(subtype === 'plan' ? { mode: 'default', ok: true } : { mode: 'plan', ok: true })
+    gw.controlQuery = (subtype: string) => Promise.resolve(subtype === 'plan' ? { mode: 'default', ok: true } : { mode: 'plan', ok: true })
 
     const r = await gw.dispatchSlash('plan', 'refactor the auth flow')
 
@@ -173,8 +172,7 @@ describe('/plan slash — CC semantics', () => {
   it('shows the current plan when already in plan mode', async () => {
     const gw = mkClient()
 
-    gw.controlQuery = () =>
-      Promise.resolve({ mode: 'plan', ok: true, plan: '# P', plan_file_path: '/plans/a.md' })
+    gw.controlQuery = () => Promise.resolve({ mode: 'plan', ok: true, plan: '# P', plan_file_path: '/plans/a.md' })
 
     const r = await gw.dispatchSlash('plan')
 

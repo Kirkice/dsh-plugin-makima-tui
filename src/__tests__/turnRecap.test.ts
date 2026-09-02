@@ -91,9 +91,7 @@ describe('turn.recap event handling', () => {
       type: 'turn.recap'
     } as any)
 
-    expect(appended).toEqual([
-      { kind: 'recap', role: 'system', text: 'Goal was X. Done. Next: re-run.' }
-    ])
+    expect(appended).toEqual([{ kind: 'recap', role: 'system', text: 'Goal was X. Done. Next: re-run.' }])
     expect(getUiState().pendingSuggestion).toBe('fix all four issues and re-run')
   })
 
@@ -134,9 +132,9 @@ describe('turn.recap event handling', () => {
 
 describe('composerPlaceholder — what the ghost slot shows', () => {
   it('shows the armed suggestion MID-conversation (the shipped regression: conversationEmpty gated it off exactly where suggestions exist)', () => {
-    expect(
-      composerPlaceholder({ busy: false, conversationEmpty: false, pendingSuggestion: 'fix all four issues and re-run' })
-    ).toBe('fix all four issues and re-run')
+    expect(composerPlaceholder({ busy: false, conversationEmpty: false, pendingSuggestion: 'fix all four issues and re-run' })).toBe(
+      'fix all four issues and re-run'
+    )
   })
 
   it('suggestion wins over the fresh-conversation hint too', () => {
@@ -170,9 +168,7 @@ describe('shouldAcceptPendingSuggestion — Tab accepts only what is visibly sug
   })
 
   it('defers to an open completion menu', () => {
-    expect(
-      shouldAcceptPendingSuggestion({ shift: false, tab: true }, { ...visible, completionsLen: 2 })
-    ).toBe(false)
+    expect(shouldAcceptPendingSuggestion({ shift: false, tab: true }, { ...visible, completionsLen: 2 })).toBe(false)
   })
 
   it('stays inert once the user typed something (ghost is hidden)', () => {
@@ -184,9 +180,7 @@ describe('shouldAcceptPendingSuggestion — Tab accepts only what is visibly sug
   })
 
   it('stays inert with no suggestion armed', () => {
-    expect(
-      shouldAcceptPendingSuggestion({ shift: false, tab: true }, { ...visible, suggestion: null })
-    ).toBe(false)
+    expect(shouldAcceptPendingSuggestion({ shift: false, tab: true }, { ...visible, suggestion: null })).toBe(false)
   })
 })
 
@@ -210,8 +204,11 @@ describe('GatewayClient system/recap translation', () => {
   afterEach(() => {
     gw.kill()
 
-    if (prevWs === undefined) {delete process.env.MAKIMA_TUI_WORKSPACE}
-    else {process.env.MAKIMA_TUI_WORKSPACE = prevWs}
+    if (prevWs === undefined) {
+      delete process.env.MAKIMA_TUI_WORKSPACE
+    } else {
+      process.env.MAKIMA_TUI_WORKSPACE = prevWs
+    }
   })
 
   it('maps the NDJSON system/recap frame to a turn.recap event', async () => {
@@ -223,8 +220,8 @@ describe('GatewayClient system/recap translation', () => {
       type: 'system'
     })
 
-    await vi.waitFor(() => expect(events.find(e => e.type === 'turn.recap')).toBeTruthy())
-    expect(events.find(e => e.type === 'turn.recap').payload).toEqual({
+    await vi.waitFor(() => expect(events.find((e) => e.type === 'turn.recap')).toBeTruthy())
+    expect(events.find((e) => e.type === 'turn.recap').payload).toEqual({
       recap: 'Goal was porting the recap feature. Next: run the tests.',
       suggestion: 'run the tests'
     })
@@ -233,8 +230,8 @@ describe('GatewayClient system/recap translation', () => {
   it('coerces missing fields to empty strings', async () => {
     proc.line({ session_id: 's1', subtype: 'recap', type: 'system' })
 
-    await vi.waitFor(() => expect(events.find(e => e.type === 'turn.recap')).toBeTruthy())
-    expect(events.find(e => e.type === 'turn.recap').payload).toEqual({ recap: '', suggestion: '' })
+    await vi.waitFor(() => expect(events.find((e) => e.type === 'turn.recap')).toBeTruthy())
+    expect(events.find((e) => e.type === 'turn.recap').payload).toEqual({ recap: '', suggestion: '' })
   })
 
   it('lists /recap in the commands catalog with no hint (local argumentHint is authoritative)', async () => {
@@ -249,7 +246,10 @@ describe('GatewayClient system/recap translation', () => {
     let req: any
     await vi.waitFor(() => {
       const raw = (proc.stdin as any).read()?.toString() ?? ''
-      const frames = raw.split('\n').filter(Boolean).map((l: string) => JSON.parse(l))
+      const frames = raw
+        .split('\n')
+        .filter(Boolean)
+        .map((l: string) => JSON.parse(l))
 
       req = req ?? frames.find((f: any) => f.type === 'control_request' && f.request?.subtype === 'list_workflow_commands')
       expect(req).toBeTruthy()

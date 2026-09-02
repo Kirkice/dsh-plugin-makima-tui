@@ -42,9 +42,7 @@ export const stickyPromptFromViewport = (
       continue
     }
 
-    return (offsets[i + 1] ?? (offsets[i] ?? 0) + 1) <= top
-      ? userDisplay(messages[i]!.text.trim()).replace(/\s+/g, ' ').trim()
-      : ''
+    return (offsets[i + 1] ?? (offsets[i] ?? 0) + 1) <= top ? userDisplay(messages[i]!.text.trim()).replace(/\s+/g, ' ').trim() : ''
   }
 
   return ''

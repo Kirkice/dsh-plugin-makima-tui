@@ -1,14 +1,5 @@
 import type { ScrollBoxHandle } from '@makima-tui/ink'
-import {
-  type RefObject,
-  useCallback,
-  useDeferredValue,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-  useSyncExternalStore
-} from 'react'
+import { type RefObject, useCallback, useDeferredValue, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 
 const ESTIMATE = 4
 // Overscan was 40 (= viewport) which is way more than needed when heights
@@ -206,7 +197,7 @@ export function useVirtualHistory(
   )
 
   useEffect(() => {
-    const keep = new Set(items.map(i => i.key))
+    const keep = new Set(items.map((i) => i.key))
     let dirty = false
 
     for (const k of heights.current.keys()) {
@@ -487,7 +478,7 @@ export function useVirtualHistory(
 
     if (skipMeasurement.current) {
       skipMeasurement.current = false
-      bumpMeasuredHeightVersion(n => n + 1)
+      bumpMeasuredHeightVersion((n) => n + 1)
     } else {
       for (let i = effStart; i < effEnd; i++) {
         const k = items[i]?.key
@@ -513,11 +504,7 @@ export function useVirtualHistory(
         vp: Math.max(0, s.getViewportHeight())
       }
 
-      if (
-        next.sticky !== metrics.current.sticky ||
-        next.top !== metrics.current.top ||
-        next.vp !== metrics.current.vp
-      ) {
+      if (next.sticky !== metrics.current.sticky || next.top !== metrics.current.top || next.vp !== metrics.current.vp) {
         metrics.current = next
         dirty = true
       }
@@ -529,7 +516,7 @@ export function useVirtualHistory(
     }
 
     if (heightDirty) {
-      bumpMeasuredHeightVersion(n => n + 1)
+      bumpMeasuredHeightVersion((n) => n + 1)
     }
   }, [effEnd, effStart, items, liveTailActive, measuredHeightVersion, n, offsets, scrollRef, sticky, total, vp])
 

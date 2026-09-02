@@ -45,8 +45,8 @@ describe('performHeapDump auto opt-in gate (#21767)', () => {
     expect(result.heapPath).toBeUndefined()
 
     const files = readdirSync(dir)
-    expect(files.some(f => f.endsWith('.diagnostics.json'))).toBe(true)
-    expect(files.some(f => f.endsWith('.heapsnapshot'))).toBe(false)
+    expect(files.some((f) => f.endsWith('.diagnostics.json'))).toBe(true)
+    expect(files.some((f) => f.endsWith('.heapsnapshot'))).toBe(false)
   })
 
   it('writes diagnostics only for auto-critical without MAKIMA_TUI_AUTO_HEAPDUMP', async () => {
@@ -57,7 +57,7 @@ describe('performHeapDump auto opt-in gate (#21767)', () => {
     expect(result.heapPath).toBeUndefined()
 
     const files = readdirSync(dir)
-    expect(files.some(f => f.endsWith('.heapsnapshot'))).toBe(false)
+    expect(files.some((f) => f.endsWith('.heapsnapshot'))).toBe(false)
   })
 
   it('writes both diagnostics and snapshot for auto-high when MAKIMA_TUI_AUTO_HEAPDUMP=1', async () => {
@@ -71,7 +71,7 @@ describe('performHeapDump auto opt-in gate (#21767)', () => {
     expect(result.heapPath).toBeDefined()
 
     const files = readdirSync(dir)
-    expect(files.some(f => f.endsWith('.heapsnapshot'))).toBe(true)
+    expect(files.some((f) => f.endsWith('.heapsnapshot'))).toBe(true)
   })
 
   it('accepts truthy spellings (true|yes|on, case-insensitive) as opt-in', async () => {
@@ -103,7 +103,7 @@ describe('performHeapDump auto opt-in gate (#21767)', () => {
     expect(result.heapPath).toBeDefined()
 
     const files = readdirSync(dir)
-    expect(files.some(f => f.endsWith('.heapsnapshot'))).toBe(true)
+    expect(files.some((f) => f.endsWith('.heapsnapshot'))).toBe(true)
   })
 })
 
@@ -163,6 +163,6 @@ describe('heapdump retention guard (#21767)', () => {
     // The old 1KB dumps must have been pruned down from the original four.
     expect(remaining.length).toBeLessThan(5)
     // The brand-new diagnostics sidecar must survive the prune.
-    expect(remaining.some(f => f.endsWith('.diagnostics.json'))).toBe(true)
+    expect(remaining.some((f) => f.endsWith('.diagnostics.json'))).toBe(true)
   })
 })

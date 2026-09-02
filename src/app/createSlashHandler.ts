@@ -142,7 +142,7 @@ export function createSlashHandler(ctx: SlashHandlerContext): (cmd: string) => b
     }
 
     gw.request<SlashExecResponse>('slash.exec', { command: cmd.slice(1), session_id: sid })
-      .then(r => {
+      .then((r) => {
         if (stale()) {
           return
         }

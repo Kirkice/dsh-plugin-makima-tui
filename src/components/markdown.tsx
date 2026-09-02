@@ -139,16 +139,15 @@ const splitRow = (row: string) =>
     .replace(/^\|/, '')
     .replace(/\|$/, '')
     .split('|')
-    .map(c => c.trim())
+    .map((c) => c.trim())
 
 const isTableDivider = (row: string) => {
   const cells = splitRow(row)
 
-  return cells.length > 1 && cells.every(c => TABLE_DIVIDER_CELL_RE.test(c))
+  return cells.length > 1 && cells.every((c) => TABLE_DIVIDER_CELL_RE.test(c))
 }
 
-const autolinkUrl = (raw: string) =>
-  raw.startsWith('mailto:') || raw.startsWith('http') || !raw.includes('@') ? raw : `mailto:${raw}`
+const autolinkUrl = (raw: string) => (raw.startsWith('mailto:') || raw.startsWith('http') || !raw.includes('@') ? raw : `mailto:${raw}`)
 
 // Trim trailing prose punctuation off a bare URL, but keep a ')' that
 // closes a '(' inside the URL — wikipedia-style /Foo_(bar) paths would
@@ -304,8 +303,7 @@ export const horizontalRule = (cols?: number) => {
   return `✦ ${'─'.repeat(arm)} ✦ ${'─'.repeat(arm)}`
 }
 
-const listMarkerColor = (t: Theme, depth: number) =>
-  depth === 0 ? t.color.highlight : depth === 1 ? t.color.command : t.color.thinking
+const listMarkerColor = (t: Theme, depth: number) => (depth === 0 ? t.color.highlight : depth === 1 ? t.color.command : t.color.thinking)
 
 const renderTable = (k: number, rows: string[][], t: Theme, cols?: number) => {
   // Guard: empty table
@@ -318,19 +316,19 @@ const renderTable = (k: number, rows: string[][], t: Theme, cols?: number) => {
   // Minimum width: longest word in a cell (to avoid breaking words)
   const minCellWidth = (raw: string) => {
     const text = stripInlineMarkup(raw)
-    const words = text.split(/\s+/).filter(w => w.length > 0)
+    const words = text.split(/\s+/).filter((w) => w.length > 0)
 
     if (words.length === 0) {
       return MIN_COL_WIDTH
     }
 
-    return Math.max(...words.map(w => stringWidth(w)), MIN_COL_WIDTH)
+    return Math.max(...words.map((w) => stringWidth(w)), MIN_COL_WIDTH)
   }
 
   const numCols = rows[0]!.length
 
   // Normalize ragged rows: ensure every row has exactly numCols cells
-  const normalizedRows = rows.map(row => {
+  const normalizedRows = rows.map((row) => {
     if (row.length >= numCols) {
       return row.slice(0, numCols)
     }
@@ -340,21 +338,17 @@ const renderTable = (k: number, rows: string[][], t: Theme, cols?: number) => {
 
   // Ideal widths: max cell content per column
   const idealWidths = normalizedRows[0]!.map((_, ci) =>
-    Math.max(...normalizedRows.map(r => cellDisplayWidth(r[ci] ?? '')), MIN_COL_WIDTH)
+    Math.max(...normalizedRows.map((r) => cellDisplayWidth(r[ci] ?? '')), MIN_COL_WIDTH)
   )
 
   // Min widths: longest word per column
-  const minWidths = normalizedRows[0]!.map((_, ci) =>
-    Math.max(...normalizedRows.map(r => minCellWidth(r[ci] ?? '')), MIN_COL_WIDTH)
-  )
+  const minWidths = normalizedRows[0]!.map((_, ci) => Math.max(...normalizedRows.map((r) => minCellWidth(r[ci] ?? '')), MIN_COL_WIDTH))
 
   // Each cell gets one space of horizontal padding on either side and every
   // column is separated by a one-cell box-drawing rail. `cols` does not include
   // this renderer's left inset, so reserve both that inset and the full frame.
   const frameOverhead = numCols * 3 + 1
-  const availableWidth = cols
-    ? Math.max(cols - TABLE_PADDING_LEFT - frameOverhead - SAFETY_MARGIN, numCols * MIN_COL_WIDTH)
-    : Infinity
+  const availableWidth = cols ? Math.max(cols - TABLE_PADDING_LEFT - frameOverhead - SAFETY_MARGIN, numCols * MIN_COL_WIDTH) : Infinity
 
   const totalIdeal = idealWidths.reduce((a, b) => a + b, 0)
   const totalMin = minWidths.reduce((a, b) => a + b, 0)
@@ -377,7 +371,7 @@ const renderTable = (k: number, rows: string[][], t: Theme, cols?: number) => {
     } else {
       const rawAlloc = minWidths.map((min, i) => min + (overflows[i]! / totalOverflow) * extraSpace)
 
-      columnWidths = rawAlloc.map(v => Math.floor(v))
+      columnWidths = rawAlloc.map((v) => Math.floor(v))
       // Distribute rounding remainders to columns with largest fractional part
       let remainder = availableWidth - columnWidths.reduce((a, b) => a + b, 0)
 
@@ -398,8 +392,8 @@ const renderTable = (k: number, rows: string[][], t: Theme, cols?: number) => {
     // many columns are scaled below 3. This is caught by safetyOverflow → vertical fallback.
     needsWrap = true
     const scaleFactor = availableWidth / totalMin
-    const rawAlloc = minWidths.map(w => w * scaleFactor)
-    columnWidths = rawAlloc.map(v => Math.max(Math.floor(v), MIN_COL_WIDTH))
+    const rawAlloc = minWidths.map((w) => w * scaleFactor)
+    columnWidths = rawAlloc.map((v) => Math.max(Math.floor(v), MIN_COL_WIDTH))
     let remainder = availableWidth - columnWidths.reduce((a, b) => a + b, 0)
 
     const fracs = rawAlloc.map((v, i) => ({ i, frac: v - Math.floor(v) })).sort((a, b) => b.frac - a.frac)
@@ -416,12 +410,9 @@ const renderTable = (k: number, rows: string[][], t: Theme, cols?: number) => {
 
   // Grapheme-safe hard-break: prefer Intl.Segmenter, fall back to code-point split
   const segmenter =
-    typeof Intl !== 'undefined' && 'Segmenter' in Intl
-      ? new (Intl as any).Segmenter(undefined, { granularity: 'grapheme' })
-      : null
+    typeof Intl !== 'undefined' && 'Segmenter' in Intl ? new (Intl as any).Segmenter(undefined, { granularity: 'grapheme' }) : null
 
-  const graphemes = (s: string): string[] =>
-    segmenter ? [...segmenter.segment(s)].map((seg: { segment: string }) => seg.segment) : [...s]
+  const graphemes = (s: string): string[] => (segmenter ? [...segmenter.segment(s)].map((seg: { segment: string }) => seg.segment) : [...s])
 
   // Word-wrap plain text to fit within `width` display columns.
   // Operates on stripped text for correct width measurement.
@@ -436,7 +427,7 @@ const renderTable = (k: number, rows: string[][], t: Theme, cols?: number) => {
       return [text]
     }
 
-    const words = text.split(/\s+/).filter(w => w.length > 0)
+    const words = text.split(/\s+/).filter((w) => w.length > 0)
     const lines: string[] = []
     let current = ''
     let currentWidth = 0
@@ -481,14 +472,14 @@ const renderTable = (k: number, rows: string[][], t: Theme, cols?: number) => {
 
   const isHard = totalMin > availableWidth // tier 3 needs hard word breaks
   const border = (left: string, middle: string, right: string) =>
-    `${left}${columnWidths.map(width => '─'.repeat(width + 2)).join(middle)}${right}`
+    `${left}${columnWidths.map((width) => '─'.repeat(width + 2)).join(middle)}${right}`
   const topBorder = border('┌', '┬', '┐')
   const rowBorder = border('├', '┼', '┤')
   const bottomBorder = border('└', '┴', '┘')
 
   const buildRowLines = (row: string[]): string[][] => {
     const cellLines = row.map((cell, ci) => wrapCell(cell, columnWidths[ci]!, isHard))
-    const height = Math.max(...cellLines.map(lines => lines.length), 1)
+    const height = Math.max(...cellLines.map((lines) => lines.length), 1)
 
     return Array.from({ length: height }, (_, lineIndex) =>
       columnWidths.map((width, ci) => {
@@ -522,11 +513,12 @@ const renderTable = (k: number, rows: string[][], t: Theme, cols?: number) => {
             ))}
           </Box>
         ))
-        const divider = rowIndex < normalizedRows.length - 1 ? (
-          <Text color={t.color.frame} key={`row-${rowIndex}-border`} wrap="truncate-end">
-            {rowBorder}
-          </Text>
-        ) : null
+        const divider =
+          rowIndex < normalizedRows.length - 1 ? (
+            <Text color={t.color.frame} key={`row-${rowIndex}-border`} wrap="truncate-end">
+              {rowBorder}
+            </Text>
+          ) : null
 
         return divider ? [...renderedLines, divider] : renderedLines
       })}

@@ -55,7 +55,7 @@ export function ensureHighlighter(): Promise<void> {
     return Promise.resolve()
   }
   hljsPromise ??= import('highlight.js')
-    .then(mod => {
+    .then((mod) => {
       const m = mod as { default?: HLJSApi }
       cachedHljs = (m.default ?? mod) as HLJSApi
 
@@ -64,7 +64,7 @@ export function ensureHighlighter(): Promise<void> {
       }
       hljsListeners.clear()
     })
-    .catch(e => logError(e))
+    .catch((e) => logError(e))
 
   return hljsPromise
 }
@@ -613,8 +613,7 @@ function highlightLine(state: { lang: string | null; stack: unknown }, line: str
   }
 
   // hljs 10.x exposes `.emitter`; 11.x renamed it to `._emitter`.
-  const emitter =
-    (result as { emitter?: unknown; _emitter?: unknown }).emitter ?? (result as { _emitter?: unknown })._emitter
+  const emitter = (result as { emitter?: unknown; _emitter?: unknown }).emitter ?? (result as { _emitter?: unknown })._emitter
 
   if (!hasRootNode(emitter)) {
     if (!loggedEmitterShapeError) {
@@ -759,11 +758,11 @@ type Highlight = {
 }
 
 function removeNewlines(h: Highlight): void {
-  h.lines = h.lines.map(line =>
+  h.lines = h.lines.map((line) =>
     line.flatMap(([style, text]) =>
       text
         .split('\n')
-        .filter(p => p.length > 0)
+        .filter((p) => p.length > 0)
         .map((p): Block => [style, p])
     )
   )
@@ -953,7 +952,7 @@ function applyBackground(h: Highlight, theme: Theme, ranges: Range[]): void {
 }
 
 function intoLines(h: Highlight, dim: boolean, skipBg: boolean, mode: ColorMode): string[] {
-  return h.lines.map(line => asTerminalEscaped(line, mode, skipBg, dim))
+  return h.lines.map((line) => asTerminalEscaped(line, mode, skipBg, dim))
 }
 
 // ---------------------------------------------------------------------------
@@ -999,7 +998,7 @@ export class ColorDiff {
     // First pass: assign markers + line numbers
     type Entry = { lineNumber: number; marker: Marker; code: string }
 
-    const entries: Entry[] = this.hunk.lines.map(rawLine => {
+    const entries: Entry[] = this.hunk.lines.map((rawLine) => {
       const marker = parseMarker(rawLine.slice(0, 1))
       const code = rawLine.slice(1)
       let lineNumber: number
@@ -1030,7 +1029,7 @@ export class ColorDiff {
     const ranges: Range[][] = entries.map(() => [])
 
     if (!dim) {
-      const markers = entries.map(e => e.marker)
+      const markers = entries.map((e) => e.marker)
 
       for (const [delIdx, addIdx] of findAdjacentPairs(markers)) {
         const [delR, addR] = wordDiffStrings(entries[delIdx]!.code, entries[addIdx]!.code)

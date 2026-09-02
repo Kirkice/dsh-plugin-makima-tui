@@ -139,8 +139,7 @@ export function formatTotalCost(s: CostSnapshot): string {
   const removed = s.total_lines_removed ?? 0
 
   const costDisplay =
-    formatCost(s.total_cost_usd ?? 0) +
-    (s.has_unknown_model_cost ? ' (costs may be inaccurate due to usage of unknown models)' : '')
+    formatCost(s.total_cost_usd ?? 0) + (s.has_unknown_model_cost ? ' (costs may be inaccurate due to usage of unknown models)' : '')
 
   return (
     `Total cost:            ${costDisplay}\n` +

@@ -1,4 +1,16 @@
-import { CallId, LlmAdapter, LlmError, type FinishReason, type GenerateOptions, type LlmModelInfo, type LlmProviderInfo, type LlmResolvedModelInfo, type ResolvedRetryPolicy, type StreamChunk, attributionHeaders } from '@deepseek-ai/dsh-llm'
+import {
+  CallId,
+  LlmAdapter,
+  LlmError,
+  type FinishReason,
+  type GenerateOptions,
+  type LlmModelInfo,
+  type LlmProviderInfo,
+  type LlmResolvedModelInfo,
+  type ResolvedRetryPolicy,
+  type StreamChunk,
+  attributionHeaders
+} from '@deepseek-ai/dsh-llm'
 import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 
 import { OPENAI_CODEX_PROVIDER, type OpenAiCodexAuthManager } from './openAiCodexAuth.js'
@@ -44,7 +56,7 @@ export class OpenAiCodexAdapter extends LlmAdapter {
   }
 
   async listModels(provider: string): Promise<readonly LlmModelInfo[]> {
-    return MODELS.map(model => ({
+    return MODELS.map((model) => ({
       id: model.id,
       inputModalities: model.inputModalities,
       name: model.name,
@@ -53,7 +65,7 @@ export class OpenAiCodexAdapter extends LlmAdapter {
   }
 
   async resolveModel(provider: string, model: string, _signal?: AbortSignal): Promise<LlmResolvedModelInfo> {
-    const known = MODELS.find(entry => entry.id === model)
+    const known = MODELS.find((entry) => entry.id === model)
     return {
       context: { contextWindow: known?.contextWindow ?? 272_000 },
       id: model,
@@ -83,7 +95,9 @@ export class OpenAiCodexAdapter extends LlmAdapter {
 
     if (!response.ok || !response.body) {
       const detail = (await response.text()).slice(0, 500)
-      throw new LlmError(`OpenAI Codex request failed (${response.status})${detail ? `: ${detail}` : ''}`, httpErrorCode(response.status), { status: response.status })
+      throw new LlmError(`OpenAI Codex request failed (${response.status})${detail ? `: ${detail}` : ''}`, httpErrorCode(response.status), {
+        status: response.status
+      })
     }
 
     yield* translateResponseEvents(readSse(response.body))
@@ -100,7 +114,8 @@ export async function serializeRequest(options: GenerateOptions, readImage?: Ima
       for (const block of message.content) {
         if (block.type === 'text') content.push({ text: block.text, type: 'output_text' })
         else if (block.type === 'reasoning') content.push({ text: block.text, type: 'reasoning' })
-        else if (block.type === 'tool-call') content.push({ arguments: block.arguments, call_id: block.id, name: block.name, type: 'function_call' })
+        else if (block.type === 'tool-call')
+          content.push({ arguments: block.arguments, call_id: block.id, name: block.name, type: 'function_call' })
       }
       if (content.length) input.push({ content, role: 'assistant' })
       continue
@@ -110,10 +125,18 @@ export async function serializeRequest(options: GenerateOptions, readImage?: Ima
     for (const block of message.content) {
       if (block.type === 'text') content.push({ text: block.text, type: 'input_text' })
       else if (block.type === 'image') {
-        if (!readImage) throw new LlmError('OpenAI Codex image attachments are unavailable because the attachment store is not mounted', 'ATTACHMENT_UNAVAILABLE')
+        if (!readImage)
+          throw new LlmError(
+            'OpenAI Codex image attachments are unavailable because the attachment store is not mounted',
+            'ATTACHMENT_UNAVAILABLE'
+          )
         const stored = await readImage(block.attachment, options.signal)
-        content.push({ image_url: `data:${stored.ref.mediaType};base64,${Buffer.from(stored.data).toString('base64')}`, type: 'input_image' })
-      } else if (block.type === 'tool-result') input.push({ call_id: block.toolCallId, output: flattenText(block.content) || '(no output)', type: 'function_call_output' })
+        content.push({
+          image_url: `data:${stored.ref.mediaType};base64,${Buffer.from(stored.data).toString('base64')}`,
+          type: 'input_image'
+        })
+      } else if (block.type === 'tool-result')
+        input.push({ call_id: block.toolCallId, output: flattenText(block.content) || '(no output)', type: 'function_call_output' })
     }
     if (content.length) input.push({ content, role: 'user' })
   }
@@ -124,14 +147,25 @@ export async function serializeRequest(options: GenerateOptions, readImage?: Ima
     ...(options.maxTokens === undefined ? {} : { max_output_tokens: options.maxTokens }),
     ...(options.reasoningEffort ? { reasoning: { effort: options.reasoningEffort, summary: 'auto' } } : {}),
     ...(options.temperature === undefined ? {} : { temperature: options.temperature }),
-    ...(options.tools?.length ? { tools: options.tools.map(tool => ({ description: tool.description, name: tool.name, parameters: tool.parameters, type: 'function' })) } : {}),
+    ...(options.tools?.length
+      ? {
+          tools: options.tools.map((tool) => ({
+            description: tool.description,
+            name: tool.name,
+            parameters: tool.parameters,
+            type: 'function'
+          }))
+        }
+      : {}),
     store: false,
     stream: true
   }
 }
 
 function flattenText(content: readonly { type: string }[]): string {
-  return content.flatMap(block => block.type === 'text' && 'text' in block && typeof block.text === 'string' ? [block.text] : []).join('')
+  return content
+    .flatMap((block) => (block.type === 'text' && 'text' in block && typeof block.text === 'string' ? [block.text] : []))
+    .join('')
 }
 
 export async function* readSse(body: ReadableStream<Uint8Array>): AsyncIterable<unknown> {
@@ -145,15 +179,31 @@ export async function* readSse(body: ReadableStream<Uint8Array>): AsyncIterable<
     const events = pending.split(/\r?\n\r?\n/)
     pending = events.pop() ?? ''
     for (const event of events) {
-      const data = event.split(/\r?\n/).filter(line => line.startsWith('data:')).map(line => line.slice(5).trimStart()).join('\n')
+      const data = event
+        .split(/\r?\n/)
+        .filter((line) => line.startsWith('data:'))
+        .map((line) => line.slice(5).trimStart())
+        .join('\n')
       if (!data || data === '[DONE]') continue
-      try { yield JSON.parse(data) } catch { throw new LlmError('OpenAI Codex returned malformed SSE data', 'MALFORMED_RESPONSE') }
+      try {
+        yield JSON.parse(data)
+      } catch {
+        throw new LlmError('OpenAI Codex returned malformed SSE data', 'MALFORMED_RESPONSE')
+      }
     }
   }
   if (pending.trim()) {
-    const data = pending.split(/\r?\n/).filter(line => line.startsWith('data:')).map(line => line.slice(5).trimStart()).join('\n')
+    const data = pending
+      .split(/\r?\n/)
+      .filter((line) => line.startsWith('data:'))
+      .map((line) => line.slice(5).trimStart())
+      .join('\n')
     if (data && data !== '[DONE]') {
-      try { yield JSON.parse(data) } catch { throw new LlmError('OpenAI Codex returned malformed SSE data', 'MALFORMED_RESPONSE') }
+      try {
+        yield JSON.parse(data)
+      } catch {
+        throw new LlmError('OpenAI Codex returned malformed SSE data', 'MALFORMED_RESPONSE')
+      }
     }
   }
 }
@@ -166,9 +216,8 @@ export async function* translateResponseEvents(events: AsyncIterable<unknown>): 
   const blockFor = (kind: OutputBlock['kind'], id: string, name = ''): OutputBlock => {
     const existing = blocks.get(id)
     if (existing) return existing
-    const created: OutputBlock = kind === 'tool'
-      ? { callId: id, index: nextIndex++, kind, name, opened: false, text: '' }
-      : { index: nextIndex++, kind, text: '' }
+    const created: OutputBlock =
+      kind === 'tool' ? { callId: id, index: nextIndex++, kind, name, opened: false, text: '' } : { index: nextIndex++, kind, text: '' }
     blocks.set(id, created)
     return created
   }
@@ -183,7 +232,12 @@ export async function* translateResponseEvents(events: AsyncIterable<unknown>): 
       if (!block.text) yield { blockType: 'text', index: block.index, type: 'block-start' }
       block.text += delta
       yield { index: block.index, text: delta, type: 'text-delta' }
-    } else if (type === 'response.reasoning.delta' || type === 'response.reasoning_text.delta' || type === 'response.reasoning_summary.delta' || type === 'response.reasoning_summary_text.delta') {
+    } else if (
+      type === 'response.reasoning.delta' ||
+      type === 'response.reasoning_text.delta' ||
+      type === 'response.reasoning_summary.delta' ||
+      type === 'response.reasoning_summary_text.delta'
+    ) {
       const delta = typeof event.delta === 'string' ? event.delta : ''
       if (!delta) continue
       const block = blockFor('reasoning', 'reasoning')
@@ -200,7 +254,13 @@ export async function* translateResponseEvents(events: AsyncIterable<unknown>): 
         yield { blockType: 'tool-call', index: block.index, type: 'block-start' }
       }
       block.text += delta
-      yield { argumentsDelta: delta, id: CallId(block.callId), index: block.index, ...(block.name ? { name: block.name } : {}), type: 'tool-call-delta' }
+      yield {
+        argumentsDelta: delta,
+        id: CallId(block.callId),
+        index: block.index,
+        ...(block.name ? { name: block.name } : {}),
+        type: 'tool-call-delta'
+      }
     } else if (type === 'response.output_item.added' || type === 'response.output_item.done') {
       const item = event.item as Record<string, unknown> | undefined
       if (item?.type === 'function_call') {
@@ -223,14 +283,22 @@ export async function* translateResponseEvents(events: AsyncIterable<unknown>): 
       const wireUsage = event.response?.usage ?? event.usage
       usage = usageFrom(wireUsage)
     } else if (type === 'response.failed' || type === 'response.incomplete') {
-      finish = { failure: { code: 'PROVIDER_RESPONSE_FAILED', message: String(event.response?.error?.message ?? 'OpenAI Codex response failed') }, kind: 'error' }
+      finish = {
+        failure: { code: 'PROVIDER_RESPONSE_FAILED', message: String(event.response?.error?.message ?? 'OpenAI Codex response failed') },
+        kind: 'error'
+      }
     }
   }
 
   for (const block of blocks.values()) {
     if (block.kind === 'text') yield { block: { text: block.text, type: 'text' }, index: block.index, type: 'block-end' }
     else if (block.kind === 'reasoning') yield { block: { text: block.text, type: 'reasoning' }, index: block.index, type: 'block-end' }
-    else yield { block: { arguments: block.text, id: CallId(block.callId), name: block.name, type: 'tool-call' }, index: block.index, type: 'block-end' }
+    else
+      yield {
+        block: { arguments: block.text, id: CallId(block.callId), name: block.name, type: 'tool-call' },
+        index: block.index,
+        type: 'block-end'
+      }
   }
   if (usage) yield { type: 'usage', usage }
   yield { reason: finish, type: 'finish' }
@@ -239,11 +307,21 @@ export async function* translateResponseEvents(events: AsyncIterable<unknown>): 
 function usageFrom(raw: unknown): { inputTokens: number; outputTokens: number; reasoningTokens?: number } | undefined {
   if (!raw || typeof raw !== 'object') return undefined
   const value = raw as Record<string, unknown>
-  const input = typeof value.input_tokens === 'number' ? value.input_tokens : typeof value.prompt_tokens === 'number' ? value.prompt_tokens : undefined
-  const output = typeof value.output_tokens === 'number' ? value.output_tokens : typeof value.completion_tokens === 'number' ? value.completion_tokens : undefined
+  const input =
+    typeof value.input_tokens === 'number' ? value.input_tokens : typeof value.prompt_tokens === 'number' ? value.prompt_tokens : undefined
+  const output =
+    typeof value.output_tokens === 'number'
+      ? value.output_tokens
+      : typeof value.completion_tokens === 'number'
+        ? value.completion_tokens
+        : undefined
   if (input === undefined || output === undefined) return undefined
   const details = value.output_tokens_details as Record<string, unknown> | undefined
-  return { inputTokens: input, outputTokens: output, ...(typeof details?.reasoning_tokens === 'number' ? { reasoningTokens: details.reasoning_tokens } : {}) }
+  return {
+    inputTokens: input,
+    outputTokens: output,
+    ...(typeof details?.reasoning_tokens === 'number' ? { reasoningTokens: details.reasoning_tokens } : {})
+  }
 }
 
 function httpErrorCode(status: number): string {

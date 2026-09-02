@@ -4,12 +4,7 @@ import { TYPING_IDLE_MS } from '../config/timing.js'
 import { attachedImageNotice } from '../domain/messages.js'
 import { completionToApplyOnSubmit, looksLikeSlashCommand } from '../domain/slash.js'
 import type { GatewayClient } from '../gatewayClient.js'
-import type {
-  InputDetectDropResponse,
-  PromptSubmitResponse,
-  SessionSteerResponse,
-  ShellExecResponse
-} from '../gatewayTypes.js'
+import type { InputDetectDropResponse, PromptSubmitResponse, SessionSteerResponse, ShellExecResponse } from '../gatewayTypes.js'
 import { asRpcResult } from '../lib/rpc.js'
 import { hasInterpolation, INTERPOLATION_RE } from '../protocol/interpolation.js'
 import { PASTE_SNIPPET_RE } from '../protocol/paste.js'
@@ -33,25 +28,14 @@ const expandSnips = (snips: PasteSnippet[]) => {
     hit ? hit.push(text) : byLabel.set(label, [text])
   }
 
-  return (value: string) => value.replace(PASTE_SNIPPET_RE, tok => byLabel.get(tok)?.shift() ?? tok)
+  return (value: string) => value.replace(PASTE_SNIPPET_RE, (tok) => byLabel.get(tok)?.shift() ?? tok)
 }
 
 const spliceMatches = (text: string, matches: RegExpMatchArray[], results: string[]) =>
   matches.reduceRight((acc, m, i) => acc.slice(0, m.index!) + results[i] + acc.slice(m.index! + m[0].length), text)
 
 export function useSubmission(opts: UseSubmissionOptions) {
-  const {
-    appendMessage,
-    composerActions,
-    composerRefs,
-    composerState,
-    gw,
-    maybeGoodVibes,
-    setLastUserMsg,
-    slashRef,
-    submitRef,
-    sys
-  } = opts
+  const { appendMessage, composerActions, composerRefs, composerState, gw, maybeGoodVibes, setLastUserMsg, slashRef, submitRef, sys } = opts
 
   const lastEmptyAt = useRef(0)
   const typingIdleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -141,7 +125,7 @@ export function useSubmission(opts: UseSubmissionOptions) {
       }
 
       gw.request<InputDetectDropResponse>('input.detect_drop', { session_id: sid, text })
-        .then(r => {
+        .then((r) => {
           if (!r?.matched) {
             return startSubmit(text, expand(text), showUserMessage)
           }
@@ -165,7 +149,7 @@ export function useSubmission(opts: UseSubmissionOptions) {
       patchUiState({ busy: true, status: 'running…' })
 
       gw.request<ShellExecResponse>('shell.exec', { command: cmd })
-        .then(raw => {
+        .then((raw) => {
           const r = asRpcResult<ShellExecResponse>(raw)
 
           if (!r) {
@@ -194,17 +178,17 @@ export function useSubmission(opts: UseSubmissionOptions) {
       const matches = [...text.matchAll(new RegExp(INTERPOLATION_RE.source, 'g'))]
 
       Promise.all(
-        matches.map(m =>
+        matches.map((m) =>
           gw
             .request<ShellExecResponse>('shell.exec', { command: m[1]! })
-            .then(raw => {
+            .then((raw) => {
               const r = asRpcResult<ShellExecResponse>(raw)
 
               return [r?.stdout, r?.stderr].filter(Boolean).join('\n').trim()
             })
             .catch(() => '(error)')
         )
-      ).then(results => then(spliceMatches(text, matches, results)))
+      ).then((results) => then(spliceMatches(text, matches, results)))
     },
     [gw]
   )
@@ -262,7 +246,7 @@ export function useSubmission(opts: UseSubmissionOptions) {
 
       if (mode === 'steer' && live.sid) {
         gw.request<SessionSteerResponse>('session.steer', { session_id: live.sid, text: full })
-          .then(raw => {
+          .then((raw) => {
             const r = asRpcResult<SessionSteerResponse>(raw)
 
             if (r?.status !== 'queued') {

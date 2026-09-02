@@ -3,8 +3,12 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { StatusRule } from '../components/appChrome.js'
 import { DEFAULT_THEME } from '../theme.js'
+import type { Usage } from '../types.js'
 
 type ReactNodeLike = React.ReactNode
+type TestElement = React.ReactElement<Record<string, unknown>>
+
+const isTestElement = (node: ReactNodeLike): node is TestElement => React.isValidElement<Record<string, unknown>>(node)
 
 const textContent = (node: ReactNodeLike): string => {
   if (node === null || node === undefined || typeof node === 'boolean') {
@@ -19,14 +23,14 @@ const textContent = (node: ReactNodeLike): string => {
     return node.map(textContent).join('')
   }
 
-  if (React.isValidElement(node)) {
-    return textContent(node.props.children)
+  if (isTestElement(node)) {
+    return textContent(node.props.children as ReactNodeLike)
   }
 
   return ''
 }
 
-const findClickableWithText = (node: ReactNodeLike, needle: string): React.ReactElement | null => {
+const findClickableWithText = (node: ReactNodeLike, needle: string): TestElement | null => {
   if (node === null || node === undefined || typeof node === 'boolean') {
     return null
   }
@@ -43,7 +47,7 @@ const findClickableWithText = (node: ReactNodeLike, needle: string): React.React
     return null
   }
 
-  if (!React.isValidElement(node)) {
+  if (!isTestElement(node)) {
     return null
   }
 
@@ -51,12 +55,12 @@ const findClickableWithText = (node: ReactNodeLike, needle: string): React.React
     return node
   }
 
-  return findClickableWithText(node.props.children, needle)
+  return findClickableWithText(node.props.children as ReactNodeLike, needle)
 }
 
 // Find the innermost element whose own (direct) text content includes the
 // needle. Used to assert the colour the notice text is rendered with.
-const findElementWithText = (node: ReactNodeLike, needle: string): React.ReactElement | null => {
+const findElementWithText = (node: ReactNodeLike, needle: string): TestElement | null => {
   if (node === null || node === undefined || typeof node === 'boolean') {
     return null
   }
@@ -73,19 +77,29 @@ const findElementWithText = (node: ReactNodeLike, needle: string): React.ReactEl
     return null
   }
 
-  if (!React.isValidElement(node)) {
+  if (!isTestElement(node)) {
     return null
   }
 
   // Prefer the deepest matching element so we get the leaf <Text> that
   // actually carries the colour, not an ancestor Box.
-  const deeper = findElementWithText(node.props.children, needle)
+  const deeper = findElementWithText(node.props.children as ReactNodeLike, needle)
 
   if (deeper) {
     return deeper
   }
 
   return textContent(node).includes(needle) ? node : null
+}
+
+const baseUsage: Usage = {
+  calls: 0,
+  context_max: 200_000,
+  context_percent: 25,
+  context_used: 50_000,
+  input: 0,
+  output: 0,
+  total: 50_000
 }
 
 const baseProps = {
@@ -100,7 +114,7 @@ const baseProps = {
   statusColor: DEFAULT_THEME.color.ok,
   t: DEFAULT_THEME,
   turnStartedAt: null,
-  usage: { context_max: 200_000, context_percent: 25, context_used: 50_000, total: 50_000 },
+  usage: baseUsage,
   voiceLabel: ''
 }
 
@@ -196,14 +210,16 @@ describe('StatusRule session count click target', () => {
       statusColor: DEFAULT_THEME.color.ok,
       t: DEFAULT_THEME,
       turnStartedAt: null,
-      usage: { total: 0 },
+      usage: { ...baseUsage, total: 0 },
       voiceLabel: ''
     })
 
     const clickableSessionCount = findClickableWithText(element, '1 session')
 
     expect(clickableSessionCount).not.toBeNull()
-    clickableSessionCount!.props.onClick({ stopImmediatePropagation: vi.fn() })
+    ;(clickableSessionCount!.props.onClick as (event: { stopImmediatePropagation: () => void }) => void)({
+      stopImmediatePropagation: vi.fn()
+    })
     expect(openSwitcher).toHaveBeenCalledOnce()
   })
 
@@ -320,8 +336,8 @@ describe('StatusRule credits notice render priority', () => {
     expect(noticeText?.props.wrap).toBe('truncate-end')
 
     // Its container box yields first (flexShrink=1) so model stays visible.
-    const findShrinkBoxContaining = (node: ReactNodeLike): React.ReactElement | null => {
-      if (!React.isValidElement(node)) {
+    const findShrinkBoxContaining = (node: ReactNodeLike): TestElement | null => {
+      if (!isTestElement(node)) {
         if (Array.isArray(node)) {
           for (const c of node) {
             const f = findShrinkBoxContaining(c)
@@ -337,12 +353,12 @@ describe('StatusRule credits notice render priority', () => {
 
       if (node.props.flexShrink === 1 && textContent(node).includes('xxxxx') && node.type !== StatusRule) {
         // Prefer the closest shrink box that wraps the notice text.
-        const deeper = findShrinkBoxContaining(node.props.children)
+        const deeper = findShrinkBoxContaining(node.props.children as ReactNodeLike)
 
         return deeper ?? node
       }
 
-      return findShrinkBoxContaining(node.props.children)
+      return findShrinkBoxContaining(node.props.children as ReactNodeLike)
     }
 
     const shrinkBox = findShrinkBoxContaining(element)
@@ -357,7 +373,7 @@ describe('StatusRule idle-since read-out', () => {
   // The IdleSince component uses hooks, so it can't be invoked outside a
   // renderer — assert on the element tree instead (same reason the duration
   // tests don't check SessionDuration's text).
-  const findComponentByName = (node: ReactNodeLike, name: string): React.ReactElement | null => {
+  const findComponentByName = (node: ReactNodeLike, name: string): TestElement | null => {
     if (node === null || node === undefined || typeof node === 'boolean') {
       return null
     }
@@ -374,7 +390,7 @@ describe('StatusRule idle-since read-out', () => {
       return null
     }
 
-    if (!React.isValidElement(node)) {
+    if (!isTestElement(node)) {
       return null
     }
 
@@ -382,7 +398,7 @@ describe('StatusRule idle-since read-out', () => {
       return node
     }
 
-    return findComponentByName(node.props.children, name)
+    return findComponentByName(node.props.children as ReactNodeLike, name)
   }
 
   it('shows time since the last final agent response when idle', () => {

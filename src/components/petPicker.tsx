@@ -43,7 +43,7 @@ export function PetPicker({ gw, onClose, t }: PetPickerProps) {
 
   useEffect(() => {
     gw.request<Gallery>('pet.gallery')
-      .then(r => {
+      .then((r) => {
         setGallery(r)
         setErr('')
       })
@@ -57,11 +57,11 @@ export function PetPicker({ gw, onClose, t }: PetPickerProps) {
   // Rank by the signals petdex gives us — active, then installed, then curated
   // (its official set), then the rest — and hide the clawd placeholders.
   const view = useMemo(() => {
-    const pets = (gallery?.pets ?? []).filter(p => !/^clawd(-|$)/i.test(p.slug))
+    const pets = (gallery?.pets ?? []).filter((p) => !/^clawd(-|$)/i.test(p.slug))
     const needle = query.trim().toLowerCase()
 
     const matched = needle
-      ? pets.filter(p => p.slug.toLowerCase().includes(needle) || p.displayName.toLowerCase().includes(needle))
+      ? pets.filter((p) => p.slug.toLowerCase().includes(needle) || p.displayName.toLowerCase().includes(needle))
       : pets
 
     const rank = (p: GalleryPet) => (enabled && p.slug === active ? 4 : 0) + (p.installed ? 2 : 0) + (p.curated ? 1 : 0)
@@ -90,11 +90,11 @@ export function PetPicker({ gw, onClose, t }: PetPickerProps) {
     }
 
     if (key.upArrow) {
-      return setIdx(i => Math.max(0, i - 1))
+      return setIdx((i) => Math.max(0, i - 1))
     }
 
     if (key.downArrow) {
-      return setIdx(i => Math.min(view.length - 1, i + 1))
+      return setIdx((i) => Math.min(view.length - 1, i + 1))
     }
 
     if (key.return) {
@@ -104,14 +104,14 @@ export function PetPicker({ gw, onClose, t }: PetPickerProps) {
     }
 
     if (key.backspace || key.delete) {
-      setQuery(q => q.slice(0, -1))
+      setQuery((q) => q.slice(0, -1))
 
       return setIdx(0)
     }
 
     // Printable char → extend the filter (ignore control/chorded keys).
     if (input && input.length === 1 && input >= ' ' && !key.ctrl && !key.meta) {
-      setQuery(q => q + input)
+      setQuery((q) => q + input)
       setIdx(0)
     }
   })

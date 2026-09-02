@@ -40,7 +40,7 @@ export const useTurnSelector = <T>(selector: (state: TurnState) => T): T =>
 export const patchTurnState = (next: Partial<TurnState> | ((state: TurnState) => TurnState)) =>
   $turnState.set(typeof next === 'function' ? next($turnState.get()) : { ...$turnState.get(), ...next })
 
-export const toggleTodoCollapsed = () => patchTurnState(state => ({ ...state, todoCollapsed: !state.todoCollapsed }))
+export const toggleTodoCollapsed = () => patchTurnState((state) => ({ ...state, todoCollapsed: !state.todoCollapsed }))
 
 export const archiveDoneTodos = () => archiveTodosAtTurnEnd()
 

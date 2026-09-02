@@ -103,7 +103,7 @@ export function linkTipFor(
     return null
   }
 
-  if (!texts.some(t => URL_RE.test(t))) {
+  if (!texts.some((t) => URL_RE.test(t))) {
     return null
   }
 

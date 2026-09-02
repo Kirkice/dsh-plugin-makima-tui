@@ -30,10 +30,7 @@ export function isUsableClipboardText(text: null | string): text is string {
   return suspicious <= Math.max(2, Math.floor(text.length * 0.02))
 }
 
-function readClipboardCommands(
-  platform: NodeJS.Platform,
-  env: NodeJS.ProcessEnv
-): Array<{ args: readonly string[]; cmd: string }> {
+function readClipboardCommands(platform: NodeJS.Platform, env: NodeJS.ProcessEnv): Array<{ args: readonly string[]; cmd: string }> {
   if (platform === 'darwin') {
     return [{ cmd: 'pbpaste', args: [] }]
   }
@@ -152,7 +149,7 @@ export async function writeClipboardText(
 
   for (const cmdEntry of candidates) {
     try {
-      const ok = await new Promise<boolean>(resolve => {
+      const ok = await new Promise<boolean>((resolve) => {
         if (cmdEntry.stdin) {
           const child = start(cmdEntry.cmd, [...cmdEntry.args], {
             stdio: ['pipe', 'ignore', 'ignore'],

@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { StatusRule } from '../components/appChrome.js'
 import type * as EnvModule from '../config/env.js'
 import { DEFAULT_THEME } from '../theme.js'
+import type { Usage } from '../types.js'
 
 // DEV_CREDITS_MODE is a module-load-time constant (config/env.ts reads
 // process.env.MAKIMA_TUI_DEV_CREDITS exactly once, at import). Mutating process.env
@@ -11,7 +12,7 @@ import { DEFAULT_THEME } from '../theme.js'
 // the dev-on value for this file. vitest hoists vi.mock above the imports, so
 // appChrome picks up the mocked flag. Lives in its own file so the override
 // stays scoped (the other StatusRule tests run with the real, dev-off value).
-vi.mock('../config/env.js', async importOriginal => {
+vi.mock('../config/env.js', async (importOriginal) => {
   const actual = await importOriginal<typeof EnvModule>()
 
   return { ...actual, DEV_CREDITS_MODE: true }
@@ -32,11 +33,21 @@ const textContent = (node: ReactNodeLike): string => {
     return node.map(textContent).join('')
   }
 
-  if (React.isValidElement(node)) {
-    return textContent(node.props.children)
+  if (React.isValidElement<Record<string, unknown>>(node)) {
+    return textContent(node.props.children as ReactNodeLike)
   }
 
   return ''
+}
+
+const baseUsage: Usage = {
+  calls: 0,
+  context_max: 200_000,
+  context_percent: 25,
+  context_used: 50_000,
+  input: 0,
+  output: 0,
+  total: 50_000
 }
 
 const baseProps = {
@@ -51,7 +62,7 @@ const baseProps = {
   statusColor: DEFAULT_THEME.color.ok,
   t: DEFAULT_THEME,
   turnStartedAt: null,
-  usage: { context_max: 200_000, context_percent: 25, context_used: 50_000, total: 50_000 },
+  usage: baseUsage,
   voiceLabel: ''
 }
 

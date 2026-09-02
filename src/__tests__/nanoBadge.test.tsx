@@ -8,7 +8,7 @@ import { StatusRule } from '../components/appChrome.js'
 import { infoAfterModelSwitch } from '../domain/modelSwitch.js'
 import { buildSessionStatsLine } from '../lib/sessionStats.js'
 import { DEFAULT_THEME } from '../theme.js'
-import type { SessionInfo } from '../types.js'
+import type { SessionInfo, Usage } from '../types.js'
 
 type ReactNodeLike = React.ReactNode
 
@@ -25,11 +25,21 @@ const textContent = (node: ReactNodeLike): string => {
     return node.map(textContent).join('')
   }
 
-  if (React.isValidElement(node)) {
-    return textContent(node.props.children)
+  if (React.isValidElement<Record<string, unknown>>(node)) {
+    return textContent(node.props.children as ReactNodeLike)
   }
 
   return ''
+}
+
+const baseUsage: Usage = {
+  calls: 0,
+  context_max: 128_000,
+  context_percent: 10,
+  context_used: 12_800,
+  input: 0,
+  output: 0,
+  total: 12_800
 }
 
 const baseProps = {
@@ -44,7 +54,7 @@ const baseProps = {
   statusColor: DEFAULT_THEME.color.ok,
   t: DEFAULT_THEME,
   turnStartedAt: null,
-  usage: { context_max: 128_000, context_percent: 10, context_used: 12_800, total: 12_800 },
+  usage: baseUsage,
   voiceLabel: ''
 }
 

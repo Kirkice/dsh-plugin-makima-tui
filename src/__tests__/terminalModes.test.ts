@@ -44,7 +44,7 @@ describe('terminal mode reset', () => {
     expect(resetTerminalModes({ isTTY: true, write } as unknown as NodeJS.WriteStream, true)).toBe(true)
     // Fullscreen reset is the full canonical sequence, including rmcup.
     expect(write).toHaveBeenCalledWith(TERMINAL_MODE_RESET)
-    expect((write.mock.calls[0]?.[0] as string)).toContain('\x1b[?1049l')
+    expect(write.mock.calls[0]?.[0] as string).toContain('\x1b[?1049l')
   })
 
   it('skips non-TTY streams', () => {

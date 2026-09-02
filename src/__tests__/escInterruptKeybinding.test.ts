@@ -31,15 +31,11 @@ it('main-dispatch anchor exists (guards every slice below from matching nothing)
 
 describe('Esc interrupts the running turn', () => {
   it('dismisses an open completion menu first (original: autocomplete registers as an overlay so chat:cancel defers)', () => {
-    expect(mainDispatch).toMatch(
-      /if\s*\(key\.escape\s*&&\s*cState\.completions\.length\)\s*\{\s*return cActions\.dismissCompletions\(\)/
-    )
+    expect(mainDispatch).toMatch(/if\s*\(key\.escape\s*&&\s*cState\.completions\.length\)\s*\{\s*return cActions\.dismissCompletions\(\)/)
   })
 
   it('has an escape branch calling turnController.interruptTurn gated on busy + sid', () => {
-    expect(mainDispatch).toMatch(
-      /if\s*\(key\.escape\s*&&\s*live\.busy\s*&&\s*live\.sid\)\s*\{\s*return turnController\.interruptTurn\(/
-    )
+    expect(mainDispatch).toMatch(/if\s*\(key\.escape\s*&&\s*live\.busy\s*&&\s*live\.sid\)\s*\{\s*return turnController\.interruptTurn\(/)
   })
 
   it('orders the Esc handlers: precedence guards → menu dismissal → interrupt', () => {

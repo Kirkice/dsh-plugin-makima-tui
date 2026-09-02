@@ -4,7 +4,7 @@ import { patchTurnState, resetTurnState } from '../app/turnStore.js'
 import { $uiState, resetUiState } from '../app/uiStore.js'
 
 const shallowEqual = <T extends Record<string, unknown>>(a: T, b: T) =>
-  Object.keys(a).length === Object.keys(b).length && Object.keys(a).every(key => Object.is(a[key], b[key]))
+  Object.keys(a).length === Object.keys(b).length && Object.keys(a).every((key) => Object.is(a[key], b[key]))
 
 const subscribeSelected = <T extends Record<string, unknown>>(selector: () => T) => {
   let current = selector()

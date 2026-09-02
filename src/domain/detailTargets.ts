@@ -14,12 +14,7 @@ const compactToolLabel = (line: string, index: number): string => {
 }
 
 /** Returns item indexes whose measured/estimated row interval intersects the viewport. */
-export const visibleItemIndexes = (
-  offsets: ArrayLike<number>,
-  scrollTop: number,
-  viewportHeight: number,
-  itemCount: number
-): number[] => {
+export const visibleItemIndexes = (offsets: ArrayLike<number>, scrollTop: number, viewportHeight: number, itemCount: number): number[] => {
   if (viewportHeight <= 0 || itemCount <= 0) {
     return []
   }

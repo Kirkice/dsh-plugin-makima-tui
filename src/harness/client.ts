@@ -38,12 +38,7 @@ import { structuredPatch } from 'diff'
 
 import type { GatewayEvent, GatewayTranscriptMessage, StructuredDiffPayload } from '../gatewayTypes.js'
 import { resolveManagedProfile } from './profile.js'
-import {
-  cancelOpenAiCodexLogin,
-  logoutOpenAiCodex,
-  openAiCodexStatus,
-  startOpenAiCodexLogin
-} from './openAiCodexRuntime.js'
+import { cancelOpenAiCodexLogin, logoutOpenAiCodex, openAiCodexStatus, startOpenAiCodexLogin } from './openAiCodexRuntime.js'
 import type { SessionInfo, Usage } from '../types.js'
 import { parseImageRefs } from '../protocol/imageRef.js'
 import { readImageFile, readWindowsClipboardImage, type IngressImage } from './imageIngress.js'
@@ -81,11 +76,14 @@ interface ManagedProviderProfile {
   models?: Array<{ id?: string; input?: string[] }>
 }
 
-const nonEmptyString = (value: unknown): string | undefined =>
-  typeof value === 'string' && value.trim() ? value.trim() : undefined
+const nonEmptyString = (value: unknown): string | undefined => (typeof value === 'string' && value.trim() ? value.trim() : undefined)
 
 const managedProviderId = (value: string): string => {
-  const slug = value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+  const slug = value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
 
   if (!slug) throw new Error('provider name must contain a letter or number')
 
@@ -101,14 +99,18 @@ const managedCredentialRef = (provider: string): string =>
 const modelsFrom = (value: unknown): string[] => {
   if (!Array.isArray(value)) return []
 
-  return [...new Set(value.flatMap(item => {
-    if (typeof item === 'string') return item.trim() ? [item.trim()] : []
-    if (item && typeof item === 'object' && 'id' in item) {
-      const id = (item as { id?: unknown }).id
-      return typeof id === 'string' && id.trim() ? [id.trim()] : []
-    }
-    return []
-  }))]
+  return [
+    ...new Set(
+      value.flatMap((item) => {
+        if (typeof item === 'string') return item.trim() ? [item.trim()] : []
+        if (item && typeof item === 'object' && 'id' in item) {
+          const id = (item as { id?: unknown }).id
+          return typeof id === 'string' && id.trim() ? [id.trim()] : []
+        }
+        return []
+      })
+    )
+  ]
 }
 
 /**
@@ -117,7 +119,7 @@ const modelsFrom = (value: unknown): string[] => {
  */
 const imageModelsFrom = (value: unknown, models: readonly string[]): string[] => {
   const requested = new Set(modelsFrom(value))
-  return models.filter(model => requested.has(model))
+  return models.filter((model) => requested.has(model))
 }
 
 /**
@@ -253,9 +255,7 @@ const previewBody = (body: string): string => {
   const lines = body.split('\n')
   const dropped = lines.length - PREVIEW_LINES
 
-  return dropped > 0
-    ? [...lines.slice(0, PREVIEW_LINES), `… +${fmtK(dropped)} ${dropped === 1 ? 'line' : 'lines'}`].join('\n')
-    : body
+  return dropped > 0 ? [...lines.slice(0, PREVIEW_LINES), `… +${fmtK(dropped)} ${dropped === 1 ? 'line' : 'lines'}`].join('\n') : body
 }
 
 /** `1 file` / `2 files` — the count the ⎿ summary lines are built from. */
@@ -267,13 +267,10 @@ const plural = (count: number, one: string, many = `${one}s`) => `${count} ${cou
  * saying what it found, and the whole point of the row is that a reader can
  * follow along without opening the file themselves.
  */
-const readCard = (view: {
-  lines?: { number: number; text: string }[]
-  path?: string
-}): { resultRaw: string; resultText: string } => {
+const readCard = (view: { lines?: { number: number; text: string }[]; path?: string }): { resultRaw: string; resultText: string } => {
   const lines = view.lines ?? []
   const width = String(lines.at(-1)?.number ?? 0).length
-  const body = lines.map(line => `${String(line.number).padStart(width)}  ${line.text}`).join('\n')
+  const body = lines.map((line) => `${String(line.number).padStart(width)}  ${line.text}`).join('\n')
 
   return { resultRaw: body, resultText: previewBody(body) }
 }
@@ -337,9 +334,7 @@ const webCard = (
   if (view.kind === 'fetch') {
     const code = view.statusCode ?? 0
     const phrase = STATUS_TEXT[code]
-    const status = [phrase ? `${code} ${phrase}` : String(code), view.truncated ? 'truncated' : '']
-      .filter(Boolean)
-      .join(', ')
+    const status = [phrase ? `${code} ${phrase}` : String(code), view.truncated ? 'truncated' : ''].filter(Boolean).join(', ')
 
     return { resultRaw: fallback, resultText: `Received ${byteSize(fallback.length)} (${status})` }
   }
@@ -347,7 +342,7 @@ const webCard = (
   const sources = view.sources ?? []
   const took = durationS === undefined ? '' : ` in ${Math.max(1, Math.round(durationS))}s`
   const cited = `${plural(sources.length, 'source')}${view.truncated ? ' (capped)' : ''}`
-  const rows = sources.map(source => (source.title ? `${source.title} — ${source.url}` : source.url))
+  const rows = sources.map((source) => (source.title ? `${source.title} — ${source.url}` : source.url))
 
   return {
     resultRaw: [cited, ...rows, view.answer ?? ''].filter(Boolean).join('\n'),
@@ -375,9 +370,7 @@ const searchCard = (view: {
   const total = view.total ?? 0
   const matches = view.shape === 'matches'
   const rows = matches
-    ? (view.files ?? []).flatMap(file =>
-        (file.matches ?? []).map(match => `${file.path}:${match.lineNumber}:${match.line}`)
-      )
+    ? (view.files ?? []).flatMap((file) => (file.matches ?? []).map((match) => `${file.path}:${match.lineNumber}:${match.line}`))
     : (view.paths ?? [])
 
   const found = `Found ${plural(total, matches ? 'line' : 'file')}`
@@ -488,7 +481,7 @@ export class HarnessGatewayClient extends GatewayClient {
     super()
     this.ctx = ctx
     this.opts = opts
-    this.harnessReady = new Promise<void>(resolve => {
+    this.harnessReady = new Promise<void>((resolve) => {
       this.harnessReadyResolve = resolve
     })
     this.mcp = new HarnessMcpManager(ctx)
@@ -496,7 +489,7 @@ export class HarnessGatewayClient extends GatewayClient {
 
   // ── lifecycle ──────────────────────────────────────────────────────────
   override start(): void {
-    void this.init().catch(err => {
+    void this.init().catch((err) => {
       this.startFailed = err instanceof Error ? err.message : String(err)
       this.publishLocalEvent({ payload: { message: `harness agent failed to start: ${this.startFailed}` }, type: 'error' })
       this.harnessReadyResolve()
@@ -539,7 +532,7 @@ export class HarnessGatewayClient extends GatewayClient {
       agentOptions: route ? { model: route.model, provider: route.provider } : {},
       meta: { cwd: this.workingDir() },
       sessionId,
-      setup: agentCtx => {
+      setup: (agentCtx) => {
         installModelSelection(agentCtx, this.selection)
       }
     })
@@ -557,7 +550,7 @@ export class HarnessGatewayClient extends GatewayClient {
     const handle = await this.ctx.agents.resume({
       agentOptions: route ? { model: route.model, provider: route.provider } : {},
       resumeSessionId: SessionId(sessionId),
-      setup: agentCtx => {
+      setup: (agentCtx) => {
         installModelSelection(agentCtx, this.selection)
       }
     })
@@ -584,7 +577,7 @@ export class HarnessGatewayClient extends GatewayClient {
 
     const events = handle.agent.session.events
 
-    this.turnCount = events.filter(e => e.type === 'turn/end').length
+    this.turnCount = events.filter((e) => e.type === 'turn/end').length
     this.turnStarted = false
     this.turnText = []
     this.turnReasoning = []
@@ -725,7 +718,7 @@ export class HarnessGatewayClient extends GatewayClient {
     try {
       const tools = this.ctx.get('tools') as { schemas?: (scope?: unknown) => Array<{ name: string }> } | undefined
 
-      toolNames = (tools?.schemas?.() ?? []).map(t => t.name).sort()
+      toolNames = (tools?.schemas?.() ?? []).map((t) => t.name).sort()
     } catch {
       toolNames = []
     }
@@ -757,9 +750,7 @@ export class HarnessGatewayClient extends GatewayClient {
         this.onChildSessionEvent(String(session.header.id), event)
       }) as () => void
     )
-    this.agentDisposers.push(
-      this.ctx.on('subagent/start', (info: { id: unknown }) => this.startChild(String(info.id))) as () => void
-    )
+    this.agentDisposers.push(this.ctx.on('subagent/start', (info: { id: unknown }) => this.startChild(String(info.id))) as () => void)
     this.agentDisposers.push(
       this.ctx.on('subagent/end', (info: { id: unknown; lastAssistantMessage?: ContentBlock[]; stopReason?: string }) =>
         this.endChild(String(info.id), info.stopReason, info.lastAssistantMessage)
@@ -1050,8 +1041,7 @@ export class HarnessGatewayClient extends GatewayClient {
         this.publishLocalEvent({
           payload: {
             duration_s: durationS,
-            error:
-              error || block.isError || view.failed ? failureText(view.resultText, error) : undefined,
+            error: error || block.isError || view.failed ? failureText(view.resultText, error) : undefined,
             name: this.callNames.get(id),
             result_raw: view.resultRaw,
             result_text: view.resultText,
@@ -1204,7 +1194,6 @@ export class HarnessGatewayClient extends GatewayClient {
     this.msgStartedHarness = false
   }
 
-
   // ── interaction gates (approvals / questions / plan review) ────────────
   private installGates(): void {
     if (this.ctx.get('approval') !== undefined) {
@@ -1225,7 +1214,7 @@ export class HarnessGatewayClient extends GatewayClient {
 
     if (userQuestions) {
       try {
-        this.disposers.push(userQuestions.registerProvider({ ask: request => this.parkQuestion(request) }))
+        this.disposers.push(userQuestions.registerProvider({ ask: (request) => this.parkQuestion(request) }))
       } catch {
         // A composed profile may already carry a provider (DUPLICATE_PROVIDER);
         // yield rather than crash the boot — the other surface answers.
@@ -1242,7 +1231,7 @@ export class HarnessGatewayClient extends GatewayClient {
     // states the escalation and its justification.
     const command = (id ? this.callArgs.get(id) : undefined) || req.reason || req.toolName
 
-    return new Promise<ApprovalOutcome>(resolve => {
+    return new Promise<ApprovalOutcome>((resolve) => {
       this.gateApproval = { resolve }
       req.signal?.addEventListener(
         'abort',
@@ -1270,7 +1259,7 @@ export class HarnessGatewayClient extends GatewayClient {
   private parkQuestion(request: AskUserQuestionRequest): Promise<AskUserQuestionAnswer> {
     const items = request.questions
 
-    return new Promise<AskUserQuestionAnswer>(resolve => {
+    return new Promise<AskUserQuestionAnswer>((resolve) => {
       const planItem = items.length === 1 && items[0]!.intent?.kind === 'plan-review' ? items[0]! : undefined
 
       this.gateQuestion = { items: [...items], planApprove: planItem?.intent?.approve, resolve }
@@ -1287,10 +1276,10 @@ export class HarnessGatewayClient extends GatewayClient {
 
       this.publishLocalEvent({
         payload: {
-          questions: items.map(q => ({
+          questions: items.map((q) => ({
             header: q.header,
             multiSelect: q.multiSelect,
-            options: q.options?.map(o => ({ description: o.description, label: o.label })),
+            options: q.options?.map((o) => ({ description: o.description, label: o.label })),
             question: q.question
           }))
         },
@@ -1320,7 +1309,6 @@ export class HarnessGatewayClient extends GatewayClient {
 
     this.publishLocalEvent({ payload: { mode }, session_id: this.sid, type: 'permission.mode' })
   }
-
 
   /**
    * Refine a tool result through the tool's own presentation view.
@@ -1377,14 +1365,14 @@ export class HarnessGatewayClient extends GatewayClient {
         const patch = structuredPatch(first.path, first.path, first.oldText ?? '', first.newText, '', '', { context: 3 })
         const structuredDiff: StructuredDiffPayload = {
           filePath: first.path,
-          hunks: patch.hunks.map(h => ({
+          hunks: patch.hunks.map((h) => ({
             // `\ No newline at end of file` is an artifact of diffing the
             // tool's applied HUNK rather than the whole file: a fragment that
             // stops mid-file has no trailing newline by construction, and the
             // file it came from is usually fine. The row renderer has no marker
             // for it either, so it came out as a phantom context line numbered
             // one past the end. Upstream shows no such row.
-            lines: h.lines.filter(line => !line.startsWith('\\')),
+            lines: h.lines.filter((line) => !line.startsWith('\\')),
             newLines: h.newLines,
             newStart: h.newStart,
             oldLines: h.oldLines,
@@ -1496,10 +1484,10 @@ export class HarnessGatewayClient extends GatewayClient {
 
     if (!session.surface?.nodes) return []
 
-    return session.surface.nodes.filter(seq => {
+    return session.surface.nodes.filter((seq) => {
       const event = session.events[seq]
 
-      return event?.type === 'user/message' && event.data.content.some(block => block.type === 'image')
+      return event?.type === 'user/message' && event.data.content.some((block) => block.type === 'image')
     })
   }
 
@@ -1514,7 +1502,7 @@ export class HarnessGatewayClient extends GatewayClient {
       session.append(
         'user/message',
         createUserMessage({
-          content: event.data.content.filter(block => block.type !== 'image'),
+          content: event.data.content.filter((block) => block.type !== 'image'),
           source: event.data.source
         }),
         { sourceEventSeqs: [seq], surfaceOp: { end: seq, op: 'replace', start: seq } }
@@ -1531,14 +1519,12 @@ export class HarnessGatewayClient extends GatewayClient {
 
     const pending = this.pendingImages.get(this.sid)
     const refs = [...new Set(parseImageRefs(text))]
-    const images = refs.flatMap(id => {
+    const images = refs.flatMap((id) => {
       const attachment = pending?.get(id)
       return attachment ? [{ attachment, type: 'image' } as ContentBlock] : []
     })
     const historicalImageNodes = images.length === 0 ? this.unsupportedHistoricalImageNodes(agent) : []
-    const acceptsImages = images.length > 0 || historicalImageNodes.length > 0
-      ? await this.activeModelAcceptsImages()
-      : undefined
+    const acceptsImages = images.length > 0 || historicalImageNodes.length > 0 ? await this.activeModelAcceptsImages() : undefined
 
     if (acceptsImages === false && images.length > 0) {
       this.pendingImages.delete(this.sid)
@@ -1563,7 +1549,9 @@ export class HarnessGatewayClient extends GatewayClient {
     }
   }
 
-  private async stageImage(image: IngressImage): Promise<{ height: number; id: number; name: string; token_estimate: number; width: number }> {
+  private async stageImage(
+    image: IngressImage
+  ): Promise<{ height: number; id: number; name: string; token_estimate: number; width: number }> {
     const attachments = this.ctx.get('attachments') as
       | { saveImage?: (input: { data: Uint8Array; mediaType: IngressImage['mediaType']; name: string }) => Promise<ImageAttachmentRef> }
       | undefined
@@ -1626,10 +1614,7 @@ export class HarnessGatewayClient extends GatewayClient {
     try {
       if (candidate.startsWith('file://')) {
         candidate = fileURLToPath(candidate)
-      } else if (
-        (candidate.startsWith('"') && candidate.endsWith('"')) ||
-        (candidate.startsWith("'") && candidate.endsWith("'"))
-      ) {
+      } else if ((candidate.startsWith('"') && candidate.endsWith('"')) || (candidate.startsWith("'") && candidate.endsWith("'"))) {
         candidate = candidate.slice(1, -1)
       }
 
@@ -1668,11 +1653,8 @@ export class HarnessGatewayClient extends GatewayClient {
     void this.mcp.dispose()
   }
 
-
   private async listPersisted(): Promise<SessionHeader[]> {
-    const persistence = this.ctx.get('sessionPersistence') as
-      | { list?: (signal?: AbortSignal) => Promise<SessionHeader[]> }
-      | undefined
+    const persistence = this.ctx.get('sessionPersistence') as { list?: (signal?: AbortSignal) => Promise<SessionHeader[]> } | undefined
 
     if (!persistence?.list) {
       throw new Error('session history is unavailable: session persistence is not configured')
@@ -1761,7 +1743,9 @@ export class HarnessGatewayClient extends GatewayClient {
         }
       }
 
-      const automatic = prompts[0] ? compactPreview(prompts[0], 72) : `Conversation · ${new Date(header.createdAt * 1000).toLocaleDateString()}`
+      const automatic = prompts[0]
+        ? compactPreview(prompts[0], 72)
+        : `Conversation · ${new Date(header.createdAt * 1000).toLocaleDateString()}`
       return {
         message_count: prompts.length,
         preview: prompts.at(-1) ? compactPreview(prompts.at(-1)!, 120) : '',
@@ -1803,7 +1787,7 @@ export class HarnessGatewayClient extends GatewayClient {
    * prompt. Agent setup events, titles, and tool metadata alone are disposable
    * scaffolding and must not turn an unopened tab into permanent history. */
   private hasUserConversation(events: readonly SessionEvent[]): boolean {
-    return events.some(event => {
+    return events.some((event) => {
       if (event.type !== 'user/message') {
         return false
       }
@@ -1846,7 +1830,6 @@ export class HarnessGatewayClient extends GatewayClient {
     }
   }
 
-
   private harnessCommands(): Array<{ description: string; hint?: string; name: string }> {
     const agent = this.agent
     const commands = this.ctx.get('commands') as
@@ -1858,7 +1841,7 @@ export class HarnessGatewayClient extends GatewayClient {
     }
 
     try {
-      return commands.list(agent).map(c => ({ description: c.description, hint: c.input?.hint, name: `/${c.name}` }))
+      return commands.list(agent).map((c) => ({ description: c.description, hint: c.input?.hint, name: `/${c.name}` }))
     } catch {
       return []
     }
@@ -1868,11 +1851,7 @@ export class HarnessGatewayClient extends GatewayClient {
     const agent = this.agent
     const commands = this.ctx.get('commands') as
       | {
-          execute?: (
-            agent: Agent,
-            line: string,
-            signal: AbortSignal
-          ) => Promise<{ result: { kind: string; text?: string } } | undefined>
+          execute?: (agent: Agent, line: string, signal: AbortSignal) => Promise<{ result: { kind: string; text?: string } } | undefined>
         }
       | undefined
 
@@ -1896,9 +1875,7 @@ export class HarnessGatewayClient extends GatewayClient {
 
   private usageSnapshot(): { context_max?: number; context_percent?: number; context_used?: number } {
     const agent = this.agent
-    const meter = this.ctx.get('tokenMeter') as
-      | { measure?: (session: Session) => { totalTokens: number } }
-      | undefined
+    const meter = this.ctx.get('tokenMeter') as { measure?: (session: Session) => { totalTokens: number } } | undefined
 
     if (!agent || !meter?.measure) {
       return {}
@@ -1971,9 +1948,7 @@ export class HarnessGatewayClient extends GatewayClient {
     this.selection.current = route
     void this.refreshContextWindow()
 
-    const defaults = this.ctx.get('agentDefaultModel') as
-      | { saveSelection?: (next: ModelRoute) => Promise<void> }
-      | undefined
+    const defaults = this.ctx.get('agentDefaultModel') as { saveSelection?: (next: ModelRoute) => Promise<void> } | undefined
 
     void defaults?.saveSelection?.(route).catch(() => {})
 
@@ -1998,57 +1973,54 @@ export class HarnessGatewayClient extends GatewayClient {
       | undefined
     const settings = this.ctx.get('settings') as { get?: (ns: string) => unknown } | undefined
     const value = settings?.get?.(PI_AI_SETTINGS_NS)
-    const profiles = value && typeof value === 'object' && 'providers' in value
-      ? (value as { providers?: unknown }).providers
-      : undefined
-    const profileMap = profiles && typeof profiles === 'object' && !Array.isArray(profiles)
-      ? profiles as Record<string, ManagedProviderProfile>
-      : {}
+    const profiles = value && typeof value === 'object' && 'providers' in value ? (value as { providers?: unknown }).providers : undefined
+    const profileMap =
+      profiles && typeof profiles === 'object' && !Array.isArray(profiles) ? (profiles as Record<string, ManagedProviderProfile>) : {}
     const current = this.selection.current?.provider
     const codexAuth = await openAiCodexStatus()
-    const items = await Promise.all((llm?.listProviders?.() ?? []).map(async provider => {
-      const profile = profileMap[provider.id]
-      const managed = isManagedProviderId(provider.id)
-      const credential = managed && profile?.apiKeyEnv
-        ? await this.ctx.credentials.describe(credentialRef(profile.apiKeyEnv))
-        : undefined
-      let models: string[] = []
+    const items = await Promise.all(
+      (llm?.listProviders?.() ?? []).map(async (provider) => {
+        const profile = profileMap[provider.id]
+        const managed = isManagedProviderId(provider.id)
+        const credential = managed && profile?.apiKeyEnv ? await this.ctx.credentials.describe(credentialRef(profile.apiKeyEnv)) : undefined
+        let models: string[] = []
 
-      try {
-        models = ((await llm?.listModels?.(provider.id)) ?? []).map(model => model.id)
-      } catch {
-        // A partial profile must remain visible and removable.
-      }
+        try {
+          models = ((await llm?.listModels?.(provider.id)) ?? []).map((model) => model.id)
+        } catch {
+          // A partial profile must remain visible and removable.
+        }
 
-      if (provider.id === 'openai-codex') {
+        if (provider.id === 'openai-codex') {
+          return {
+            current: provider.id === current,
+            display_name: provider.name,
+            id: provider.id,
+            models,
+            removable: false,
+            type: 'oauth',
+            warning: !codexAuth.authenticated ? codexAuth.login_error || 'Sign in with ChatGPT to activate' : undefined
+          }
+        }
+
         return {
+          api: profile?.api,
+          base_url: profile?.baseURL,
+          image_models: profile?.models
+            ?.filter((model) => model.input?.includes('image'))
+            .flatMap((model) => (typeof model.id === 'string' ? [model.id] : [])),
+          credential_configured: credential?.configured,
+          credential_source: credential?.source,
+          credential_writable: credential?.writable,
           current: provider.id === current,
-          display_name: provider.name,
+          display_name: profile?.displayName || provider.name,
           id: provider.id,
           models,
-          removable: false,
-          type: 'oauth',
-          warning: !codexAuth.authenticated ? (codexAuth.login_error || 'Sign in with ChatGPT to activate') : undefined
+          removable: managed,
+          type: managed ? 'api_key' : 'system'
         }
-      }
-
-      return {
-        api: profile?.api,
-        base_url: profile?.baseURL,
-        image_models: profile?.models
-          ?.filter(model => model.input?.includes('image'))
-          .flatMap(model => typeof model.id === 'string' ? [model.id] : []),
-        credential_configured: credential?.configured,
-        credential_source: credential?.source,
-        credential_writable: credential?.writable,
-        current: provider.id === current,
-        display_name: profile?.displayName || provider.name,
-        id: provider.id,
-        models,
-        removable: managed,
-        type: managed ? 'api_key' : 'system'
-      }
-    }))
+      })
+    )
 
     return { current_provider: current, items, protocols: [...supportedProtocols()] }
   }
@@ -2088,17 +2060,19 @@ export class HarnessGatewayClient extends GatewayClient {
     if (apiKey) await this.ctx.credentials.set(credentialRef(ref), apiKey)
 
     try {
-      await settings.mutate(PI_AI_SETTINGS_NS, [{
-        op: 'set',
-        path: ['providers', id],
-        value: {
-          api,
-          apiKeyEnv: ref,
-          baseURL,
-          displayName,
-          models: models.map(id => ({ id, input: imageModels.includes(id) ? ['text', 'image'] : ['text'] }))
+      await settings.mutate(PI_AI_SETTINGS_NS, [
+        {
+          op: 'set',
+          path: ['providers', id],
+          value: {
+            api,
+            apiKeyEnv: ref,
+            baseURL,
+            displayName,
+            models: models.map((id) => ({ id, input: imageModels.includes(id) ? ['text', 'image'] : ['text'] }))
+          }
         }
-      }])
+      ])
     } catch (error) {
       // Do not leave a new secret behind if its profile was rejected. Existing
       // credentials are intentionally retained because they may still belong
@@ -2139,12 +2113,14 @@ export class HarnessGatewayClient extends GatewayClient {
       case 'plugins.install':
       case 'plugins.remove':
       case 'plugins.runtime': {
-        const inventory = this.ctx.get('pluginInventory') as {
-          list?: () => unknown
-          listProfile?: (profile: string) => unknown
-          install?: (profile: string, specifier: string) => unknown
-          remove?: (profile: string, packageName: string) => unknown
-        } | undefined
+        const inventory = this.ctx.get('pluginInventory') as
+          | {
+              list?: () => unknown
+              listProfile?: (profile: string) => unknown
+              install?: (profile: string, specifier: string) => unknown
+              remove?: (profile: string, packageName: string) => unknown
+            }
+          | undefined
         const requestedProfile = typeof p.profile === 'string' && p.profile.trim() ? p.profile : undefined
         const profile = resolveManagedProfile({ configured: requestedProfile ?? this.opts.profile })
 
@@ -2158,7 +2134,8 @@ export class HarnessGatewayClient extends GatewayClient {
         }
 
         if (method === 'plugins.list') {
-          if (!inventory.listProfile) return Promise.reject(new Error('plugin management is unavailable: pluginInventory.listProfile is not mounted'))
+          if (!inventory.listProfile)
+            return Promise.reject(new Error('plugin management is unavailable: pluginInventory.listProfile is not mounted'))
           return Promise.resolve(inventory.listProfile(profile)) as Promise<T>
         }
 
@@ -2166,7 +2143,8 @@ export class HarnessGatewayClient extends GatewayClient {
           const specifier = typeof p.specifier === 'string' ? p.specifier.trim() : ''
 
           if (!specifier) return Promise.reject(new Error('plugin install requires a package specifier'))
-          if (!inventory.install) return Promise.reject(new Error('plugin management is unavailable: pluginInventory.install is not mounted'))
+          if (!inventory.install)
+            return Promise.reject(new Error('plugin management is unavailable: pluginInventory.install is not mounted'))
           return Promise.resolve(inventory.install(profile, specifier)) as Promise<T>
         }
 
@@ -2285,7 +2263,7 @@ export class HarnessGatewayClient extends GatewayClient {
       }
 
       case 'session.most_recent': {
-        return this.listPersisted().then(headers => {
+        return this.listPersisted().then((headers) => {
           const latest = headers[0]
 
           return (latest ? { session_id: String(latest.id) } : {}) as T
@@ -2296,7 +2274,7 @@ export class HarnessGatewayClient extends GatewayClient {
         const id = String(p.session_id ?? '')
         const title = typeof p.title === 'string' ? p.title : ''
         if (!id) return Promise.reject(new Error('session_id is required'))
-        return this.renamePersisted(id, title).then(accepted => ({ session_id: id, title: accepted }) as T)
+        return this.renamePersisted(id, title).then((accepted) => ({ session_id: id, title: accepted }) as T)
       }
 
       case 'session.title': {
@@ -2331,13 +2309,15 @@ export class HarnessGatewayClient extends GatewayClient {
         return Promise.resolve({ config_path: this.mcp.configPath(), policy_path: this.mcp.policyPath(), servers: this.mcp.list() } as T)
 
       case 'mcp.manager.reload':
-        return this.mcp.reload().then(servers => ({ config_path: this.mcp.configPath(), policy_path: this.mcp.policyPath(), servers }) as T)
+        return this.mcp
+          .reload()
+          .then((servers) => ({ config_path: this.mcp.configPath(), policy_path: this.mcp.policyPath(), servers }) as T)
 
       case 'mcp.manager.save':
-        return this.mcp.save(p.server as McpServerConfig).then(server => ({ server }) as T)
+        return this.mcp.save(p.server as McpServerConfig).then((server) => ({ server }) as T)
 
       case 'mcp.manager.set_enabled':
-        return this.mcp.setEnabled(String(p.name ?? ''), p.enabled === true).then(server => ({ server }) as T)
+        return this.mcp.setEnabled(String(p.name ?? ''), p.enabled === true).then((server) => ({ server }) as T)
 
       case 'mcp.manager.tools':
         return Promise.resolve({ tools: this.mcp.toolsFor(String(p.name ?? '')) } as T)
@@ -2352,22 +2332,20 @@ export class HarnessGatewayClient extends GatewayClient {
         return this.deliver(String(p.text ?? ''), 'followup').then(() => ({ ok: true }) as T)
 
       case 'image.clipboard':
-        return this.attachImageFromClipboard().then(result => result as T)
+        return this.attachImageFromClipboard().then((result) => result as T)
 
       case 'clipboard.paste':
-        return this.attachImageFromClipboard().then(result => {
+        return this.attachImageFromClipboard().then((result) => {
           // The legacy bracketed-paste path expects `{ attached, count }`,
           // whereas the direct composer image probe consumes image metadata.
           // Preserve both RPC contracts instead of silently staging an image
           // that the bracketed-paste UI cannot render.
           const id = typeof result.id === 'number' ? result.id : undefined
-          return (id === undefined
-            ? result
-            : { ...result, attached: true, count: id }) as T
+          return (id === undefined ? result : { ...result, attached: true, count: id }) as T
         })
 
       case 'image.attach':
-        return this.attachImageFromPath(String(p.path ?? '')).then(result => result as T)
+        return this.attachImageFromPath(String(p.path ?? '')).then((result) => result as T)
 
       case 'input.detect_drop':
         return Promise.resolve(this.detectDroppedFile(String(p.text ?? '')) as T)
@@ -2387,7 +2365,7 @@ export class HarnessGatewayClient extends GatewayClient {
           cwd: handle.agent.session.header.cwd,
           id,
           last_active: undefined,
-          message_count: handle.agent.session.events.filter(e => e.type === 'user/message').length,
+          message_count: handle.agent.session.events.filter((e) => e.type === 'user/message').length,
           model: this.selection.current?.model,
           started_at: handle.agent.session.header.createdAt,
           status: handle.agent.status === 'running' ? 'working' : 'idle',
@@ -2398,17 +2376,15 @@ export class HarnessGatewayClient extends GatewayClient {
       }
 
       case 'session.list':
-        return this.listPersisted().then(async headers => {
-          const limit = typeof p.limit === 'number' && Number.isSafeInteger(p.limit) && p.limit >= 0
-            ? p.limit
-            : 50
+        return this.listPersisted().then(async (headers) => {
+          const limit = typeof p.limit === 'number' && Number.isSafeInteger(p.limit) && p.limit >= 0 ? p.limit : 50
           const selected = headers.slice(0, limit)
           // Do not fan out unbounded disk work for a large history list. Eight
           // concurrent inspections keep the browser responsive on JSONL and
           // SQLite persistence alike.
           const summaries: Array<Awaited<ReturnType<typeof this.persistedSummary>>> = []
           for (let start = 0; start < selected.length; start += 8) {
-            summaries.push(...await Promise.all(selected.slice(start, start + 8).map(header => this.persistedSummary(header))))
+            summaries.push(...(await Promise.all(selected.slice(start, start + 8).map((header) => this.persistedSummary(header)))))
           }
           const sessions = selected.map((header, index) => ({
             cwd: header.cwd,
@@ -2432,11 +2408,11 @@ export class HarnessGatewayClient extends GatewayClient {
           return Promise.reject(new Error(`cannot delete active session "${id}"`))
         }
 
-        return this.deletePersisted(id).then(() => ({ deleted: id } as T))
+        return this.deletePersisted(id).then(() => ({ deleted: id }) as T)
       }
 
       case 'commands.catalog': {
-        const pairs = SLASHES.map(s => [s.name, s.desc] as [string, string])
+        const pairs = SLASHES.map((s) => [s.name, s.desc] as [string, string])
         const canon: Record<string, string> = {}
         const hints: Record<string, string> = {}
 
@@ -2469,15 +2445,17 @@ export class HarnessGatewayClient extends GatewayClient {
         const entries = [
           ...SLASHES,
           ...this.harnessCommands()
-            .filter(c => !SLASHES.some(s => s.name === c.name))
-            .map(c => ({ desc: c.description, hint: c.hint, name: c.name }))
+            .filter((c) => !SLASHES.some((s) => s.name === c.name))
+            .map((c) => ({ desc: c.description, hint: c.hint, name: c.name }))
         ]
-        const items = entries.filter(s => s.name.toLowerCase().startsWith(text)).map(s => ({
-          display: s.name,
-          hint: s.hint,
-          meta: s.desc,
-          text: s.name
-        }))
+        const items = entries
+          .filter((s) => s.name.toLowerCase().startsWith(text))
+          .map((s) => ({
+            display: s.name,
+            hint: s.hint,
+            meta: s.desc,
+            text: s.name
+          }))
 
         return Promise.resolve({ items, replace_from: 1 } as T)
       }
@@ -2519,31 +2497,31 @@ export class HarnessGatewayClient extends GatewayClient {
           } as T)
         }
 
-        return this.runHarnessCommand(line).then(r => r as T)
+        return this.runHarnessCommand(line).then((r) => r as T)
       }
 
       case 'command.dispatch': {
         const name = String(p.name ?? '').trim()
         const arg = typeof p.arg === 'string' && p.arg.trim() ? ` ${p.arg.trim()}` : ''
 
-        return this.runHarnessCommand(`${name}${arg}`).then(r => ({ output: r.output, type: 'exec' }) as T)
+        return this.runHarnessCommand(`${name}${arg}`).then((r) => ({ output: r.output, type: 'exec' }) as T)
       }
 
       case 'providers.list':
-        return this.listManagedProviders().then(result => result as T)
+        return this.listManagedProviders().then((result) => result as T)
 
       case 'providers.saveOpenAiCompatible':
-        return this.saveManagedProvider(p).then(result => result as T)
+        return this.saveManagedProvider(p).then((result) => result as T)
 
       case 'providers.remove':
-        return this.removeManagedProvider(p.id).then(result => result as T)
+        return this.removeManagedProvider(p.id).then((result) => result as T)
 
       case 'llm.openAiCodex.status':
-        return openAiCodexStatus().then(status => status as T)
+        return openAiCodexStatus().then((status) => status as T)
 
       case 'llm.openAiCodex.login': {
         const method = p.method === 'device_code' ? 'device_code' : 'browser'
-        return startOpenAiCodexLogin(method).then(login => login as T)
+        return startOpenAiCodexLogin(method).then((login) => login as T)
       }
 
       case 'llm.openAiCodex.cancelLogin':
@@ -2563,11 +2541,11 @@ export class HarnessGatewayClient extends GatewayClient {
           const current = this.selection.current
           const codexAuth = await openAiCodexStatus()
           const providers = await Promise.all(
-            (llm?.listProviders?.() ?? []).map(async info => {
+            (llm?.listProviders?.() ?? []).map(async (info) => {
               let models: string[] = []
 
               try {
-                models = ((await llm?.listModels?.(info.id)) ?? []).map(m => m.id)
+                models = ((await llm?.listModels?.(info.id)) ?? []).map((m) => m.id)
               } catch {
                 models = []
               }
@@ -2582,9 +2560,7 @@ export class HarnessGatewayClient extends GatewayClient {
                 name: info.name,
                 slug: info.id,
                 total_models: models.length,
-                warning: isOpenAiCodex && !codexAuth.authenticated
-                  ? 'Sign in with ChatGPT to activate'
-                  : undefined
+                warning: isOpenAiCodex && !codexAuth.authenticated ? 'Sign in with ChatGPT to activate' : undefined
               }
             })
           )
@@ -2612,7 +2588,7 @@ export class HarnessGatewayClient extends GatewayClient {
 
           try {
             const info = await llm?.resolveModelInfo?.(route.provider, route.model)
-            const levels = (info?.reasoning?.efforts ?? []).map(e => e.id)
+            const levels = (info?.reasoning?.efforts ?? []).map((e) => e.id)
 
             return {
               current: (route.reasoningEffort as string | undefined) ?? '',
@@ -2671,20 +2647,20 @@ export class HarnessGatewayClient extends GatewayClient {
 
         if (pending) {
           if (!answers) {
-            pending.resolve({ answers: pending.items.map(q => ({ id: q.id, selected: [] })) })
+            pending.resolve({ answers: pending.items.map((q) => ({ id: q.id, selected: [] })) })
           } else {
             pending.resolve({
-              answers: pending.items.map(q => {
+              answers: pending.items.map((q) => {
                 const raw = answers[q.question]
 
                 if (typeof raw !== 'string' || raw === '') {
                   return { id: q.id, selected: [] }
                 }
 
-                const labels = new Set((q.options ?? []).map(o => o.label))
+                const labels = new Set((q.options ?? []).map((o) => o.label))
                 const parts = q.multiSelect ? raw.split(', ') : [raw]
-                const selected = parts.filter(part => labels.has(part))
-                const custom = parts.filter(part => !labels.has(part)).join(', ')
+                const selected = parts.filter((part) => labels.has(part))
+                const custom = parts.filter((part) => !labels.has(part)).join(', ')
 
                 return { custom: custom || undefined, id: q.id, selected }
               })
@@ -2748,7 +2724,7 @@ export class HarnessGatewayClient extends GatewayClient {
         }
 
         if (String(p.key ?? '') === 'model') {
-          return this.applyModelSwitch(String(p.value ?? '')).then(r => r as T)
+          return this.applyModelSwitch(String(p.value ?? '')).then((r) => r as T)
         }
 
         if (String(p.key ?? '') === 'permission_mode') {
@@ -2770,18 +2746,16 @@ export class HarnessGatewayClient extends GatewayClient {
       case 'session.usage': {
         const usage = this.usageSnapshot()
 
-        return Promise.resolve(
-          {
-            calls: this.usageTotals.calls,
-            context_max: usage.context_max,
-            context_percent: usage.context_percent,
-            context_used: usage.context_used,
-            input: this.usageTotals.input,
-            model: this.selection.current?.model,
-            output: this.usageTotals.output,
-            total: this.usageTotals.total
-          } as T
-        )
+        return Promise.resolve({
+          calls: this.usageTotals.calls,
+          context_max: usage.context_max,
+          context_percent: usage.context_percent,
+          context_used: usage.context_used,
+          input: this.usageTotals.input,
+          model: this.selection.current?.model,
+          output: this.usageTotals.output,
+          total: this.usageTotals.total
+        } as T)
       }
 
       case 'session.status':

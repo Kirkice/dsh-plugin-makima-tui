@@ -5,14 +5,11 @@ import React from 'react'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { SessionPanel } from '../components/branding.js'
-import {
-  TRANSCRIPT_PADDING_X,
-  TRANSCRIPT_SCROLLBAR_GUTTER,
-  transcriptPanelWidth
-} from '../lib/inputMetrics.js'
+import { TRANSCRIPT_PADDING_X, TRANSCRIPT_SCROLLBAR_GUTTER, transcriptPanelWidth } from '../lib/inputMetrics.js'
 import { stripAnsi } from '../lib/text.js'
 import { DEFAULT_THEME } from '../theme.js'
-import type { SessionInfo, Theme } from '../types.js'
+import type { Theme } from '../theme.js'
+import type { SessionInfo } from '../types.js'
 
 // Render-level invariant: every row the header box emits is exactly `cols`
 // wide, with its border glyphs intact, at every width and for every cwd.
@@ -33,7 +30,7 @@ import type { SessionInfo, Theme } from '../types.js'
 // produces the same 100-column layout clipped to N. It looks responsive and
 // tests nothing. Pin process.stdout.columns instead.
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const originalColumns = Object.getOwnPropertyDescriptor(process.stdout, 'columns')
 
@@ -84,7 +81,7 @@ async function boxRows(
   Object.assign(stderr, { isTTY: false })
 
   let captured = ''
-  stdout.on('data', chunk => {
+  stdout.on('data', (chunk) => {
     captured += chunk.toString()
   })
 
@@ -114,9 +111,9 @@ async function boxRows(
     ),
     {
       patchConsole: false,
-      stderr: stderr as NodeJS.WriteStream,
-      stdin: stdin as NodeJS.ReadStream,
-      stdout: stdout as NodeJS.WriteStream
+      stderr: stderr as unknown as NodeJS.WriteStream,
+      stdin: stdin as unknown as NodeJS.ReadStream,
+      stdout: stdout as unknown as NodeJS.WriteStream
     }
   )
 
@@ -133,9 +130,9 @@ async function boxRows(
     // wrapper's left padding means rows no longer start at column 0.
     return plain
       .split('\n')
-      .map(line => line.trimEnd())
-      .filter(line => /[╭│╰]/.test(line))
-      .map(line => line.slice(line.search(/[╭│╰]/)))
+      .map((line) => line.trimEnd())
+      .filter((line) => /[╭│╰]/.test(line))
+      .map((line) => line.slice(line.search(/[╭│╰]/)))
   } finally {
     instance.unmount()
     instance.cleanup()
@@ -145,7 +142,7 @@ async function boxRows(
 const WIDTHS = [34, 40, 60, 72, 88, 96, 100, 140, 200]
 
 describe('header box render width', () => {
-  it.each(WIDTHS)('fills its container exactly at %i terminal columns', async cols => {
+  it.each(WIDTHS)('fills its container exactly at %i terminal columns', async (cols) => {
     const rows = await boxRows(cols, info())
 
     expect(rows.length).toBeGreaterThan(0)
@@ -156,10 +153,10 @@ describe('header box render width', () => {
     }
   })
 
-  it.each(WIDTHS)('keeps the border corners and edges intact at %i columns', async cols => {
+  it.each(WIDTHS)('keeps the border corners and edges intact at %i columns', async (cols) => {
     const rows = await boxRows(cols, info())
-    const top = rows.find(r => r.startsWith('╭'))
-    const bottom = rows.find(r => r.startsWith('╰'))
+    const top = rows.find((r) => r.startsWith('╭'))
+    const bottom = rows.find((r) => r.startsWith('╰'))
 
     // Non-vacuity: if the rows were filtered away these assertions would
     // otherwise "pass" against undefined.
@@ -170,7 +167,7 @@ describe('header box render width', () => {
     expect(top?.endsWith('╮')).toBe(true)
     expect(bottom?.endsWith('╯')).toBe(true)
 
-    for (const row of rows.filter(r => r.startsWith('│'))) {
+    for (const row of rows.filter((r) => r.startsWith('│'))) {
       expect(row.endsWith('│')).toBe(true)
     }
   })
@@ -186,10 +183,10 @@ describe('header box render width', () => {
   // So the panel must hold its own width against a container that is bigger
   // than the steady-state one. `oversizedContainer` reproduces frame 1 by
   // omitting the gutter.
-  it.each(WIDTHS)('holds its width when the container is mis-measured at %i columns', async cols => {
+  it.each(WIDTHS)('holds its width when the container is mis-measured at %i columns', async (cols) => {
     const rows = await boxRows(cols, info(), DEFAULT_THEME, { oversizedContainer: true })
-    const top = rows.find(r => r.startsWith('╭'))
-    const bottom = rows.find(r => r.startsWith('╰'))
+    const top = rows.find((r) => r.startsWith('╭'))
+    const bottom = rows.find((r) => r.startsWith('╰'))
 
     expect(rows.length).toBeGreaterThan(0)
     expect(top).toBeDefined()
@@ -209,7 +206,7 @@ describe('header box render width', () => {
 
     for (const cols of [30, 36, 40, 60]) {
       const rows = await boxRows(cols, info(), branded)
-      const top = rows.find(r => r.startsWith('╭'))
+      const top = rows.find((r) => r.startsWith('╭'))
 
       expect(top).toBeDefined()
       expect(stringWidth(top ?? '')).toBe(transcriptPanelWidth(cols))

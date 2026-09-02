@@ -83,7 +83,7 @@ const PromptPrefix = memo(function PromptPrefix({
       return
     }
 
-    const id = setInterval(() => setFrame(value => value + 1), 90)
+    const id = setInterval(() => setFrame((value) => value + 1), 90)
 
     return () => clearInterval(id)
   }, [animated])
@@ -113,7 +113,7 @@ const TranscriptPane = memo(function TranscriptPane({
   // domain/blockLayout.ts::showsInterTurnSeparator; heights in useMainApp
   // mirror this gate). -1 when no user message has been sent yet.
   const firstUserIdx = useMemo(
-    () => (TRANSCRIPT_COLOR ? -1 : transcript.historyItems.findIndex(m => m.role === 'user')),
+    () => (TRANSCRIPT_COLOR ? -1 : transcript.historyItems.findIndex((m) => m.role === 'user')),
     [transcript.historyItems]
   )
 
@@ -135,11 +135,13 @@ const TranscriptPane = memo(function TranscriptPane({
           {transcript.virtualHistory.topSpacer > 0 ? <Box height={transcript.virtualHistory.topSpacer} /> : null}
           {transcript.historyItems.length > 1 && (
             <Box marginBottom={1}>
-              <Text color={ui.theme.color.muted} dim>conversation</Text>
+              <Text color={ui.theme.color.muted} dim>
+                conversation
+              </Text>
             </Box>
           )}
 
-          {transcript.virtualRows.slice(transcript.virtualHistory.start, transcript.virtualHistory.end).map(row => (
+          {transcript.virtualRows.slice(transcript.virtualHistory.start, transcript.virtualHistory.end).map((row) => (
             <Box flexDirection="column" key={row.key} ref={transcript.virtualHistory.measureRef(row.key)}>
               {showsInterTurnSeparator(row.msg, row.index, firstUserIdx, TRANSCRIPT_COLOR) && (
                 <Box marginTop={1}>
@@ -172,7 +174,7 @@ const TranscriptPane = memo(function TranscriptPane({
                   detailsMode={ui.detailsMode}
                   detailsModeCommandOverride={ui.detailsModeCommandOverride}
                   msg={row.msg}
-                  prev={prevRenderedMsg(i => transcript.virtualRows[i]?.msg, row.index, {
+                  prev={prevRenderedMsg((i) => transcript.virtualRows[i]?.msg, row.index, {
                     commandOverride: ui.detailsModeCommandOverride,
                     detailsMode: ui.detailsMode,
                     sections: ui.sections
@@ -213,11 +215,7 @@ const TranscriptPane = memo(function TranscriptPane({
   )
 })
 
-const ComposerPane = memo(function ComposerPane({
-  actions,
-  composer,
-  status
-}: Pick<AppLayoutProps, 'actions' | 'composer' | 'status'>) {
+const ComposerPane = memo(function ComposerPane({ actions, composer, status }: Pick<AppLayoutProps, 'actions' | 'composer' | 'status'>) {
   const ui = useStore($uiState)
   const isBlocked = useStore($isBlocked)
   const sh = composer.input.startsWith('!')
@@ -276,12 +274,7 @@ const ComposerPane = memo(function ComposerPane({
       }}
       paddingX={1}
     >
-      <QueuedMessages
-        cols={composer.cols}
-        queued={composer.queuedDisplay}
-        queueEditIdx={composer.queueEditIdx}
-        t={ui.theme}
-      />
+      <QueuedMessages cols={composer.cols} queued={composer.queuedDisplay} queueEditIdx={composer.queueEditIdx} t={ui.theme} />
 
       {ui.bgTasks.size > 0 && (
         <Text color={ui.theme.color.muted} dim>
@@ -505,14 +498,7 @@ const StatusRulePane = memo(function StatusRulePane({
   )
 })
 
-export const AppLayout = memo(function AppLayout({
-  actions,
-  composer,
-  mouseTracking,
-  progress,
-  status,
-  transcript
-}: AppLayoutProps) {
+export const AppLayout = memo(function AppLayout({ actions, composer, mouseTracking, progress, status, transcript }: AppLayoutProps) {
   const overlay = useStore($overlayState)
   const ui = useStore($uiState)
 

@@ -29,7 +29,7 @@ class FakeProc extends EventEmitter {
 
   constructor() {
     super()
-    this.stdin.on('data', chunk => {
+    this.stdin.on('data', (chunk) => {
       for (const line of String(chunk).split('\n')) {
         if (line.trim()) {
           this.sent.push(JSON.parse(line))
@@ -43,7 +43,7 @@ class FakeProc extends EventEmitter {
   }
 }
 
-const flush = () => new Promise(resolve => setTimeout(resolve, 0))
+const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 describe('/goal gateway adapter', () => {
   const prevWs = process.env.MAKIMA_TUI_WORKSPACE
@@ -66,8 +66,11 @@ describe('/goal gateway adapter', () => {
   afterEach(() => {
     gw.kill()
 
-    if (prevWs === undefined) {delete process.env.MAKIMA_TUI_WORKSPACE}
-    else {process.env.MAKIMA_TUI_WORKSPACE = prevWs}
+    if (prevWs === undefined) {
+      delete process.env.MAKIMA_TUI_WORKSPACE
+    } else {
+      process.env.MAKIMA_TUI_WORKSPACE = prevWs
+    }
   })
 
   const replyToLastControl = async (response: unknown) => {
@@ -112,7 +115,12 @@ describe('/goal gateway adapter', () => {
 
   it('gate refusals surface the reason as exec output', async () => {
     const p = gw.request('command.dispatch', { arg: 'do things', name: 'goal' })
-    await replyToLastControl({ active: false, error: '/goal requires a trusted workspace.', ok: false, text: '/goal requires a trusted workspace.' })
+    await replyToLastControl({
+      active: false,
+      error: '/goal requires a trusted workspace.',
+      ok: false,
+      text: '/goal requires a trusted workspace.'
+    })
 
     const d: any = await p
 
@@ -152,7 +160,7 @@ describe('/goal gateway adapter', () => {
     })
     await flush()
 
-    const ev = events.find(e => e.type === 'status.update')
+    const ev = events.find((e) => e.type === 'status.update')
 
     expect(ev).toBeTruthy()
     expect(ev.payload.kind).toBe('goal')
@@ -172,7 +180,7 @@ describe('/goal gateway adapter', () => {
     })
     await p
 
-    const ev = events.find(e => e.type === 'goal.state')
+    const ev = events.find((e) => e.type === 'goal.state')
 
     expect(ev).toBeTruthy()
     expect(ev.payload.goal).toMatchObject({ created_at: 1_751_800_000, status: 'active' })
@@ -184,7 +192,7 @@ describe('/goal gateway adapter', () => {
     await replyToLastControl({ active: false, goal: null, ok: true, text: '✓ Goal cleared.' })
     await p
 
-    const ev = events.find(e => e.type === 'goal.state')
+    const ev = events.find((e) => e.type === 'goal.state')
 
     expect(ev).toBeTruthy()
     expect(ev.payload.goal).toBeNull()
@@ -195,7 +203,7 @@ describe('/goal gateway adapter', () => {
     await replyToLastControl({ active: true, ok: true, text: '◎ Goal (active): x' })
     await p
 
-    expect(events.find(e => e.type === 'goal.state')).toBeUndefined()
+    expect(events.find((e) => e.type === 'goal.state')).toBeUndefined()
   })
 
   it('goal_status events refresh the indicator from their snapshot', async () => {
@@ -209,7 +217,7 @@ describe('/goal gateway adapter', () => {
     })
     await flush()
 
-    const ev = events.find(e => e.type === 'goal.state')
+    const ev = events.find((e) => e.type === 'goal.state')
 
     expect(ev).toBeTruthy()
     expect(ev.payload.goal).toMatchObject({ status: 'paused', turns_used: 3 })
@@ -224,7 +232,7 @@ describe('/goal gateway adapter', () => {
       type: 'system'
     })
     await flush()
-    expect(events.find(e => e.type === 'goal.state')).toBeUndefined()
+    expect(events.find((e) => e.type === 'goal.state')).toBeUndefined()
 
     proc.line({
       goal_active: false,
@@ -235,7 +243,7 @@ describe('/goal gateway adapter', () => {
     })
     await flush()
 
-    const ev = events.find(e => e.type === 'goal.state')
+    const ev = events.find((e) => e.type === 'goal.state')
 
     expect(ev).toBeTruthy()
     expect(ev.payload.goal).toBeNull()
@@ -246,7 +254,7 @@ describe('/goal gateway adapter', () => {
     await replyToLastControl({ ok: true })
     const d: any = await p
 
-    const ev = events.find(e => e.type === 'goal.state')
+    const ev = events.find((e) => e.type === 'goal.state')
 
     expect(ev).toBeTruthy()
     expect(ev.payload.goal).toBeNull()
@@ -258,7 +266,7 @@ describe('/goal gateway adapter', () => {
     await replyToLastControl({ cost: {}, goal: null, goal_rev: 9, ok: true, session_turns: 0 })
     await p
 
-    const ev = events.find(e => e.type === 'goal.state')
+    const ev = events.find((e) => e.type === 'goal.state')
 
     expect(ev).toBeTruthy()
     expect(ev.payload.goal).toBeNull()
@@ -270,14 +278,19 @@ describe('/goal gateway adapter', () => {
     await replyToLastControl({ error: 'cannot clear during an active turn', ok: false })
     const d: any = await p
 
-    expect(events.find(e => e.type === 'goal.state')).toBeUndefined()
+    expect(events.find((e) => e.type === 'goal.state')).toBeUndefined()
     expect(d.output).toContain('cannot clear during an active turn')
   })
 
   it('/goal and /subgoal are in the slash catalog', async () => {
     proc.line({
-      cwd: '/ws', model: 'm', protocol_version: '0.1.0', session_id: 's1',
-      subtype: 'init', tools: [], type: 'system'
+      cwd: '/ws',
+      model: 'm',
+      protocol_version: '0.1.0',
+      session_id: 's1',
+      subtype: 'init',
+      tools: [],
+      type: 'system'
     })
     await flush()
     // Workflow-command fetch rides the catalog request; answer it empty.

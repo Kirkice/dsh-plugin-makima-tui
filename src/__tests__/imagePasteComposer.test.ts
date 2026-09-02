@@ -13,8 +13,7 @@ import { attachedImageNotice } from '../domain/messages.js'
 const NUL = String.fromCharCode(0)
 const CONTROL_HEAVY = Array.from({ length: 12 }, (_, i) => String.fromCharCode(i + 1)).join('')
 
-const probing = (result: unknown) =>
-  vi.fn(async () => result as never)
+const probing = (result: unknown) => vi.fn(async () => result as never)
 
 describe('resolveHotkeyPaste — probe ordering', () => {
   it('does NOT probe when the clipboard has usable text', async () => {
@@ -109,9 +108,9 @@ describe('resolveHotkeyPaste — probe ordering', () => {
 
 describe('attachedImageNotice', () => {
   it('confirms a real attach with its metadata', () => {
-    expect(
-      attachedImageNotice({ height: 914, name: 'shot.png', token_estimate: 976, width: 1568 })
-    ).toContain('📎 Attached image: shot.png')
+    expect(attachedImageNotice({ height: 914, name: 'shot.png', token_estimate: 976, width: 1568 })).toContain(
+      '📎 Attached image: shot.png'
+    )
   })
 
   it('does NOT claim an attach when the backend reported an error', () => {

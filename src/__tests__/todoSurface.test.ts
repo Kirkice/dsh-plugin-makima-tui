@@ -59,7 +59,7 @@ describe('GatewayClient todo mapping', () => {
     gw.start()
     gw.drain()
 
-    const last = (t: string) => [...events].reverse().find(e => e.type === t)
+    const last = (t: string) => [...events].reverse().find((e) => e.type === t)
 
     proc.line({
       message: { content: [{ id: 't1', input: { todos: TODOS }, name: 'TodoWrite', type: 'tool_use' }] },
@@ -91,15 +91,15 @@ describe('GatewayClient todo mapping', () => {
     gw.drain()
 
     const complete = async (id: string, name: string, input: unknown, result: string) => {
-      const expectedCount = events.filter(e => e.type === 'tool.complete').length + 1
+      const expectedCount = events.filter((e) => e.type === 'tool.complete').length + 1
       proc.line({ message: { content: [{ id, input, name, type: 'tool_use' }] }, type: 'assistant' })
       proc.line({
         message: { content: [{ content: result, is_error: false, tool_use_id: id, type: 'tool_result' }] },
         type: 'user'
       })
-      await vi.waitFor(() => expect(events.filter(e => e.type === 'tool.complete')).toHaveLength(expectedCount))
+      await vi.waitFor(() => expect(events.filter((e) => e.type === 'tool.complete')).toHaveLength(expectedCount))
 
-      return events.filter(e => e.type === 'tool.complete').at(-1).payload.todos
+      return events.filter((e) => e.type === 'tool.complete').at(-1).payload.todos
     }
 
     expect(
@@ -111,9 +111,9 @@ describe('GatewayClient todo mapping', () => {
       )
     ).toEqual([{ activeForm: 'Fixing auth', content: 'Fix auth', id: 'abc123', status: 'pending' }])
 
-    expect(
-      await complete('t2', 'TaskUpdate', { status: 'in_progress', taskId: 'abc123' }, 'Updated task #abc123 status')
-    ).toEqual([{ activeForm: 'Fixing auth', content: 'Fix auth', id: 'abc123', status: 'in_progress' }])
+    expect(await complete('t2', 'TaskUpdate', { status: 'in_progress', taskId: 'abc123' }, 'Updated task #abc123 status')).toEqual([
+      { activeForm: 'Fixing auth', content: 'Fix auth', id: 'abc123', status: 'in_progress' }
+    ])
 
     expect(
       await complete(
@@ -127,9 +127,9 @@ describe('GatewayClient todo mapping', () => {
       { content: 'Add tests', id: 'def456', status: 'pending' }
     ])
 
-    expect(
-      await complete('t4', 'TaskUpdate', { status: 'deleted', taskId: 'abc123' }, 'Updated task #abc123 deleted')
-    ).toEqual([{ content: 'Add tests', id: 'def456', status: 'pending' }])
+    expect(await complete('t4', 'TaskUpdate', { status: 'deleted', taskId: 'abc123' }, 'Updated task #abc123 deleted')).toEqual([
+      { content: 'Add tests', id: 'def456', status: 'pending' }
+    ])
 
     gw.kill()
   })
@@ -270,7 +270,7 @@ const renderToString = (element: React.ReactElement): string => {
   Object.assign(stdout, { columns: 90, isTTY: false, rows: 40 })
   Object.assign(stdin, { isTTY: false })
   Object.assign(stderr, { isTTY: false })
-  stdout.on('data', chunk => {
+  stdout.on('data', (chunk) => {
     output += chunk.toString()
   })
 

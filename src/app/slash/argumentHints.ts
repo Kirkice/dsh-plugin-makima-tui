@@ -14,10 +14,7 @@ const GHOST_RE = /^\/([^\s/][^\s]*) $/
  * /compact, /model) must also shadow its hint. The catalog covers the rest:
  * gateway-dispatched SLASHES commands and backend workflow commands.
  */
-export function argumentHintFor(
-  name: string,
-  catalogHints?: null | Record<string, string>
-): string | undefined {
+export function argumentHintFor(name: string, catalogHints?: null | Record<string, string>): string | undefined {
   const local = findSlashCommand(name)
 
   if (local?.argumentHint) {
@@ -29,10 +26,7 @@ export function argumentHintFor(
 
 /** Hint to ghost-render after the input, or undefined when the input isn't an
  *  exactly-completed `/command ` (or the command has no hint). */
-export function ghostArgumentHint(
-  input: string,
-  catalogHints?: null | Record<string, string>
-): string | undefined {
+export function ghostArgumentHint(input: string, catalogHints?: null | Record<string, string>): string | undefined {
   const m = GHOST_RE.exec(input)
 
   return m ? argumentHintFor(m[1]!, catalogHints) : undefined

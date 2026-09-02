@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  applyMotion,
-  dispatchNormal,
-  initialVimState,
-  resolveMotion,
-  type Buffer,
-  type VimState,
-} from '../vim/engine.js'
+import { applyMotion, dispatchNormal, initialVimState, resolveMotion, type Buffer, type VimState } from '../vim/engine.js'
 
 // Helper: run a sequence of keys through the NORMAL-mode dispatcher.
 function run(value: string, cursor: number, keys: string[]): { state: VimState; buffer: Buffer } {

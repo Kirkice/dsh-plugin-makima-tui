@@ -31,7 +31,10 @@ export const contextHealth = (usage: Partial<Usage> | null | undefined): Context
   }
 
   const level: ContextHealthLevel = percent >= 85 ? 'critical' : percent >= 65 ? 'watch' : 'healthy'
-  const capacity = typeof used === 'number' && typeof window === 'number' ? `${used.toLocaleString()} / ${window.toLocaleString()} tokens` : `${percent}% of context`
+  const capacity =
+    typeof used === 'number' && typeof window === 'number'
+      ? `${used.toLocaleString()} / ${window.toLocaleString()} tokens`
+      : `${percent}% of context`
   const compressionNote = compressions ? ` · ${compressions} compression${compressions === 1 ? '' : 's'}` : ''
   const prefix = level === 'critical' ? 'Context nearly full' : level === 'watch' ? 'Context filling' : 'Context healthy'
 

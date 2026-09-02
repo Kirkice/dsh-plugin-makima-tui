@@ -48,10 +48,7 @@ const loadCommandRegistryNames = (): CommandRegistryLoad => {
     const names = JSON.parse(
       execFileSync(
         process.env.PYTHON ?? 'python3',
-        [
-          '-c',
-          'import json; from clawcodex_cli.commands import COMMAND_REGISTRY; print(json.dumps([c.name for c in COMMAND_REGISTRY]))'
-        ],
+        ['-c', 'import json; from clawcodex_cli.commands import COMMAND_REGISTRY; print(json.dumps([c.name for c in COMMAND_REGISTRY]))'],
         { cwd: resolve(here, '../../..'), encoding: 'utf8' }
       )
     ) as string[]
@@ -70,7 +67,7 @@ const registryIt = commandRegistry.error ? it.skip : it
 const skipReason = commandRegistry.error ? commandRegistry.error.split('\n')[0] : ''
 
 const LOCAL_COMMAND_NAMES = new Set(
-  SLASH_COMMANDS.flatMap(command => [command.name, ...(command.aliases ?? [])].map(name => name.toLowerCase()))
+  SLASH_COMMANDS.flatMap((command) => [command.name, ...(command.aliases ?? [])].map((name) => name.toLowerCase()))
 )
 
 const classifyRoute = (name: string): CommandRoute => {
@@ -93,7 +90,7 @@ describe('slash parity matrix', () => {
   }
 
   registryIt('classifies each command registry command as local/native/fallback', () => {
-    const routes = Object.fromEntries(commandRegistry.names.map(name => [name, classifyRoute(name)]))
+    const routes = Object.fromEntries(commandRegistry.names.map((name) => [name, classifyRoute(name)]))
 
     expect(routes['model']).toBe('local')
     expect(routes['browser']).toBe('native')
@@ -103,7 +100,7 @@ describe('slash parity matrix', () => {
   })
 
   registryIt('keeps every mutating command off slash-worker fallback', () => {
-    const routes = Object.fromEntries(commandRegistry.names.map(name => [name, classifyRoute(name)]))
+    const routes = Object.fromEntries(commandRegistry.names.map((name) => [name, classifyRoute(name)]))
 
     for (const name of MUTATING_COMMANDS) {
       expect(routes[name], `missing command in registry: ${name}`).toBeDefined()

@@ -17,7 +17,7 @@ interface Slot {
 }
 
 export function useLongRunToolCharms() {
-  const tools = useTurnSelector(state => state.tools)
+  const tools = useTurnSelector((state) => state.tools)
   const slots = useRef(new Map<string, Slot>())
 
   useEffect(() => {
@@ -35,7 +35,7 @@ export function useLongRunToolCharms() {
       }
 
       const now = Date.now()
-      const liveIds = new Set(tools.map(t => t.id))
+      const liveIds = new Set(tools.map((t) => t.id))
 
       for (const key of Array.from(slots.current.keys())) {
         if (!liveIds.has(key)) {

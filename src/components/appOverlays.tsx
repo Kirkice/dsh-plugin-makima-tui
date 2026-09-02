@@ -38,13 +38,7 @@ export function PromptZone({
   onSudoSubmit
 }: Pick<
   AppOverlaysProps,
-  | 'cols'
-  | 'onApprovalChoice'
-  | 'onClarifyAnswer'
-  | 'onPlanApprovalChoice'
-  | 'onQuestionsAnswer'
-  | 'onSecretSubmit'
-  | 'onSudoSubmit'
+  'cols' | 'onApprovalChoice' | 'onClarifyAnswer' | 'onPlanApprovalChoice' | 'onQuestionsAnswer' | 'onSecretSubmit' | 'onSudoSubmit'
 >) {
   const overlay = useStore($overlayState)
   const theme = useStore($uiTheme)
@@ -83,12 +77,7 @@ export function PromptZone({
   if (overlay.questions) {
     return (
       <Box flexDirection="column" flexShrink={0} paddingX={1} paddingY={1}>
-        <QuestionPrompt
-          cols={cols}
-          onAnswer={onQuestionsAnswer}
-          questions={overlay.questions.questions}
-          t={theme}
-        />
+        <QuestionPrompt cols={cols} onAnswer={onQuestionsAnswer} questions={overlay.questions.questions} t={theme} />
       </Box>
     )
   }
@@ -97,7 +86,7 @@ export function PromptZone({
     const current = overlay.billing
 
     const onPatch = (next: Partial<typeof current>) =>
-      patchOverlayState(prev => (prev.billing ? { ...prev, billing: { ...prev.billing, ...next } } : prev))
+      patchOverlayState((prev) => (prev.billing ? { ...prev, billing: { ...prev.billing, ...next } } : prev))
 
     const onClose = () => patchOverlayState({ billing: null })
 
@@ -128,13 +117,7 @@ export function PromptZone({
   if (overlay.clarify) {
     return (
       <Box flexDirection="column" flexShrink={0} paddingX={1} paddingY={1}>
-        <ClarifyPrompt
-          cols={cols}
-          onAnswer={onClarifyAnswer}
-          onCancel={() => onClarifyAnswer('')}
-          req={overlay.clarify}
-          t={theme}
-        />
+        <ClarifyPrompt cols={cols} onAnswer={onClarifyAnswer} onCancel={() => onClarifyAnswer('')} req={overlay.clarify} t={theme} />
       </Box>
     )
   }
@@ -237,8 +220,12 @@ export function FloatingOverlays({
       {overlay.detailPicker && (
         <FloatBox color={theme.color.primary}>
           <Box flexDirection="column" paddingX={1} paddingY={1} width={Math.max(20, Math.min(Math.max(20, cols - 6), 72))}>
-            <Text bold color={theme.color.primary}>Details</Text>
-            <Text color={theme.color.muted} dim>Choose one transcript block to expand or collapse</Text>
+            <Text bold color={theme.color.primary}>
+              Details
+            </Text>
+            <Text color={theme.color.muted} dim>
+              Choose one transcript block to expand or collapse
+            </Text>
             <Box flexDirection="column" marginTop={1}>
               {detailWindow!.items.map((item, index) => {
                 const absoluteIndex = detailWindow!.offset + index
@@ -251,7 +238,9 @@ export function FloatingOverlays({
                     key={item.key}
                     wrap="truncate-end"
                   >
-                    {active ? '› ' : '  '}{item.expanded ? '▾ ' : '▸ '}{item.label}
+                    {active ? '› ' : '  '}
+                    {item.expanded ? '▾ ' : '▸ '}
+                    {item.label}
                   </Text>
                 )
               })}
@@ -299,22 +288,13 @@ export function FloatingOverlays({
 
       {overlay.providersHub && (
         <FloatBox color={theme.color.border}>
-          <ProvidersHub
-            gw={gw}
-            onClose={() => patchOverlayState({ providersHub: false })}
-            t={theme}
-          />
+          <ProvidersHub gw={gw} onClose={() => patchOverlayState({ providersHub: false })} t={theme} />
         </FloatBox>
       )}
 
       {overlay.logoPicker && (
         <FloatBox color={theme.color.border}>
-          <LogoPicker
-            current={logoPalette}
-            onClose={() => patchOverlayState({ logoPicker: false })}
-            onSelect={onLogoSelect}
-            t={theme}
-          />
+          <LogoPicker current={logoPalette} onClose={() => patchOverlayState({ logoPicker: false })} onSelect={onLogoSelect} t={theme} />
         </FloatBox>
       )}
 
@@ -331,12 +311,7 @@ export function FloatingOverlays({
 
       {overlay.memoryPicker && (
         <FloatBox color={theme.color.border}>
-          <MemoryPicker
-            gw={gw}
-            onCancel={() => patchOverlayState({ memoryPicker: false })}
-            onSelect={onMemorySelect}
-            t={theme}
-          />
+          <MemoryPicker gw={gw} onCancel={() => patchOverlayState({ memoryPicker: false })} onSelect={onMemorySelect} t={theme} />
         </FloatBox>
       )}
 
@@ -411,9 +386,7 @@ export function FloatingOverlays({
               // name (original CC's argumentHint). Local registry wins over
               // the gateway item's hint — dispatch consults it first, so a
               // shadowing local command's grammar is the truthful one.
-              const hint = item.text.startsWith('/')
-                ? (argumentHintFor(item.text.slice(1)) ?? item.hint)
-                : item.hint
+              const hint = item.text.startsWith('/') ? (argumentHintFor(item.text.slice(1)) ?? item.hint) : item.hint
 
               return (
                 <Box

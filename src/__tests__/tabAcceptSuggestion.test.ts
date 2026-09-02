@@ -56,7 +56,7 @@ describe('suggestedQuery — extract the tab-acceptable query from a placeholder
   })
 
   it('the shipped list still contains tab-acceptable suggestions', () => {
-    expect(PLACEHOLDERS.some(p => suggestedQuery(p) !== null)).toBe(true)
+    expect(PLACEHOLDERS.some((p) => suggestedQuery(p) !== null)).toBe(true)
   })
 })
 
@@ -76,9 +76,7 @@ describe('shouldAcceptPlaceholderSuggestion — Tab accepts only what is visibly
   })
 
   it('defers to an open completion menu', () => {
-    expect(shouldAcceptPlaceholderSuggestion({ shift: false, tab: true }, { ...visible, completionsLen: 2 })).toBe(
-      false
-    )
+    expect(shouldAcceptPlaceholderSuggestion({ shift: false, tab: true }, { ...visible, completionsLen: 2 })).toBe(false)
   })
 
   it('stays inert once the user typed something (placeholder is hidden)', () => {
@@ -86,9 +84,7 @@ describe('shouldAcceptPlaceholderSuggestion — Tab accepts only what is visibly
   })
 
   it('stays inert mid-conversation (placeholder is only shown on a fresh transcript)', () => {
-    expect(
-      shouldAcceptPlaceholderSuggestion({ shift: false, tab: true }, { ...visible, conversationEmpty: false })
-    ).toBe(false)
+    expect(shouldAcceptPlaceholderSuggestion({ shift: false, tab: true }, { ...visible, conversationEmpty: false })).toBe(false)
   })
 
   it('stays inert while a turn is running (placeholder is hidden when busy)', () => {

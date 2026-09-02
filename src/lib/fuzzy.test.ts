@@ -70,8 +70,8 @@ describe('fuzzyRank', () => {
   const models = ['gpt-4o', 'gpt-4o-mini', 'claude-sonnet-4', 'claude-haiku', 'o1-preview']
 
   it('drops non-matching items and ranks matches by score', () => {
-    const ranked = fuzzyRank(models, 'g4o', m => m)
-    const ids = ranked.map(r => r.item)
+    const ranked = fuzzyRank(models, 'g4o', (m) => m)
+    const ids = ranked.map((r) => r.item)
 
     expect(ids).toContain('gpt-4o')
     expect(ids).toContain('gpt-4o-mini')
@@ -81,14 +81,14 @@ describe('fuzzyRank', () => {
   })
 
   it('ranks son4 so a sonnet model surfaces', () => {
-    const ranked = fuzzyRank(models, 'son4', m => m)
+    const ranked = fuzzyRank(models, 'son4', (m) => m)
     expect(ranked[0]?.item).toBe('claude-sonnet-4')
   })
 
   it('returns all items in original order for an empty query', () => {
-    const ranked = fuzzyRank(models, '', m => m)
-    expect(ranked.map(r => r.item)).toEqual(models)
-    expect(ranked.every(r => r.positions.length === 0)).toBe(true)
+    const ranked = fuzzyRank(models, '', (m) => m)
+    expect(ranked.map((r) => r.item)).toEqual(models)
+    expect(ranked.every((r) => r.positions.length === 0)).toBe(true)
   })
 
   it('is stable for equal scores (original index tiebreak)', () => {
@@ -97,10 +97,10 @@ describe('fuzzyRank', () => {
     const ranked = fuzzyRank(
       items.map((v, i) => ({ v, i })),
       'ab',
-      x => x.v
+      (x) => x.v
     )
 
-    expect(ranked.map(r => r.item.i)).toEqual([0, 1, 2])
+    expect(ranked.map((r) => r.item.i)).toEqual([0, 1, 2])
   })
 
   it('matches across a derived key, not just the raw string', () => {
@@ -109,7 +109,7 @@ describe('fuzzyRank', () => {
       { slug: 'anthropic', name: 'Anthropic' }
     ]
 
-    const ranked = fuzzyRank(providers, 'anth', p => `${p.name} ${p.slug}`)
+    const ranked = fuzzyRank(providers, 'anth', (p) => `${p.name} ${p.slug}`)
     expect(ranked[0]?.item.slug).toBe('anthropic')
   })
 })

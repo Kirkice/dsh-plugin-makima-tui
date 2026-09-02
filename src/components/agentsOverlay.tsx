@@ -2,12 +2,7 @@ import { Box, NoSelect, ScrollBox, type ScrollBoxHandle, Text, useInput, useStdo
 import { useStore } from '@nanostores/react'
 import { type ReactNode, type RefObject, useEffect, useMemo, useRef, useState } from 'react'
 
-import {
-  $delegationState,
-  $overlaySectionsOpen,
-  applyDelegationStatus,
-  toggleOverlaySection
-} from '../app/delegationStore.js'
+import { $delegationState, $overlaySectionsOpen, applyDelegationStatus, toggleOverlaySection } from '../app/delegationStore.js'
 import { patchOverlayState } from '../app/overlayStore.js'
 import { $spawnDiff, $spawnHistory, clearDiffPair, type SpawnSnapshot } from '../app/spawnHistoryStore.js'
 import { useTurnSelector } from '../app/turnStore.js'
@@ -77,23 +72,19 @@ const SORT_COMPARATORS: Record<SortMode, (a: SubagentNode, b: SubagentNode) => n
 
 const FILTER_PREDICATES: Record<FilterMode, (n: SubagentNode) => boolean> = {
   all: () => true,
-  leaf: n => n.children.length === 0,
-  running: n => n.item.status === 'running' || n.item.status === 'queued',
-  failed: n =>
-    n.item.status === 'error' ||
-    n.item.status === 'failed' ||
-    n.item.status === 'interrupted' ||
-    n.item.status === 'timeout'
+  leaf: (n) => n.children.length === 0,
+  running: (n) => n.item.status === 'running' || n.item.status === 'queued',
+  failed: (n) => n.item.status === 'error' || n.item.status === 'failed' || n.item.status === 'interrupted' || n.item.status === 'timeout'
 }
 
 const STATUS_GLYPH: Record<Status, { color: (t: Theme) => string; glyph: string }> = {
-  running: { color: t => t.color.accent, glyph: '●' },
-  queued: { color: t => t.color.muted, glyph: '○' },
-  completed: { color: t => t.color.statusGood, glyph: '✓' },
-  interrupted: { color: t => t.color.warn, glyph: '■' },
-  failed: { color: t => t.color.error, glyph: '✗' },
-  timeout: { color: t => t.color.warn, glyph: '⌛' },
-  error: { color: t => t.color.error, glyph: '⚠' }
+  running: { color: (t) => t.color.accent, glyph: '●' },
+  queued: { color: (t) => t.color.muted, glyph: '○' },
+  completed: { color: (t) => t.color.statusGood, glyph: '✓' },
+  interrupted: { color: (t) => t.color.warn, glyph: '■' },
+  failed: { color: (t) => t.color.error, glyph: '✗' },
+  timeout: { color: (t) => t.color.warn, glyph: '⌛' },
+  error: { color: (t) => t.color.error, glyph: '⚠' }
 }
 
 // Heatmap palette — cold → hot, resolved against the active theme.
@@ -140,15 +131,7 @@ const diffMetricLine = (name: string, a: number, b: number, fmt: (n: number) => 
 // ── Sub-components ───────────────────────────────────────────────────
 
 /** Polled on parent `tick` so accordions can resize the thumb without a scroll event. */
-function OverlayScrollbar({
-  scrollRef,
-  t,
-  tick
-}: {
-  scrollRef: RefObject<null | ScrollBoxHandle>
-  t: Theme
-  tick: number
-}) {
+function OverlayScrollbar({ scrollRef, t, tick }: { scrollRef: RefObject<null | ScrollBoxHandle>; t: Theme; tick: number }) {
   void tick // ensures re-render when the parent clock advances
 
   const [hover, setHover] = useState(false)
@@ -195,9 +178,7 @@ function OverlayScrollbar({
         setGrab(off)
         jump(row, off)
       }}
-      onMouseDrag={(e: { localRow?: number }) =>
-        jump(Math.max(0, Math.min(vp - 1, e.localRow ?? 0)), grab ?? Math.floor(thumb / 2))
-      }
+      onMouseDrag={(e: { localRow?: number }) => jump(Math.max(0, Math.min(vp - 1, e.localRow ?? 0)), grab ?? Math.floor(thumb / 2))}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       onMouseUp={() => setGrab(null)}
@@ -248,20 +229,18 @@ function GanttStrip({
       const started = node.item.startedAt ?? now
 
       const ended =
-        node.item.durationSeconds != null && node.item.startedAt != null
-          ? node.item.startedAt + node.item.durationSeconds * 1000
-          : now
+        node.item.durationSeconds != null && node.item.startedAt != null ? node.item.startedAt + node.item.durationSeconds * 1000 : now
 
       return { endAt: ended, idx, node, startAt: started }
     })
-    .filter(s => s.endAt >= s.startAt)
+    .filter((s) => s.endAt >= s.startAt)
 
   if (!spans.length) {
     return null
   }
 
-  const globalStart = Math.min(...spans.map(s => s.startAt))
-  const globalEnd = Math.max(...spans.map(s => s.endAt))
+  const globalStart = Math.min(...spans.map((s) => s.startAt))
+  const globalEnd = Math.max(...spans.map((s) => s.endAt))
   const totalSpan = Math.max(1, globalEnd - globalStart)
   const totalSeconds = (globalEnd - globalStart) / 1000
 
@@ -311,8 +290,7 @@ function GanttStrip({
     return chars.join('')
   })()
 
-  const windowLabel =
-    spans.length > maxRows ? `  (${startIdx + 1}-${Math.min(spans.length, startIdx + maxRows)}/${spans.length})` : ''
+  const windowLabel = spans.length > maxRows ? `  (${startIdx + 1}-${Math.min(spans.length, startIdx + maxRows)}/${spans.length})` : ''
 
   return (
     <Box flexDirection="column" marginBottom={1}>
@@ -418,7 +396,7 @@ function Detail({ id, node, t }: { id?: string; node: SubagentNode; t: Theme }) 
   // Tool calls: prefer the live stream; for archived / post-turn views
   // that stream is often empty even when tool_count > 0, so fall back to
   // the tool names captured in outputTail at subagent.complete time.
-  const toolLines = item.tools.length > 0 ? item.tools : outputTail.map(e => e.tool).filter(Boolean)
+  const toolLines = item.tools.length > 0 ? item.tools : outputTail.map((e) => e.tool).filter(Boolean)
 
   const filesOverflow = Math.max(0, filesRead.length - 8) + Math.max(0, filesWritten.length - 8)
 
@@ -602,7 +580,7 @@ function DiffPane({
       <Box flexDirection="column" marginTop={1}>
         {topLevelSubagents(snapshot.subagents)
           .slice(0, 8)
-          .map(s => {
+          .map((s) => {
             const { color, glyph } = statusGlyph(s, t)
 
             return (
@@ -660,15 +638,11 @@ function DiffView({
           Δ
         </Text>
 
-        <Text color={t.color.text}>
-          {diffMetricLine('agents', aTotals.descendantCount, bTotals.descendantCount, round)}
-        </Text>
+        <Text color={t.color.text}>{diffMetricLine('agents', aTotals.descendantCount, bTotals.descendantCount, round)}</Text>
         <Text color={t.color.text}>{diffMetricLine('tools', aTotals.totalTools, bTotals.totalTools, round)}</Text>
+        <Text color={t.color.text}>{diffMetricLine('depth', aTotals.maxDepthFromHere, bTotals.maxDepthFromHere, round)}</Text>
         <Text color={t.color.text}>
-          {diffMetricLine('depth', aTotals.maxDepthFromHere, bTotals.maxDepthFromHere, round)}
-        </Text>
-        <Text color={t.color.text}>
-          {diffMetricLine('duration', aTotals.totalDuration, bTotals.totalDuration, n => `${n.toFixed(1)}s`)}
+          {diffMetricLine('duration', aTotals.totalDuration, bTotals.totalDuration, (n) => `${n.toFixed(1)}s`)}
         </Text>
         <Text color={t.color.text}>{diffMetricLine('tokens', sumTokens(aTotals), sumTokens(bTotals), fmtTokens)}</Text>
       </Box>
@@ -679,7 +653,7 @@ function DiffView({
 // ── Main overlay ─────────────────────────────────────────────────────
 
 export function AgentsOverlay({ gw, initialHistoryIndex = 0, onClose, t }: AgentsOverlayProps) {
-  const liveSubagents = useTurnSelector(state => state.subagents)
+  const liveSubagents = useTurnSelector((state) => state.subagents)
   const delegation = useStore($delegationState)
   const history = useStore($spawnHistory)
   const diffPair = useStore($spawnDiff)
@@ -687,9 +661,7 @@ export function AgentsOverlay({ gw, initialHistoryIndex = 0, onClose, t }: Agent
 
   // historyIndex === 0: live turn.  1..N pulls the Nth-most-recent archived
   // snapshot.  /replay passes N on open.
-  const [historyIndex, setHistoryIndex] = useState(() =>
-    Math.max(0, Math.min(history.length, Math.floor(initialHistoryIndex)))
-  )
+  const [historyIndex, setHistoryIndex] = useState(() => Math.max(0, Math.min(history.length, Math.floor(initialHistoryIndex))))
 
   const [sort, setSort] = useState<SortMode>('depth-first')
   const [filter, setFilter] = useState<FilterMode>('all')
@@ -766,7 +738,7 @@ export function AgentsOverlay({ gw, initialHistoryIndex = 0, onClose, t }: Agent
   useEffect(() => {
     // Warm caps + paused flag on open.
     gw.request<DelegationStatusResponse>('delegation.status', {})
-      .then(r => applyDelegationStatus(asRpcResult<DelegationStatusResponse>(r)))
+      .then((r) => applyDelegationStatus(asRpcResult<DelegationStatusResponse>(r)))
       .catch(() => {})
   }, [gw])
 
@@ -791,7 +763,7 @@ export function AgentsOverlay({ gw, initialHistoryIndex = 0, onClose, t }: Agent
   const killOne = (id: string) =>
     guardLive(() => {
       interrupt(id)
-        .then(raw => {
+        .then((raw) => {
           const r = asRpcResult<SubagentInterruptResponse>(raw)
           setFlash(r?.found ? `killing ${id}` : `not found: ${id}`)
         })
@@ -801,14 +773,14 @@ export function AgentsOverlay({ gw, initialHistoryIndex = 0, onClose, t }: Agent
   const killSubtree = (node: SubagentNode) =>
     guardLive(() => {
       const ids = [node.item.id, ...descendantIds(node)]
-      ids.forEach(id => interrupt(id).catch(() => {}))
+      ids.forEach((id) => interrupt(id).catch(() => {}))
       setFlash(`killing subtree · ${ids.length} node${ids.length === 1 ? '' : 's'}`)
     })
 
   const togglePause = () =>
     guardLive(() => {
       gw.request<DelegationPauseResponse>('delegation.pause', { paused: !delegation.paused })
-        .then(raw => {
+        .then((raw) => {
           const r = asRpcResult<DelegationPauseResponse>(raw)
           applyDelegationStatus({ paused: r?.paused })
           setFlash(r?.paused ? 'spawning paused' : 'spawning resumed')
@@ -817,7 +789,7 @@ export function AgentsOverlay({ gw, initialHistoryIndex = 0, onClose, t }: Agent
     })
 
   const stepHistory = (delta: -1 | 1) =>
-    setHistoryIndex(idx => {
+    setHistoryIndex((idx) => {
       const next = Math.max(0, Math.min(history.length, idx + delta))
 
       if (next !== idx) {
@@ -915,11 +887,11 @@ export function AgentsOverlay({ gw, initialHistoryIndex = 0, onClose, t }: Agent
     }
 
     if (key.upArrow || ch === 'k' || key.wheelUp) {
-      return setCursor(c => Math.max(0, c - 1))
+      return setCursor((c) => Math.max(0, c - 1))
     }
 
     if (key.downArrow || ch === 'j' || key.wheelDown) {
-      return setCursor(c => Math.min(Math.max(0, rows.length - 1), c + 1))
+      return setCursor((c) => Math.min(Math.max(0, rows.length - 1), c + 1))
     }
 
     if (ch === 'g') {
@@ -931,11 +903,11 @@ export function AgentsOverlay({ gw, initialHistoryIndex = 0, onClose, t }: Agent
     }
 
     if (ch === 's') {
-      return setSort(m => cycle(SORT_ORDER, m))
+      return setSort((m) => cycle(SORT_ORDER, m))
     }
 
     if (ch === 'f') {
-      return setFilter(m => cycle(FILTER_ORDER, m))
+      return setFilter((m) => cycle(FILTER_ORDER, m))
     }
   })
 
@@ -954,9 +926,7 @@ export function AgentsOverlay({ gw, initialHistoryIndex = 0, onClose, t }: Agent
     .map(([k, v]) => `${k}×${v}`)
     .join(' · ')
 
-  const capsLabel = delegation.maxSpawnDepth
-    ? `caps d${delegation.maxSpawnDepth}/${delegation.maxConcurrentChildren ?? '?'}`
-    : ''
+  const capsLabel = delegation.maxSpawnDepth ? `caps d${delegation.maxSpawnDepth}/${delegation.maxConcurrentChildren ?? '?'}` : ''
 
   const title =
     replayMode && effectiveSnapshot
@@ -967,9 +937,7 @@ export function AgentsOverlay({ gw, initialHistoryIndex = 0, onClose, t }: Agent
 
   const metaLine = [formatSummary(totals), spark, capsLabel, mix ? `· ${mix}` : ''].filter(Boolean).join('  ')
 
-  const controlsHint = replayMode
-    ? ' · controls locked'
-    : ` · x kill · X subtree · p ${delegation.paused ? 'resume' : 'pause'}`
+  const controlsHint = replayMode ? ' · controls locked' : ` · x kill · X subtree · p ${delegation.paused ? 'resume' : 'pause'}`
 
   // ── Rendering ──────────────────────────────────────────────────────
 
@@ -1040,9 +1008,7 @@ export function AgentsOverlay({ gw, initialHistoryIndex = 0, onClose, t }: Agent
             {' · q close'}
           </Text>
         ) : (
-          <Text color={t.color.muted}>
-            ↑↓/jk scroll · PgUp/PgDn page · g/G top/bottom · Esc/← back to list{controlsHint} · q close
-          </Text>
+          <Text color={t.color.muted}>↑↓/jk scroll · PgUp/PgDn page · g/G top/bottom · Esc/← back to list{controlsHint} · q close</Text>
         )}
       </Box>
     </Box>

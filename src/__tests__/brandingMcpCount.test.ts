@@ -17,7 +17,7 @@ import type { McpServerStatus, SessionInfo } from '../types.js'
 // disabled `linear` server alongside a connected `nous-support` server made
 // the TUI report "2 MCP" while the classic CLI correctly reported "1 MCP".
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const makeStreams = (columns = 100) => {
   const stdout = new PassThrough()
@@ -29,7 +29,7 @@ const makeStreams = (columns = 100) => {
   Object.assign(stderr, { isTTY: false })
 
   let captured = ''
-  stdout.on('data', chunk => {
+  stdout.on('data', (chunk) => {
     captured += chunk.toString()
   })
 
@@ -55,9 +55,9 @@ async function renderFooter(info: SessionInfo): Promise<string> {
 
   const instance = renderSync(React.createElement(SessionPanel, { info, sid: 'test', t: DEFAULT_THEME }), {
     patchConsole: false,
-    stderr: streams.stderr as NodeJS.WriteStream,
-    stdin: streams.stdin as NodeJS.ReadStream,
-    stdout: streams.stdout as NodeJS.WriteStream
+    stderr: streams.stderr as unknown as NodeJS.WriteStream,
+    stdin: streams.stdin as unknown as NodeJS.ReadStream,
+    stdout: streams.stdout as unknown as NodeJS.WriteStream
   })
 
   try {
@@ -87,9 +87,7 @@ describe('branding MCP headline count', () => {
   })
 
   it('drops the MCP segment entirely when no server is connected', async () => {
-    const frame = await renderFooter(
-      baseInfo([mcp({ connected: false, disabled: true, name: 'linear', status: 'disabled' })])
-    )
+    const frame = await renderFooter(baseInfo([mcp({ connected: false, disabled: true, name: 'linear', status: 'disabled' })]))
 
     // Matches the classic CLI, which only appends "· N MCP" when N > 0.
     expect(frame).not.toContain('MCP servers')

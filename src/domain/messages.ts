@@ -7,14 +7,10 @@ export const introMsg = (info: SessionInfo): Msg => ({ info, kind: 'intro', role
 export const imageTokenMeta = (info?: ImageMeta | null) => {
   const { width, height, token_estimate: t } = info ?? {}
 
-  return [width && height ? `${width}x${height}` : '', (t ?? 0) > 0 ? `~${fmtK(t!)} tok` : '']
-    .filter(Boolean)
-    .join(' · ')
+  return [width && height ? `${width}x${height}` : '', (t ?? 0) > 0 ? `~${fmtK(t!)} tok` : ''].filter(Boolean).join(' · ')
 }
 
-export const attachedImageNotice = (
-  info?: ({ error?: string; name?: string; unavailable?: boolean } & ImageMeta) | null
-) => {
+export const attachedImageNotice = (info?: ({ error?: string; name?: string; unavailable?: boolean } & ImageMeta) | null) => {
   // A failed attach must not print an attach confirmation. The backend
   // distinguishes "couldn't read it" (error) from "no clipboard tooling"
   // (unavailable) and both used to render as a bare "📎 Attached image", so a

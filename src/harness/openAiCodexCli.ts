@@ -13,7 +13,7 @@ function parse(argv: readonly string[]): { command: Command; method: Method; pro
   if ((command !== 'login' && command !== 'status' && command !== 'logout') || provider !== 'openai-codex') return undefined
   const browser = flags.includes('--browser')
   const device = flags.includes('--device-code')
-  if (browser && device || flags.some(flag => flag !== '--browser' && flag !== '--device-code')) return undefined
+  if ((browser && device) || flags.some((flag) => flag !== '--browser' && flag !== '--device-code')) return undefined
   return { command, method: device ? 'device_code' : 'browser', provider }
 }
 
@@ -50,7 +50,9 @@ async function main(): Promise<number> {
     return 2
   }
   const login = await auth.beginLogin(parsed.method)
-  const interrupt = (): void => { void login.cancel() }
+  const interrupt = (): void => {
+    void login.cancel()
+  }
   process.once('SIGINT', interrupt)
   process.once('SIGTERM', interrupt)
   try {
@@ -68,7 +70,7 @@ async function main(): Promise<number> {
   }
 }
 
-process.exitCode = await main().catch(error => {
+process.exitCode = await main().catch((error) => {
   process.stderr.write(`makima-tui-auth: ${error instanceof Error ? error.message : 'OAuth login failed'}\n`)
   return 1
 })

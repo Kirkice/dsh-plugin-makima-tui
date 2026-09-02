@@ -21,14 +21,9 @@ export interface RecoveryPlan {
 // recovery target carried across a respawn that died before gateway.ready —
 // so a startup crash-loop keeps retrying the same session up to the budget
 // instead of stranding it after one attempt.
-export function planGatewayRecovery(
-  liveSid: null | string,
-  recoverSid: null | string,
-  attempts: number[],
-  now: number
-): RecoveryPlan {
+export function planGatewayRecovery(liveSid: null | string, recoverSid: null | string, attempts: number[], now: number): RecoveryPlan {
   const sid = liveSid ?? recoverSid
-  const recent = attempts.filter(t => now - t < GATEWAY_RECOVERY_WINDOW_MS)
+  const recent = attempts.filter((t) => now - t < GATEWAY_RECOVERY_WINDOW_MS)
   const recover = Boolean(sid) && recent.length < GATEWAY_RECOVERY_LIMIT
 
   return { attempts: recover ? [...recent, now] : recent, recover, sid }

@@ -35,11 +35,7 @@ export const applyCompletion = (value: string, rowText: string, compReplace: num
  * whitespace-only delta as "already complete" collapses that back to the
  * expected one/two presses.
  */
-export const completionToApplyOnSubmit = (
-  value: string,
-  rowText: string | undefined,
-  compReplace: number
-): string | null => {
+export const completionToApplyOnSubmit = (value: string, rowText: string | undefined, compReplace: number): string | null => {
   if (!rowText) {
     return null
   }

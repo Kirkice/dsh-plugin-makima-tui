@@ -63,8 +63,7 @@ describe('cursor-drift regression — composer cursorLayout matches Ink renderin
 
         expect(
           layout,
-          `mismatch at cols=${cols}, len=${acc.length}, last-char=${JSON.stringify(ch)}, ` +
-            `tail=${JSON.stringify(acc.slice(-30))}`
+          `mismatch at cols=${cols}, len=${acc.length}, last-char=${JSON.stringify(ch)}, ` + `tail=${JSON.stringify(acc.slice(-30))}`
         ).toEqual(expected)
       }
     }

@@ -290,7 +290,7 @@ export function usePet(): PetRender {
         }
 
         setGrid(null)
-        setKitty(prev =>
+        setKitty((prev) =>
           prev && prev.color === entry.color && prev.placeholder === entry.placeholder
             ? prev
             : { color: entry.color, placeholder: entry.placeholder }

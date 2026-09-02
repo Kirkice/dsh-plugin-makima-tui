@@ -167,8 +167,7 @@ describe('navChipLabels', () => {
   const CHROME = 4
   const FIXED = '← '.length + ' →'.length + ' ✔ Submit '.length
 
-  const rendered = (labels: string[]) =>
-    labels.filter(Boolean).reduce((sum, l) => sum + CHROME + l.length, 0) + FIXED
+  const rendered = (labels: string[]) => labels.filter(Boolean).reduce((sum, l) => sum + CHROME + l.length, 0) + FIXED
 
   it('renders headers verbatim when they fit', () => {
     expect(navChipLabels(['Scope', 'Depth'], 0, 80)).toEqual(['Scope', 'Depth'])
@@ -205,8 +204,7 @@ describe('navChipLabels', () => {
 
     for (let cols = 21; cols <= 120; cols++) {
       for (let current = 0; current < headers.length; current++) {
-        expect(rendered(navChipLabels(headers, current, cols)), `cols=${cols} current=${current}`)
-          .toBeLessThanOrEqual(cols)
+        expect(rendered(navChipLabels(headers, current, cols)), `cols=${cols} current=${current}`).toBeLessThanOrEqual(cols)
       }
     }
   })

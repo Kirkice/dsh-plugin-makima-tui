@@ -32,15 +32,7 @@ import {
 } from '../lib/text.js'
 import { isChecklistHudTool } from '../lib/todo.js'
 import type { Theme } from '../theme.js'
-import type {
-  ActiveTool,
-  ActivityItem,
-  DetailsMode,
-  SectionVisibility,
-  SubagentNode,
-  SubagentProgress,
-  ThinkingMode
-} from '../types.js'
+import type { ActiveTool, ActivityItem, DetailsMode, SectionVisibility, SubagentNode, SubagentProgress, ThinkingMode } from '../types.js'
 
 const THINK: BrailleSpinnerName[] = ['braille']
 const TOOL: BrailleSpinnerName[] = ['cascade', 'scan', 'diagswipe', 'fillsweep', 'rain', 'columns', 'sparkle']
@@ -57,7 +49,7 @@ type TreeRails = readonly boolean[]
 const nextTreeRails = (rails: TreeRails, branch: TreeBranch) => [...rails, branch === 'mid']
 
 const treeLead = (rails: TreeRails, branch: TreeBranch) =>
-  `${rails.map(on => (on ? '│ ' : '  ')).join('')}${branch === 'mid' ? '├─ ' : '└─ '}`
+  `${rails.map((on) => (on ? '│ ' : '  ')).join('')}${branch === 'mid' ? '├─ ' : '└─ '}`
 
 // ── Primitives ───────────────────────────────────────────────────────
 
@@ -159,7 +151,7 @@ export function Spinner({ color, variant = 'think' }: { color: string; variant?:
   const spin = useMemo(() => {
     const raw = spinners[pick(variant === 'tool' ? TOOL : THINK)]
 
-    return { ...raw, frames: raw.frames.map(f => [...f][0] ?? '⠀') }
+    return { ...raw, frames: raw.frames.map((f) => [...f][0] ?? '⠀') }
   }, [variant])
 
   const [frame, setFrame] = useState(0)
@@ -169,7 +161,7 @@ export function Spinner({ color, variant = 'think' }: { color: string; variant?:
   }, [spin])
 
   useEffect(() => {
-    const id = setInterval(() => setFrame(f => (f + 1) % spin.frames.length), spin.interval)
+    const id = setInterval(() => setFrame((f) => (f + 1) % spin.frames.length), spin.interval)
 
     return () => clearInterval(id)
   }, [spin])
@@ -215,7 +207,7 @@ function StreamCursor({
       return
     }
 
-    const id = setInterval(() => setOn(v => !v), 420)
+    const id = setInterval(() => setOn((v) => !v), 420)
 
     return () => clearInterval(id)
   }, [streaming, visible])
@@ -404,11 +396,11 @@ function SubagentAccordion({
       header: (
         <Chevron
           count={item.thinking.length}
-          onClick={shift => {
+          onClick={(shift) => {
             if (shift) {
               expandAll()
             } else {
-              setOpenThinking(v => !v)
+              setOpenThinking((v) => !v)
             }
           }}
           open={openThinking}
@@ -418,7 +410,7 @@ function SubagentAccordion({
       ),
       key: 'thinking',
       open: openThinking,
-      render: childRails => (
+      render: (childRails) => (
         <Thinking
           active={item.status === 'running'}
           branch="last"
@@ -437,11 +429,11 @@ function SubagentAccordion({
       header: (
         <Chevron
           count={item.tools.length}
-          onClick={shift => {
+          onClick={(shift) => {
             if (shift) {
               expandAll()
             } else {
-              setOpenTools(v => !v)
+              setOpenTools((v) => !v)
             }
           }}
           open={openTools}
@@ -451,7 +443,7 @@ function SubagentAccordion({
       ),
       key: 'tools',
       open: openTools,
-      render: childRails => (
+      render: (childRails) => (
         <Box flexDirection="column">
           {item.tools.map((line, index) => (
             <TreeTextRow
@@ -478,11 +470,11 @@ function SubagentAccordion({
       header: (
         <Chevron
           count={noteRows.length}
-          onClick={shift => {
+          onClick={(shift) => {
             if (shift) {
               expandAll()
             } else {
-              setOpenNotes(v => !v)
+              setOpenNotes((v) => !v)
             }
           }}
           open={openNotes}
@@ -493,7 +485,7 @@ function SubagentAccordion({
       ),
       key: 'notes',
       open: openNotes,
-      render: childRails => (
+      render: (childRails) => (
         <Box flexDirection="column">
           {noteRows.map((line, index) => (
             <TreeTextRow
@@ -518,11 +510,11 @@ function SubagentAccordion({
       header: (
         <Chevron
           count={children.length}
-          onClick={shift => {
+          onClick={(shift) => {
             if (shift) {
               expandAll()
             } else {
-              setOpenKids(v => !v)
+              setOpenKids((v) => !v)
             }
           }}
           open={openKids}
@@ -533,7 +525,7 @@ function SubagentAccordion({
       ),
       key: 'subagents',
       open: openKids,
-      render: childRails => (
+      render: (childRails) => (
         <Box flexDirection="column">
           {children.map((child, i) => (
             <SubagentAccordion
@@ -560,14 +552,14 @@ function SubagentAccordion({
       branch={branch}
       header={
         <Chevron
-          onClick={shift => {
+          onClick={(shift) => {
             if (shift) {
               expandAll()
 
               return
             }
 
-            setOpen(v => {
+            setOpen((v) => {
               if (!v) {
                 setDeep(false)
               }
@@ -588,7 +580,7 @@ function SubagentAccordion({
       stemDim={stem == null}
       t={t}
     >
-      {childRails => (
+      {(childRails) => (
         <Box flexDirection="column">
           {sections.map((section, index) => (
             <TreeNode
@@ -633,7 +625,7 @@ export const Thinking = memo(function Thinking({
     return mode === 'full' ? boundedLiveRenderText(raw) : raw
   }, [mode, reasoning])
 
-  const lines = useMemo(() => preview.split('\n').map(line => line.replace(/\t/g, '  ')), [preview])
+  const lines = useMemo(() => preview.split('\n').map((line) => line.replace(/\t/g, '  ')), [preview])
 
   // Whether the preview is standing in for more than it shows. Compared
   // against the same whitespace-collapsed form the preview is cut from, so a
@@ -656,9 +648,7 @@ export const Thinking = memo(function Thinking({
             lines.map((line, index) => (
               <Text color={t.color.muted} key={index} wrap="wrap-trim">
                 {line || ' '}
-                {index === lines.length - 1 ? (
-                  <StreamCursor color={t.color.muted} streaming={streaming} visible={active} />
-                ) : null}
+                {index === lines.length - 1 ? <StreamCursor color={t.color.muted} streaming={streaming} visible={active} /> : null}
               </Text>
             ))
           ) : (
@@ -796,16 +786,7 @@ export const ToolTrail = memo(function ToolTrail({
   const spawnSpark = useMemo(() => sparkline(spawnWidths), [spawnWidths])
   const spawnSummaryLabel = useMemo(() => formatSpawnSummary(spawnTotals), [spawnTotals])
 
-  if (
-    !busy &&
-    !trail.length &&
-    !tools.length &&
-    !subagents.length &&
-    !activity.length &&
-    !cot &&
-    !reasoningActive &&
-    !outcome
-  ) {
+  if (!busy && !trail.length && !tools.length && !subagents.length && !activity.length && !cot && !reasoningActive && !outcome) {
     return null
   }
 
@@ -832,18 +813,15 @@ export const ToolTrail = memo(function ToolTrail({
   // reasoning — hundreds of lines — above every answer. So it stays open by
   // default and shows a line or two, and ctrl+o is what asks for all of it.
   const thinkingKey = detailScope ? `${detailScope}:thinking` : ''
-  const thinkingOverride = thinkingKey && detailExpanded && Object.hasOwn(detailExpanded, thinkingKey)
-    ? detailExpanded[thinkingKey]
-    : undefined
+  const thinkingOverride =
+    thinkingKey && detailExpanded && Object.hasOwn(detailExpanded, thinkingKey) ? detailExpanded[thinkingKey] : undefined
   const thinkingExpanded = thinkingOverride ?? detailsMode === 'expanded'
   const resolvedExpandedTools = new Set(
     trail.flatMap((_, index) => {
       const key = detailScope ? `${detailScope}:tool:${index}` : ''
-      const override = key && detailExpanded && Object.hasOwn(detailExpanded, key)
-        ? detailExpanded[key]
-        : undefined
+      const override = key && detailExpanded && Object.hasOwn(detailExpanded, key) ? detailExpanded[key] : undefined
 
-      return override ?? toolsExpanded ? [index] : []
+      return (override ?? toolsExpanded) ? [index] : []
     })
   )
 
@@ -852,9 +830,7 @@ export const ToolTrail = memo(function ToolTrail({
     // when the gateway retained raw output; '' means the compact line is
     // already complete.
     const toolKey = detailScope ? `${detailScope}:tool:${i}` : ''
-    const toolOverride = toolKey && detailExpanded && Object.hasOwn(detailExpanded, toolKey)
-      ? detailExpanded[toolKey]
-      : undefined
+    const toolOverride = toolKey && detailExpanded && Object.hasOwn(detailExpanded, toolKey) ? detailExpanded[toolKey] : undefined
     const toolExpanded = toolOverride ?? toolsExpanded
     const line = toolExpanded && verboseTrail[i] ? verboseTrail[i]! : compactLine
     const parsed = parseToolTrailResultLine(line)
@@ -967,8 +943,7 @@ export const ToolTrail = memo(function ToolTrail({
   const hasThinking = !!cot || reasoningActive || reasoningStreaming
   const thinkingLive = reasoningActive || reasoningStreaming
 
-  const tokenCount =
-    reasoningTokens && reasoningTokens > 0 ? reasoningTokens : reasoning ? estimateTokensRough(reasoning) : 0
+  const tokenCount = reasoningTokens && reasoningTokens > 0 ? reasoningTokens : reasoning ? estimateTokensRough(reasoning) : 0
 
   const toolTokenCount = toolTokens ?? 0
   const totalTokenCount = tokenCount + toolTokenCount
@@ -977,7 +952,7 @@ export const ToolTrail = memo(function ToolTrail({
   const toolTokensLabel = toolTokens !== undefined && toolTokens > 0 ? `~${fmtK(toolTokens)} tokens` : undefined
 
   const totalTokensLabel = tokenCount > 0 && toolTokenCount > 0 ? `~${fmtK(totalTokenCount)} total` : null
-  const delegateGroups = groups.filter(g => isDelegationCall(g.label))
+  const delegateGroups = groups.filter((g) => isDelegationCall(g.label))
   const inlineDelegateKey = hasSubagents && delegateGroups.length === 1 ? delegateGroups[0]!.key : null
 
   const toolLabel = (group: Group) => {
@@ -1000,7 +975,9 @@ export const ToolTrail = memo(function ToolTrail({
 
     return (
       <>
-        <Text bold color={t.color.highlight}>{label.slice(0, paren)}</Text>
+        <Text bold color={t.color.highlight}>
+          {label.slice(0, paren)}
+        </Text>
         <Text color={t.color.command}>{label.slice(paren)}</Text>
       </>
     )
@@ -1016,17 +993,14 @@ export const ToolTrail = memo(function ToolTrail({
   // backstop so quiet-mode users aren't blind to failures.
 
   const allHidden =
-    visible.thinking === 'hidden' &&
-    visible.tools === 'hidden' &&
-    visible.subagents === 'hidden' &&
-    visible.activity === 'hidden'
+    visible.thinking === 'hidden' && visible.tools === 'hidden' && visible.subagents === 'hidden' && visible.activity === 'hidden'
 
   if (allHidden) {
-    const alerts = activity.filter(i => i.tone !== 'info').slice(-2)
+    const alerts = activity.filter((i) => i.tone !== 'info').slice(-2)
 
     return alerts.length ? (
       <Box flexDirection="column">
-        {alerts.map(i => (
+        {alerts.map((i) => (
           <Text color={i.tone === 'error' ? t.color.error : t.color.warn} key={`ha-${i.id}`}>
             {i.tone === 'error' ? '✗' : '!'} {i.text}
           </Text>
@@ -1059,9 +1033,9 @@ export const ToolTrail = memo(function ToolTrail({
     }
   }
 
-  const metaTone: 'dim' | 'error' | 'warn' = activity.some(i => i.tone === 'error')
+  const metaTone: 'dim' | 'error' | 'warn' = activity.some((i) => i.tone === 'error')
     ? 'error'
-    : activity.some(i => i.tone === 'warn')
+    : activity.some((i) => i.tone === 'warn')
       ? 'warn'
       : 'dim'
 
@@ -1096,7 +1070,7 @@ export const ToolTrail = memo(function ToolTrail({
             if (e?.shiftKey || e?.ctrlKey) {
               expandAll()
             } else {
-              setOpenThinking(v => !v)
+              setOpenThinking((v) => !v)
             }
           }}
         >
@@ -1133,7 +1107,7 @@ export const ToolTrail = memo(function ToolTrail({
       ),
       key: 'thinking',
       open: openThinking,
-      render: rails => (
+      render: (rails) => (
         <Thinking
           active={reasoningActive}
           branch="last"
@@ -1162,7 +1136,8 @@ export const ToolTrail = memo(function ToolTrail({
     const isDelegateGroup = isDelegationCall(group.label)
     const visual = toolVisual(group.label, group.live ? 'running' : group.error ? 'error' : 'success')
     const bulletColor = group.error ? t.color.error : group.live ? t.color.accent : t.color.ok
-    const visualColor = visual.tone === 'error' ? t.color.error : visual.tone === 'ok' ? t.color.ok : visual.tone === 'accent' ? t.color.accent : t.color.text
+    const visualColor =
+      visual.tone === 'error' ? t.color.error : visual.tone === 'ok' ? t.color.ok : visual.tone === 'accent' ? t.color.accent : t.color.text
 
     return (
       <Box
@@ -1176,7 +1151,9 @@ export const ToolTrail = memo(function ToolTrail({
       >
         <Text color={group.color}>
           {group.live ? (
-            <Text color={visualColor} dim={!blinkOn}>{blinkOn ? `${visual.glyph} ` : '  '}</Text>
+            <Text color={visualColor} dim={!blinkOn}>
+              {blinkOn ? `${visual.glyph} ` : '  '}
+            </Text>
           ) : (
             <Text color={visualColor}>{visual.glyph} </Text>
           )}
@@ -1188,7 +1165,7 @@ export const ToolTrail = memo(function ToolTrail({
           ) : null}
         </Text>
         {group.details.length > 0 ? <Box borderColor={t.color.frame} borderTop marginY={0} /> : null}
-        {group.details.map(detail => {
+        {group.details.map((detail) => {
           // Multi-line details (Bash 3-line summaries, error caps):
           // first row carries the ⎿ connector, continuations align
           // under the content column.
@@ -1233,7 +1210,7 @@ export const ToolTrail = memo(function ToolTrail({
   // result is the information the user needs to audit at a glance. ctrl+o (or
   // an explicit tools=expanded setting) restores the complete per-call trail.
   const renderBrief = (run: Group[], key: string) => {
-    const summary = briefText(countBriefTools(run.map(group => group.label)))
+    const summary = briefText(countBriefTools(run.map((group) => group.label)))
 
     return (
       <Text color={t.color.muted} dim key={key} wrap="wrap-trim">
@@ -1257,8 +1234,8 @@ export const ToolTrail = memo(function ToolTrail({
     // every other call back into the compact brief.
     const runs = briefRuns(
       groups,
-      group => group.label,
-      group => {
+      (group) => group.label,
+      (group) => {
         const match = /^tr-(\d+)$/.exec(group.key)
         return Boolean(group.error || group.live || (match && resolvedExpandedTools.has(Number(match[1]))))
       }
@@ -1284,12 +1261,12 @@ export const ToolTrail = memo(function ToolTrail({
       header: (
         <Chevron
           count={spawnTotals.descendantCount}
-          onClick={shift => {
+          onClick={(shift) => {
             if (shift) {
               expandAll()
               setDeepSubagents(true)
             } else {
-              setOpenSubagents(v => !v)
+              setOpenSubagents((v) => !v)
               setDeepSubagents(false)
             }
           }}
@@ -1310,11 +1287,11 @@ export const ToolTrail = memo(function ToolTrail({
       header: (
         <Chevron
           count={meta.length}
-          onClick={shift => {
+          onClick={(shift) => {
             if (shift) {
               expandAll()
             } else {
-              setOpenMeta(v => !v)
+              setOpenMeta((v) => !v)
             }
           }}
           open={openMeta}
@@ -1325,7 +1302,7 @@ export const ToolTrail = memo(function ToolTrail({
       ),
       key: 'meta',
       open: openMeta,
-      render: rails => (
+      render: (rails) => (
         <Box flexDirection="column">
           {meta.map((row, index) => (
             <TreeTextRow
@@ -1348,13 +1325,7 @@ export const ToolTrail = memo(function ToolTrail({
   return (
     <Box flexDirection="column">
       {panels.map((panel, index) => (
-        <TreeNode
-          branch={index === topCount - 1 ? 'last' : 'mid'}
-          header={panel.header}
-          key={panel.key}
-          open={panel.open}
-          t={t}
-        >
+        <TreeNode branch={index === topCount - 1 ? 'last' : 'mid'} header={panel.header} key={panel.key} open={panel.open} t={t}>
           {panel.render}
         </TreeNode>
       ))}

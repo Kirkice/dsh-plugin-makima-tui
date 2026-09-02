@@ -66,23 +66,15 @@ describe('formatToolResult', () => {
       'REMINDER: You MUST include the sources above in your response to the user using markdown hyperlinks.'
 
     // Envelope present (agent-server tool_use_result): exact CC string.
-    expect(formatToolResult('WebSearch', blob, false, { durationSeconds: 24.4, searchCount: 1 })).toBe(
-      'Did 1 search in 24s'
-    )
-    expect(formatToolResult('WebSearch', blob, false, { durationSeconds: 0.532, searchCount: 2 })).toBe(
-      'Did 2 searches in 532ms'
-    )
+    expect(formatToolResult('WebSearch', blob, false, { durationSeconds: 24.4, searchCount: 1 })).toBe('Did 1 search in 24s')
+    expect(formatToolResult('WebSearch', blob, false, { durationSeconds: 0.532, searchCount: 2 })).toBe('Did 2 searches in 532ms')
 
     // No envelope (older backend): count recovered from the blob, no time.
     expect(formatToolResult('WebSearch', blob)).toBe('Did 1 search')
-    expect(formatToolResult('WebSearch', 'Web search results for query: "x"\n\nNo results found.')).toBe(
-      'Did 0 searches'
-    )
+    expect(formatToolResult('WebSearch', 'Web search results for query: "x"\n\nNo results found.')).toBe('Did 0 searches')
 
     // Envelope without a matching stored tool name (mid-turn attach).
-    expect(formatToolResult(undefined, blob, false, { durationSeconds: 2, searchCount: 1 })).toBe(
-      'Did 1 search in 2s'
-    )
+    expect(formatToolResult(undefined, blob, false, { durationSeconds: 2, searchCount: 1 })).toBe('Did 1 search in 2s')
 
     // Errors keep the error path — never a fake "Did N searches".
     expect(formatToolResult('WebSearch', 'rate limited', true)).toBe('Error: rate limited')
@@ -105,19 +97,11 @@ describe('formatToolResult', () => {
   // reaches the transcript (the bug: `Error: <tool_use_error>path is not a
   // file: …</tool_use_error>` printed raw).
   it('strips tool_use_error / error / sandbox_violations markup from errors', () => {
-    expect(formatToolResult('Bash', '<tool_use_error>permission denied</tool_use_error>', true)).toBe(
-      'Error: permission denied'
+    expect(formatToolResult('Bash', '<tool_use_error>permission denied</tool_use_error>', true)).toBe('Error: permission denied')
+    expect(formatToolResult('Bash', '<error>Command was aborted</error>', true)).toBe('Error: Command was aborted')
+    expect(formatToolResult('Bash', 'boom<sandbox_violations>write /etc/hosts\nconnect 1.2.3.4</sandbox_violations>', true)).toBe(
+      'Error: boom'
     )
-    expect(formatToolResult('Bash', '<error>Command was aborted</error>', true)).toBe(
-      'Error: Command was aborted'
-    )
-    expect(
-      formatToolResult(
-        'Bash',
-        'boom<sandbox_violations>write /etc/hosts\nconnect 1.2.3.4</sandbox_violations>',
-        true
-      )
-    ).toBe('Error: boom')
     // Cancelled: survives unprefixed after unwrapping.
     expect(formatToolResult('Bash', '<tool_use_error>Cancelled: parallel tool call errored</tool_use_error>', true)).toBe(
       'Cancelled: parallel tool call errored'
@@ -133,23 +117,21 @@ describe('formatToolResult', () => {
       )
     ).toBe('Error searching files')
     // Non-search tools take the fallback collapse (FallbackToolUseErrorMessage.tsx:39-40).
-    expect(
-      formatToolResult('TodoWrite', '<tool_use_error>InputValidationError: bad</tool_use_error>', true)
-    ).toBe('Invalid tool parameters')
+    expect(formatToolResult('TodoWrite', '<tool_use_error>InputValidationError: bad</tool_use_error>', true)).toBe(
+      'Invalid tool parameters'
+    )
   })
 
   // Per-tool renderToolUseErrorMessage ports (tools/*/UI.tsx).
   it('collapses tagged per-tool errors like the original transcript', () => {
     expect(formatToolResult('Read', '<tool_use_error>boom</tool_use_error>', true)).toBe('Error reading file')
-    expect(
-      formatToolResult('Read', "File does not exist: /x. Note: your current working directory is /ws.", true)
-    ).toBe('File not found')
+    expect(formatToolResult('Read', 'File does not exist: /x. Note: your current working directory is /ws.', true)).toBe('File not found')
     expect(
       formatToolResult('Glob', '<tool_use_error>File does not exist. Note: your current working directory is /ws.</tool_use_error>', true)
     ).toBe('File not found')
-    expect(formatToolResult('Edit', '<tool_use_error>File has not been read yet. Read it first before writing to it.</tool_use_error>', true)).toBe(
-      'File must be read first'
-    )
+    expect(
+      formatToolResult('Edit', '<tool_use_error>File has not been read yet. Read it first before writing to it.</tool_use_error>', true)
+    ).toBe('File must be read first')
     expect(formatToolResult('Edit', '<tool_use_error>boom</tool_use_error>', true)).toBe('Error editing file')
     expect(formatToolResult('Write', '<tool_use_error>boom</tool_use_error>', true)).toBe('Error writing file')
     expect(formatToolResult('NotebookEdit', '<tool_use_error>boom</tool_use_error>', true)).toBe('Error editing notebook')
@@ -211,7 +193,7 @@ const renderToString = (element: React.ReactElement): string => {
   Object.assign(stdout, { columns: 100, isTTY: false, rows: 40 })
   Object.assign(stdin, { isTTY: false })
   Object.assign(stderr, { isTTY: false })
-  stdout.on('data', chunk => {
+  stdout.on('data', (chunk) => {
     output += chunk.toString()
   })
 
@@ -232,15 +214,13 @@ describe('ToolTrail rendering', () => {
   it('renders a 3-line Bash result as three aligned rows under one connector', () => {
     const line = buildToolTrailLine('Bash', 'ls src/', false, 'components\nlib\napp')
 
-    const output = renderToString(
-      React.createElement(ToolTrail, { detailsMode: 'expanded', t: DEFAULT_THEME, trail: [line] })
-    )
+    const output = renderToString(React.createElement(ToolTrail, { detailsMode: 'expanded', t: DEFAULT_THEME, trail: [line] }))
 
     const rows = stripAnsi(output)
       .split('\n')
-      .filter(r => r.trim().length > 0)
+      .filter((r) => r.trim().length > 0)
 
-    const bullet = rows.findIndex(r => r.includes('Bash(ls src/)'))
+    const bullet = rows.findIndex((r) => r.includes('Bash(ls src/)'))
 
     expect(bullet).toBeGreaterThanOrEqual(0)
     expect(rows[bullet]).not.toMatch(/\(\d+(\.\d+)?s\)/) // no duration
@@ -254,9 +234,7 @@ describe('ToolTrail rendering', () => {
   it('bolds the tool name and keeps args plain', () => {
     const line = buildToolTrailLine('Bash', 'npm test', false, 'ok')
 
-    const output = renderToString(
-      React.createElement(ToolTrail, { detailsMode: 'expanded', t: DEFAULT_THEME, trail: [line] })
-    )
+    const output = renderToString(React.createElement(ToolTrail, { detailsMode: 'expanded', t: DEFAULT_THEME, trail: [line] }))
 
     // bold SGR immediately around the name, not the args
     // eslint-disable-next-line no-control-regex
@@ -267,9 +245,7 @@ describe('ToolTrail rendering', () => {
   it('marks failed tools with an error bullet while the name row stays plain', () => {
     const line = buildToolTrailLine('Bash', 'false', true, 'Error: exit 1')
 
-    const output = renderToString(
-      React.createElement(ToolTrail, { detailsMode: 'expanded', t: DEFAULT_THEME, trail: [line] })
-    )
+    const output = renderToString(React.createElement(ToolTrail, { detailsMode: 'expanded', t: DEFAULT_THEME, trail: [line] }))
 
     const plain = stripAnsi(output)
 

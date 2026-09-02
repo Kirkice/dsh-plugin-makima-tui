@@ -9,7 +9,7 @@ import type { QuestionSpec } from '../gatewayTypes.js'
 import { stripAnsi } from '../lib/text.js'
 import { DEFAULT_THEME } from '../theme.js'
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 /** Poll until `check` stops throwing. A fixed settle is load-dependent — 20ms
  *  is plenty when this file runs alone and not nearly enough inside the full
@@ -53,16 +53,13 @@ function mount(questions: QuestionSpec[]) {
 
   const onAnswer = vi.fn()
 
-  const app = renderSync(
-    React.createElement(QuestionPrompt, { cols: 100, onAnswer, questions, t: DEFAULT_THEME }),
-    {
-      exitOnCtrlC: false,
-      patchConsole: false,
-      stderr: stderr as NodeJS.WriteStream,
-      stdin: stdin as NodeJS.ReadStream,
-      stdout: stdout as NodeJS.WriteStream
-    }
-  )
+  const app = renderSync(React.createElement(QuestionPrompt, { cols: 100, onAnswer, questions, t: DEFAULT_THEME }), {
+    exitOnCtrlC: false,
+    patchConsole: false,
+    stderr: stderr as unknown as NodeJS.WriteStream,
+    stdin: stdin as unknown as NodeJS.ReadStream,
+    stdout: stdout as unknown as NodeJS.WriteStream
+  })
 
   return {
     /** Reset the accumulator so a later `toContain` means "rendered SINCE this
@@ -327,10 +324,7 @@ describe('QuestionPrompt — untrusted model input', () => {
     const forged: QuestionSpec = {
       header: 'Deploy',
       question: 'Which deploy?',
-      options: [
-        { label: 'Cancel deploy\n  2. Deploy to staging (safe)' },
-        { label: 'Deploy to PRODUCTION' }
-      ]
+      options: [{ label: 'Cancel deploy\n  2. Deploy to staging (safe)' }, { label: 'Deploy to PRODUCTION' }]
     }
 
     const p = mount([forged])

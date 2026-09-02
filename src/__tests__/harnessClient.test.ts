@@ -101,10 +101,34 @@ function makeWorld() {
   }
   const handle = { agent, dispose: vi.fn(async () => {}) }
   const storedEvents = [
-    { data: { content: [{ text: 'old prompt', type: 'text' }], id: 'u1', role: 'user', source: { kind: 'user' } }, seq: 1, time: 1, type: 'user/message' },
+    {
+      data: { content: [{ text: 'old prompt', type: 'text' }], id: 'u1', role: 'user', source: { kind: 'user' } },
+      seq: 1,
+      time: 1,
+      type: 'user/message'
+    },
     { data: { arguments: '{"command":"ls"}', callId: 'c1', name: 'bash', step: 1, turn: 1 }, seq: 2, time: 2, type: 'tool/call' },
-    { data: { message: { content: [{ content: [{ text: 'raw', type: 'text' }], toolCallId: 'c1', type: 'tool-result' }] }, step: 1, turn: 1 }, seq: 3, time: 3, type: 'tool/result' },
-    { data: { message: { content: [{ text: 'old reply', type: 'text' }], id: 'a1', role: 'assistant', source: { kind: 'model' } }, step: 1, turn: 1, usage: { cacheReadTokens: 100, inputTokens: 900, outputTokens: 120 } }, seq: 3, time: 3, type: 'assistant/message' },
+    {
+      data: {
+        message: { content: [{ content: [{ text: 'raw', type: 'text' }], toolCallId: 'c1', type: 'tool-result' }] },
+        step: 1,
+        turn: 1
+      },
+      seq: 3,
+      time: 3,
+      type: 'tool/result'
+    },
+    {
+      data: {
+        message: { content: [{ text: 'old reply', type: 'text' }], id: 'a1', role: 'assistant', source: { kind: 'model' } },
+        step: 1,
+        turn: 1,
+        usage: { cacheReadTokens: 100, inputTokens: 900, outputTokens: 120 }
+      },
+      seq: 3,
+      time: 3,
+      type: 'assistant/message'
+    },
     { data: { reason: { kind: 'completed' }, turn: 1 }, seq: 4, time: 4, type: 'turn/end' }
   ]
   const resumedAgent = {
@@ -150,7 +174,12 @@ function makeWorld() {
       }
 
       if (name === 'userQuestions') {
-        return { registerProvider: (prov: { ask: (r: unknown) => Promise<unknown> }) => { providers.push(prov); return () => {} } }
+        return {
+          registerProvider: (prov: { ask: (r: unknown) => Promise<unknown> }) => {
+            providers.push(prov)
+            return () => {}
+          }
+        }
       }
 
       if (name === 'commands') {
@@ -179,7 +208,11 @@ function makeWorld() {
         return {
           listModels: async () => [{ id: 'mock-1' }, { id: 'mock-2' }],
           listProviders: () => [{ id: 'mock', name: 'Mock' }],
-          resolveModelInfo: async () => ({ context: { contextWindow: 64000 }, inputModalities: ['text', 'image'], reasoning: { efforts: [{ id: 'low' }, { id: 'high' }] } })
+          resolveModelInfo: async () => ({
+            context: { contextWindow: 64000 },
+            inputModalities: ['text', 'image'],
+            reasoning: { efforts: [{ id: 'low' }, { id: 'high' }] }
+          })
         }
       }
 
@@ -206,15 +239,30 @@ function makeWorld() {
 
       if (name === 'sessionPersistence') {
         return {
-          append: async (id: string, events: readonly unknown[]) => { appended.push({ events, id }) },
-          delete: async (id: string) => { deleted.push(id) },
+          append: async (id: string, events: readonly unknown[]) => {
+            appended.push({ events, id })
+          },
+          delete: async (id: string) => {
+            deleted.push(id)
+          },
           inspect: async (id: string) => ({
-            events: id === 'cc-old-2'
-              ? [
-                  { data: { content: [{ text: 'first persisted prompt', type: 'text' }], source: { kind: 'user' } }, seq: 0, time: 1, type: 'user/message' },
-                  { data: { content: [{ text: 'latest persisted prompt', type: 'text' }], source: { kind: 'user' } }, seq: 1, time: 2, type: 'user/message' }
-                ]
-              : storedEvents
+            events:
+              id === 'cc-old-2'
+                ? [
+                    {
+                      data: { content: [{ text: 'first persisted prompt', type: 'text' }], source: { kind: 'user' } },
+                      seq: 0,
+                      time: 1,
+                      type: 'user/message'
+                    },
+                    {
+                      data: { content: [{ text: 'latest persisted prompt', type: 'text' }], source: { kind: 'user' } },
+                      seq: 1,
+                      time: 2,
+                      type: 'user/message'
+                    }
+                  ]
+                : storedEvents
           }),
           list: async () => [
             { createdAt: 50, cwd: '/workspaces/first', id: 'cc-old-1', version: 1 },
@@ -256,7 +304,7 @@ function makeWorld() {
   const client = new HarnessGatewayClient(ctx as never, { cwd: '/tmp/w', model: 'mock-1', provider: 'mock' })
   const events: GatewayEvent[] = []
 
-  client.on('event', ev => events.push(ev as GatewayEvent))
+  client.on('event', (ev) => events.push(ev as GatewayEvent))
   client.drain()
 
   const fire = (type: string, data: unknown) => {
@@ -280,10 +328,29 @@ function makeWorld() {
     }
   }
 
-  return { agent, appended, cancels, client, ctx, deleted, emit, events, fire, fireFrom, followups, listeners, planSets, policies, providers, resumedAgent, resumedHandle, steers }
+  return {
+    agent,
+    appended,
+    cancels,
+    client,
+    ctx,
+    deleted,
+    emit,
+    events,
+    fire,
+    fireFrom,
+    followups,
+    listeners,
+    planSets,
+    policies,
+    providers,
+    resumedAgent,
+    resumedHandle,
+    steers
+  }
 }
 
-const settle = () => new Promise(resolve => setTimeout(resolve, 0))
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 describe('HarnessGatewayClient', () => {
   afterEach(() => {
@@ -296,9 +363,22 @@ describe('HarnessGatewayClient', () => {
     w.client.start()
     await settle()
 
-    ;(w.client as any).pendingImages.set('cc-test-session', new Map([[7, {
-      attachmentId: 'stored-image', bytes: 3, height: 12, mediaType: 'image/png', name: 'clipboard-screenshot.png', width: 16
-    }]]))
+    ;(w.client as any).pendingImages.set(
+      'cc-test-session',
+      new Map([
+        [
+          7,
+          {
+            attachmentId: 'stored-image',
+            bytes: 3,
+            height: 12,
+            mediaType: 'image/png',
+            name: 'clipboard-screenshot.png',
+            width: 16
+          }
+        ]
+      ])
+    )
     await w.client.request('prompt.submit', { text: '[Image #7] inspect this' })
 
     expect(w.followups).toHaveLength(1)
@@ -313,18 +393,29 @@ describe('HarnessGatewayClient', () => {
   it('rejects an image before followup when the active model is text-only', async () => {
     const w = makeWorld()
     const originalGet = w.ctx.get
-    ;(w.ctx as any).get = (name: string) => name === 'llm'
-      ? { resolveModelInfo: async () => ({ inputModalities: ['text'] }) }
-      : originalGet(name)
+    ;(w.ctx as any).get = (name: string) =>
+      name === 'llm' ? { resolveModelInfo: async () => ({ inputModalities: ['text'] }) } : originalGet(name)
     w.client.start()
     await settle()
 
-    ;(w.client as any).pendingImages.set('cc-test-session', new Map([[7, {
-      attachmentId: 'stored-image', bytes: 3, height: 12, mediaType: 'image/png', name: 'clipboard-screenshot.png', width: 16
-    }]]))
+    ;(w.client as any).pendingImages.set(
+      'cc-test-session',
+      new Map([
+        [
+          7,
+          {
+            attachmentId: 'stored-image',
+            bytes: 3,
+            height: 12,
+            mediaType: 'image/png',
+            name: 'clipboard-screenshot.png',
+            width: 16
+          }
+        ]
+      ])
+    )
 
-    await expect(w.client.request('prompt.submit', { text: '[Image #7] inspect this' }))
-      .rejects.toThrow('does not support image input')
+    await expect(w.client.request('prompt.submit', { text: '[Image #7] inspect this' })).rejects.toThrow('does not support image input')
     expect(w.followups).toHaveLength(0)
     expect(SESSION.events).toHaveLength(0)
     expect((w.client as any).pendingImages.has('cc-test-session')).toBe(false)
@@ -333,16 +424,19 @@ describe('HarnessGatewayClient', () => {
   it('shadows a legacy unsupported image prompt before sending later text', async () => {
     const w = makeWorld()
     const originalGet = w.ctx.get
-    ;(w.ctx as any).get = (name: string) => name === 'llm'
-      ? { resolveModelInfo: async () => ({ inputModalities: ['text'] }) }
-      : originalGet(name)
-    const poisoned = SESSION.append('user/message', {
-      content: [
-        { text: '[Image #1] inspect this', type: 'text' },
-        { attachment: { attachmentId: 'old-image' }, type: 'image' }
-      ],
-      source: { kind: 'user' }
-    }, { surfaceOp: 'append' })
+    ;(w.ctx as any).get = (name: string) =>
+      name === 'llm' ? { resolveModelInfo: async () => ({ inputModalities: ['text'] }) } : originalGet(name)
+    const poisoned = SESSION.append(
+      'user/message',
+      {
+        content: [
+          { text: '[Image #1] inspect this', type: 'text' },
+          { attachment: { attachmentId: 'old-image' }, type: 'image' }
+        ],
+        source: { kind: 'user' }
+      },
+      { surfaceOp: 'append' }
+    )
     w.client.start()
     await settle()
 
@@ -405,33 +499,38 @@ describe('HarnessGatewayClient', () => {
     const mutations: unknown[] = []
     const settings = {
       get: () => ({ providers: {} }),
-      mutate: async (_ns: string, ops: unknown[]) => { mutations.push(...ops) }
+      mutate: async (_ns: string, ops: unknown[]) => {
+        mutations.push(...ops)
+      }
     }
-    ;(w.ctx as any).get = (name: string) => name === 'settings' ? settings : name === 'llm'
-      ? { listModels: async () => [], listProviders: () => [] }
-      : undefined
+    ;(w.ctx as any).get = (name: string) =>
+      name === 'settings' ? settings : name === 'llm' ? { listModels: async () => [], listProviders: () => [] } : undefined
     ;(w.ctx as any).credentials = {
       describe: async () => ({ configured: true }),
       set: async () => {},
       unset: async () => {}
     }
 
-    await expect(w.client.request('providers.saveOpenAiCompatible', {
-      api: 'openai-responses',
-      base_url: 'https://api.example.test/v1',
-      display_name: 'Example',
-      image_models: ['gpt-5.6-terra', 'missing-model'],
-      models: ['gpt-5.6-terra', 'text-only']
-    })).resolves.toEqual({ id: 'makima-example', saved: true })
-
-    expect(mutations).toEqual([expect.objectContaining({
-      value: expect.objectContaining({
-        models: [
-          { id: 'gpt-5.6-terra', input: ['text', 'image'] },
-          { id: 'text-only', input: ['text'] }
-        ]
+    await expect(
+      w.client.request('providers.saveOpenAiCompatible', {
+        api: 'openai-responses',
+        base_url: 'https://api.example.test/v1',
+        display_name: 'Example',
+        image_models: ['gpt-5.6-terra', 'missing-model'],
+        models: ['gpt-5.6-terra', 'text-only']
       })
-    })])
+    ).resolves.toEqual({ id: 'makima-example', saved: true })
+
+    expect(mutations).toEqual([
+      expect.objectContaining({
+        value: expect.objectContaining({
+          models: [
+            { id: 'gpt-5.6-terra', input: ['text', 'image'] },
+            { id: 'text-only', input: ['text'] }
+          ]
+        })
+      })
+    ])
   })
 
   it('does not submit a staged image when its chip was deleted', async () => {
@@ -439,9 +538,22 @@ describe('HarnessGatewayClient', () => {
     w.client.start()
     await settle()
 
-    ;(w.client as any).pendingImages.set('cc-test-session', new Map([[7, {
-      attachmentId: 'stored-image', bytes: 3, height: 12, mediaType: 'image/png', name: 'clipboard-screenshot.png', width: 16
-    }]]))
+    ;(w.client as any).pendingImages.set(
+      'cc-test-session',
+      new Map([
+        [
+          7,
+          {
+            attachmentId: 'stored-image',
+            bytes: 3,
+            height: 12,
+            mediaType: 'image/png',
+            name: 'clipboard-screenshot.png',
+            width: 16
+          }
+        ]
+      ])
+    )
     await w.client.request('prompt.submit', { text: 'text only' })
 
     expect(w.followups[0]).toMatchObject({ content: [{ text: 'text only', type: 'text' }] })
@@ -454,9 +566,11 @@ describe('HarnessGatewayClient', () => {
     client.start()
     await settle()
 
-    expect(w.ctx.agents.create).toHaveBeenCalledWith(expect.objectContaining({
-      meta: { cwd: 'H:\\Project\\Roo-Code' },
-    }))
+    expect(w.ctx.agents.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        meta: { cwd: 'H:\\Project\\Roo-Code' }
+      })
+    )
   })
 
   it('uses the CLI launch directory instead of a Makima workspace environment override', async () => {
@@ -469,9 +583,11 @@ describe('HarnessGatewayClient', () => {
       client.start()
       await settle()
 
-      expect(w.ctx.agents.create).toHaveBeenCalledWith(expect.objectContaining({
-        meta: { cwd: 'H:\\Project\\Roo-Code' },
-      }))
+      expect(w.ctx.agents.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          meta: { cwd: 'H:\\Project\\Roo-Code' }
+        })
+      )
     } finally {
       vi.unstubAllEnvs()
     }
@@ -486,7 +602,9 @@ describe('HarnessGatewayClient', () => {
     ctx.get = (name: string) => {
       if (name === 'sessionPersistence') {
         return {
-          delete: async (id: string) => { w.deleted.push(id) },
+          delete: async (id: string) => {
+            w.deleted.push(id)
+          },
           inspect: async () => ({ events: [] }),
           list: async () => [{ createdAt: 1, cwd: '/tmp/w', id: staleId, version: 1 }]
         }
@@ -509,7 +627,7 @@ describe('HarnessGatewayClient', () => {
     await settle()
 
     expect((w.ctx.agents.create as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1)
-    expect(w.events.map(e => e.type)).toEqual(['gateway.ready', 'session.info'])
+    expect(w.events.map((e) => e.type)).toEqual(['gateway.ready', 'session.info'])
 
     const info = w.events[1] as Extract<GatewayEvent, { type: 'session.info' }>
 
@@ -542,7 +660,7 @@ describe('HarnessGatewayClient', () => {
     })
     w.fire('turn/end', { reason: { kind: 'completed' }, turn: 1 })
 
-    const types = w.events.map(e => e.type)
+    const types = w.events.map((e) => e.type)
 
     expect(types).toEqual([
       'message.start',
@@ -586,7 +704,7 @@ describe('HarnessGatewayClient', () => {
       turn: 1
     })
 
-    expect(w.events.map(e => e.type)).toEqual(['error', 'session.stats'])
+    expect(w.events.map((e) => e.type)).toEqual(['error', 'session.stats'])
     expect(w.events[0]).toMatchObject({
       payload: { message: 'model gpt-5.6-luna is not available' },
       session_id: 'cc-test-session',
@@ -608,7 +726,7 @@ describe('HarnessGatewayClient', () => {
     w.fire('turn/start', { turn: 1 })
     w.fire('turn/end', { reason: { kind: 'completed' }, turn: 1 })
 
-    expect(w.events.map(e => e.type)).toEqual(['message.complete'])
+    expect(w.events.map((e) => e.type)).toEqual(['message.complete'])
   })
 
   it('gives every tool.start the salient argument its row renders in parens', async () => {
@@ -834,7 +952,7 @@ describe('HarnessGatewayClient', () => {
     }
 
     const subagentEvents = (w: ReturnType<typeof makeWorld>) =>
-      w.events.filter(e => e.type.startsWith('subagent.')) as Extract<GatewayEvent, { type: `subagent.${string}` }>[]
+      w.events.filter((e) => e.type.startsWith('subagent.')) as Extract<GatewayEvent, { type: `subagent.${string}` }>[]
 
     it('opens a row on the lifecycle edge and names it from the child’s own descriptor', async () => {
       const w = await delegating()
@@ -893,7 +1011,7 @@ describe('HarnessGatewayClient', () => {
       })
     })
 
-    it('bills the child\'s tokens to the session odometer, not just its own row', async () => {
+    it("bills the child's tokens to the session odometer, not just its own row", async () => {
       const w = await delegating()
 
       // The parent's own step…
@@ -1100,38 +1218,42 @@ describe('HarnessGatewayClient', () => {
   it('lists profile-owned MCP clients that were connected before Makima started', async () => {
     const w = makeWorld()
     ;(w.ctx as { loader?: unknown }).loader = {
-      entries: () => [{
-        disabled: false,
-        fiber: { state: 2 },
-        options: {
-          config: {
-            args: ['server.mjs'],
-            command: 'node',
-            cwd: '/tmp/w',
-            env: { TOKEN: 'redacted' },
-            serverName: 'memory',
-            transport: 'stdio'
-          },
-          name: '@deepseek-ai/dsh-mcp-client'
+      entries: () => [
+        {
+          disabled: false,
+          fiber: { state: 2 },
+          options: {
+            config: {
+              args: ['server.mjs'],
+              command: 'node',
+              cwd: '/tmp/w',
+              env: { TOKEN: 'redacted' },
+              serverName: 'memory',
+              transport: 'stdio'
+            },
+            name: '@deepseek-ai/dsh-mcp-client'
+          }
         }
-      }]
+      ]
     }
     const response = await w.client.request<{
       servers: Array<{ managed: boolean; name: string; status: string; tools: number }>
     }>('mcp.manager.list', {})
 
-    expect(response.servers).toContainEqual(expect.objectContaining({
-      args: ['server.mjs'],
-      command: 'node',
-      cwd: '/tmp/w',
-      enabled: true,
-      env: { TOKEN: 'redacted' },
-      managed: false,
-      name: 'memory',
-      status: 'connected',
-      tools: 0,
-      transport: 'stdio'
-    }))
+    expect(response.servers).toContainEqual(
+      expect.objectContaining({
+        args: ['server.mjs'],
+        command: 'node',
+        cwd: '/tmp/w',
+        enabled: true,
+        env: { TOKEN: 'redacted' },
+        managed: false,
+        name: 'memory',
+        status: 'connected',
+        tools: 0,
+        transport: 'stdio'
+      })
+    )
   })
 
   it('lists externally mounted MCP clients observed through registered tool names', async () => {
@@ -1143,20 +1265,21 @@ describe('HarnessGatewayClient', () => {
       schemas: (scope?: unknown) => Array<{ name: string }>
     }
     const child = { id: 'child-agent' }
-    ctx.get = name => {
+    ctx.get = (name) => {
       if (name === 'agents') return { list: () => [child] }
       if (name !== 'tools') return get(name)
       return {
         ...tools,
-        schemas: (scope?: unknown) => scope === child
-          ? [{ name: 'mcp__unity_console__unity_get_status' }]
-          : [
-              { name: 'bash' },
-              { name: 'mcp__memory__search' },
-              { name: 'mcp__memory__fetch' },
-              { name: 'mcp__bad.name__ignored' },
-              { name: 'mcp__empty__' }
-            ]
+        schemas: (scope?: unknown) =>
+          scope === child
+            ? [{ name: 'mcp__unity_console__unity_get_status' }]
+            : [
+                { name: 'bash' },
+                { name: 'mcp__memory__search' },
+                { name: 'mcp__memory__fetch' },
+                { name: 'mcp__bad.name__ignored' },
+                { name: 'mcp__empty__' }
+              ]
       }
     }
 
@@ -1164,24 +1287,28 @@ describe('HarnessGatewayClient', () => {
       servers: Array<{ enabled: boolean; managed: boolean; name: string; status: string; tools: number; transport: string }>
     }>('mcp.manager.list', {})
 
-    expect(response.servers).toContainEqual(expect.objectContaining({
-      agentIds: ['global'],
-      enabled: true,
-      managed: false,
-      name: 'memory',
-      status: 'connected',
-      tools: 2,
-      transport: 'external'
-    }))
-    expect(response.servers).toContainEqual(expect.objectContaining({
-      agentIds: ['child-agent'],
-      enabled: true,
-      managed: false,
-      name: 'unity_console',
-      toolNames: ['mcp__unity_console__unity_get_status'],
-      tools: 1,
-      transport: 'external'
-    }))
+    expect(response.servers).toContainEqual(
+      expect.objectContaining({
+        agentIds: ['global'],
+        enabled: true,
+        managed: false,
+        name: 'memory',
+        status: 'connected',
+        tools: 2,
+        transport: 'external'
+      })
+    )
+    expect(response.servers).toContainEqual(
+      expect.objectContaining({
+        agentIds: ['child-agent'],
+        enabled: true,
+        managed: false,
+        name: 'unity_console',
+        toolNames: ['mcp__unity_console__unity_get_status'],
+        tools: 1,
+        transport: 'external'
+      })
+    )
     expect(response.servers).not.toContainEqual(expect.objectContaining({ name: 'bad.name' }))
     expect(response.servers).not.toContainEqual(expect.objectContaining({ name: 'empty' }))
   })
@@ -1203,7 +1330,7 @@ describe('HarnessGatewayClient', () => {
     w.fire('tool/call', { arguments: '{"command":"rm -rf x"}', callId: 'c1', name: 'bash', step: 1, turn: 1 })
 
     const handler = (w.listeners.get('approval/request') ?? [])[0]!
-    const outcome = handler({ agent: w.agent, callId: 'c1', toolName: 'bash' }, () => Promise.resolve('unavailable')) as Promise<string>
+    const outcome = handler({ agent: w.agent, callId: 'c1', toolName: 'bash' }, () => Promise.resolve('unavailable')) as unknown as Promise<string>
 
     await settle()
 
@@ -1216,7 +1343,7 @@ describe('HarnessGatewayClient', () => {
     await expect(outcome).resolves.toBe('allowed-once')
 
     // deny path
-    const denied = handler({ agent: w.agent, callId: 'c1', toolName: 'bash' }, () => Promise.resolve('unavailable')) as Promise<string>
+    const denied = handler({ agent: w.agent, callId: 'c1', toolName: 'bash' }, () => Promise.resolve('unavailable')) as unknown as Promise<string>
 
     await w.client.request('approval.respond', { choice: 'deny' })
     await expect(denied).resolves.toBe('rejected')
@@ -1239,10 +1366,7 @@ describe('HarnessGatewayClient', () => {
 
     const handler = (w.listeners.get('approval/request') ?? [])[0]!
 
-    void handler(
-      { agent: w.agent, callId: 'c7', reason: 'escalate sandbox', toolName: 'bash' },
-      () => Promise.resolve('unavailable')
-    )
+    void handler({ agent: w.agent, callId: 'c7', reason: 'escalate sandbox', toolName: 'bash' }, () => Promise.resolve('unavailable'))
     await settle()
 
     const ask = w.events.at(-1) as Extract<GatewayEvent, { type: 'approval.request' }>
@@ -1261,10 +1385,10 @@ describe('HarnessGatewayClient', () => {
     await settle()
 
     const handler = (w.listeners.get('approval/request') ?? [])[0]!
-    const outcome = await (handler({ agent: { other: true }, toolName: 'bash' }, () => Promise.resolve('unavailable')) as Promise<string>)
+    const outcome = await (handler({ agent: { other: true }, toolName: 'bash' }, () => Promise.resolve('unavailable')) as unknown as Promise<string>)
 
     expect(outcome).toBe('unavailable')
-    expect(w.events.some(e => e.type === 'approval.request')).toBe(false)
+    expect(w.events.some((e) => e.type === 'approval.request')).toBe(false)
   })
 
   it('serves user questions and maps answers back by question text', async () => {
@@ -1308,7 +1432,15 @@ describe('HarnessGatewayClient', () => {
 
     const provider = w.providers[0]!
     const approve = provider.ask({
-      questions: [{ detail: 'THE PLAN', id: 'p1', intent: { approve: 'Approve plan', kind: 'plan-review' }, options: [{ label: 'Approve plan' }, { label: 'Keep planning' }], question: 'Review' }]
+      questions: [
+        {
+          detail: 'THE PLAN',
+          id: 'p1',
+          intent: { approve: 'Approve plan', kind: 'plan-review' },
+          options: [{ label: 'Approve plan' }, { label: 'Keep planning' }],
+          question: 'Review'
+        }
+      ]
     }) as Promise<{ answers: Array<{ id: string; selected: string[] }> }>
 
     await settle()
@@ -1353,7 +1485,7 @@ describe('HarnessGatewayClient', () => {
 
     await expect(w.client.request('permission.cycle', {})).resolves.toEqual({ mode: 'default' })
     expect(w.policies.at(-1)).toEqual([w.agent, 'ask'])
-    expect(w.events.filter(e => e.type === 'permission.mode').map(e => (e as { payload: { mode: string } }).payload.mode)).toEqual([
+    expect(w.events.filter((e) => e.type === 'permission.mode').map((e) => (e as { payload: { mode: string } }).payload.mode)).toEqual([
       'plan',
       'bypassPermissions',
       'default'
@@ -1389,7 +1521,7 @@ describe('HarnessGatewayClient', () => {
     expect(w.resumedAgent.followup).toHaveBeenCalledTimes(1)
   })
 
-  it('replays the stored log\'s token accounting so a resume does not restart at zero', async () => {
+  it("replays the stored log's token accounting so a resume does not restart at zero", async () => {
     const w = makeWorld()
 
     w.client.start()
@@ -1412,7 +1544,7 @@ describe('HarnessGatewayClient', () => {
 
     // …and it rides the stats refresh, so the line is right immediately
     // rather than a whole turn later.
-    const stats = w.events.find(ev => ev.type === 'session.stats')
+    const stats = w.events.find((ev) => ev.type === 'session.stats')
 
     expect(stats?.payload).toMatchObject({ session_turns: 1, usage: { input: 1000, output: 120 } })
   })
@@ -1424,15 +1556,12 @@ describe('HarnessGatewayClient', () => {
     await settle()
     await w.client.request('session.resume', { session_id: 'cc-resumed-1' })
 
-    const res = await w.client.request<{ sessions: Array<{ current?: boolean; id: string; status: string }> }>(
-      'session.active_list',
-      {}
-    )
+    const res = await w.client.request<{ sessions: Array<{ current?: boolean; id: string; status: string }> }>('session.active_list', {})
 
-    const ids = res.sessions.map(s => s.id).sort()
+    const ids = res.sessions.map((s) => s.id).sort()
 
     expect(ids).toEqual([String((w.ctx.agents.create as ReturnType<typeof vi.fn>).mock.calls[0]![0].sessionId), 'cc-resumed-1'].sort())
-    expect(res.sessions.find(s => s.id === 'cc-resumed-1')?.current).toBe(true)
+    expect(res.sessions.find((s) => s.id === 'cc-resumed-1')?.current).toBe(true)
   })
 
   it('session.list serves human-readable persisted summaries with actual user-message counts', async () => {
@@ -1441,7 +1570,9 @@ describe('HarnessGatewayClient', () => {
     w.client.start()
     await settle()
 
-    const res = await w.client.request<{ sessions: Array<{ cwd?: string; id: string; message_count: number; preview: string; title: string }> }>('session.list', { limit: 1 })
+    const res = await w.client.request<{
+      sessions: Array<{ cwd?: string; id: string; message_count: number; preview: string; title: string }>
+    }>('session.list', { limit: 1 })
 
     expect(res.sessions).toEqual([
       expect.objectContaining({
@@ -1467,17 +1598,23 @@ describe('HarnessGatewayClient', () => {
     expect(w.appended).toEqual([
       expect.objectContaining({
         id: 'cc-old-2',
-        events: [expect.objectContaining({
-          data: expect.objectContaining({ source: { kind: 'user' }, title: 'Release checklist' }),
-          seq: 2,
-          type: 'session/title'
-        })]
+        events: [
+          expect.objectContaining({
+            data: expect.objectContaining({ source: { kind: 'user' }, title: 'Release checklist' }),
+            seq: 2,
+            type: 'session/title'
+          })
+        ]
       })
     ])
-    await expect(w.client.request('session.rename', { session_id: 'cc-old-1', title: '   ' })).rejects.toThrow('session title must contain visible characters')
+    await expect(w.client.request('session.rename', { session_id: 'cc-old-1', title: '   ' })).rejects.toThrow(
+      'session title must contain visible characters'
+    )
 
     const activeId = String((w.ctx.agents.create as ReturnType<typeof vi.fn>).mock.calls[0]![0].sessionId)
-    await expect(w.client.request('session.rename', { session_id: activeId, title: 'Nope' })).rejects.toThrow('rename the active session with /title')
+    await expect(w.client.request('session.rename', { session_id: activeId, title: 'Nope' })).rejects.toThrow(
+      'rename the active session with /title'
+    )
   })
 
   it('session.delete delegates persisted-history removal and refuses active sessions', async () => {
@@ -1529,7 +1666,11 @@ describe('HarnessGatewayClient', () => {
     w.client.start()
     await settle()
 
-    const catalog = await w.client.request<{ canon: Record<string, string>; hints: Record<string, string>; pairs: Array<[string, string]> }>('commands.catalog', {})
+    const catalog = await w.client.request<{
+      canon: Record<string, string>
+      hints: Record<string, string>
+      pairs: Array<[string, string]>
+    }>('commands.catalog', {})
 
     for (const name of ['/sessions', '/session', '/switch', '/resume']) {
       expect(catalog.canon[name]).toBe(name)
@@ -1539,7 +1680,7 @@ describe('HarnessGatewayClient', () => {
 
     const completion = await w.client.request<{ items: Array<{ text: string }> }>('complete.slash', { text: '/session' })
 
-    expect(completion.items.map(item => item.text)).toEqual(expect.arrayContaining(['/session', '/sessions']))
+    expect(completion.items.map((item) => item.text)).toEqual(expect.arrayContaining(['/session', '/sessions']))
   })
 
   it('merges harness commands into the catalog and completions', async () => {
@@ -1548,7 +1689,11 @@ describe('HarnessGatewayClient', () => {
     w.client.start()
     await settle()
 
-    const catalog = await w.client.request<{ canon: Record<string, string>; hints: Record<string, string>; pairs: Array<[string, string]> }>('commands.catalog', {})
+    const catalog = await w.client.request<{
+      canon: Record<string, string>
+      hints: Record<string, string>
+      pairs: Array<[string, string]>
+    }>('commands.catalog', {})
 
     expect(catalog.canon['/mycmd']).toBe('/mycmd')
     expect(catalog.hints['/mycmd']).toBe('<text>')
@@ -1556,7 +1701,7 @@ describe('HarnessGatewayClient', () => {
 
     const completion = await w.client.request<{ items: Array<{ text: string }> }>('complete.slash', { text: '/myc' })
 
-    expect(completion.items.map(i => i.text)).toContain('/mycmd')
+    expect(completion.items.map((i) => i.text)).toContain('/mycmd')
   })
 
   it('slash.exec bridges to harness commands and errors propagate', async () => {
@@ -1568,7 +1713,10 @@ describe('HarnessGatewayClient', () => {
     await expect(w.client.request('slash.exec', { command: 'mycmd ship it' })).resolves.toEqual({ output: 'mycmd ran: mycmd ship it' })
     await expect(w.client.request('slash.exec', { command: 'bad thing' })).rejects.toThrow('boom')
     await expect(w.client.request('slash.exec', { command: 'nosuch' })).rejects.toThrow('unknown command')
-    await expect(w.client.request('command.dispatch', { arg: 'x', name: 'mycmd' })).resolves.toEqual({ output: 'mycmd ran: mycmd x', type: 'exec' })
+    await expect(w.client.request('command.dispatch', { arg: 'x', name: 'mycmd' })).resolves.toEqual({
+      output: 'mycmd ran: mycmd x',
+      type: 'exec'
+    })
   })
 
   it('slash.exec effort updates the live selection and session.info', async () => {
@@ -1580,7 +1728,7 @@ describe('HarnessGatewayClient', () => {
 
     await expect(w.client.request('slash.exec', { command: 'effort high' })).resolves.toEqual({ output: 'effort: high' })
 
-    const info = w.events.find(e => e.type === 'session.info') as Extract<GatewayEvent, { type: 'session.info' }>
+    const info = w.events.find((e) => e.type === 'session.info') as Extract<GatewayEvent, { type: 'session.info' }>
 
     expect(info.payload.reasoning_effort).toBe('high')
   })
@@ -1598,7 +1746,7 @@ describe('HarnessGatewayClient', () => {
       value: 'mock-2'
     })
 
-    const info = w.events.find(e => e.type === 'session.info') as Extract<GatewayEvent, { type: 'session.info' }>
+    const info = w.events.find((e) => e.type === 'session.info') as Extract<GatewayEvent, { type: 'session.info' }>
 
     expect(info.payload.model).toBe('mock-2')
 
@@ -1617,7 +1765,7 @@ describe('HarnessGatewayClient', () => {
 
     w.client.start()
     await settle()
-    await new Promise(resolve => setTimeout(resolve, 5))
+    await new Promise((resolve) => setTimeout(resolve, 5))
 
     const usage = await w.client.request<{ context_max?: number; context_percent?: number; context_used?: number }>('session.usage', {})
 
@@ -1628,12 +1776,12 @@ describe('HarnessGatewayClient', () => {
 
   it('drops the no-newline marker a hunk-shaped diff always produces', async () => {
     const done = await runTool('write_hunk', '{"file_path":"notes.txt"}')
-    const lines = done.payload.structured_diff?.hunks.flatMap(hunk => hunk.lines) ?? []
+    const lines = done.payload.structured_diff?.hunks.flatMap((hunk) => hunk.lines) ?? []
 
     // the row renderer has no marker for `\ No newline at end of file`, so it
     // came out as a phantom context line numbered one past the end
     expect(lines.length).toBeGreaterThan(0)
-    expect(lines.some(line => line.startsWith('\\'))).toBe(false)
+    expect(lines.some((line) => line.startsWith('\\'))).toBe(false)
   })
 
   it('converts diff presentation views into structured_diff payloads', async () => {
@@ -1644,7 +1792,13 @@ describe('HarnessGatewayClient', () => {
     w.events.length = 0
 
     w.fire('turn/start', { turn: 1 })
-    w.fire('tool/call', { arguments: '{"file_path":"notes.txt","content":"line one\\nline two\\n"}', callId: 'w1', name: 'write', step: 1, turn: 1 })
+    w.fire('tool/call', {
+      arguments: '{"file_path":"notes.txt","content":"line one\\nline two\\n"}',
+      callId: 'w1',
+      name: 'write',
+      step: 1,
+      turn: 1
+    })
     w.fire('tool/result', {
       message: { content: [{ content: [{ text: 'wrote notes.txt', type: 'text' }], toolCallId: 'w1', type: 'tool-result' }] },
       step: 1,
@@ -1688,13 +1842,21 @@ describe('HarnessGatewayClient', () => {
     w.events.length = 0
 
     w.fire('turn/start', { turn: 1 })
-    w.fire('assistant/chunk', { chunk: { argumentsDelta: '{', id: 'g1', index: 0, name: 'bash', type: 'tool-call-delta' }, step: 1, turn: 1 })
-    w.fire('assistant/chunk', { chunk: { argumentsDelta: '}', id: 'g1', index: 0, name: 'bash', type: 'tool-call-delta' }, step: 1, turn: 1 })
+    w.fire('assistant/chunk', {
+      chunk: { argumentsDelta: '{', id: 'g1', index: 0, name: 'bash', type: 'tool-call-delta' },
+      step: 1,
+      turn: 1
+    })
+    w.fire('assistant/chunk', {
+      chunk: { argumentsDelta: '}', id: 'g1', index: 0, name: 'bash', type: 'tool-call-delta' },
+      step: 1,
+      turn: 1
+    })
 
-    expect(w.events.filter(e => e.type === 'tool.generating')).toHaveLength(1)
+    expect(w.events.filter((e) => e.type === 'tool.generating')).toHaveLength(1)
   })
 
-  it('persists the /logo palette into the app config (not clawcodex\'s)', async () => {
+  it("persists the /logo palette into the app config (not clawcodex's)", async () => {
     const home = mkdtempSync(join(tmpdir(), 'makima-tui-logo-rpc-'))
 
     vi.stubEnv('MAKIMA_TUI_HOME', home)

@@ -11,7 +11,7 @@ import {
   resolveBundleDir,
   resolveProfileDir,
   writeProfileManifest,
-  type ProfileManifest,
+  type ProfileManifest
 } from './profile.ts'
 
 const NAME = 'dsh'
@@ -67,10 +67,10 @@ export function listProfilePlugins(profile: string, home?: string): ProfilePlugi
     specifier,
     dependency: true,
     bundle: bundles.has(packageName) || bundleExists(packageName, profileDir),
-    builtIn: builtIns.has(packageName),
+    builtIn: builtIns.has(packageName)
   }))
   for (const packageName of bundles) {
-    if (!entries.some(entry => entry.packageName === packageName)) {
+    if (!entries.some((entry) => entry.packageName === packageName)) {
       entries.unshift({ packageName, specifier: 'built-in', dependency: false, bundle: true, builtIn: builtIns.has(packageName) })
     }
   }
@@ -88,8 +88,7 @@ export function mutateProfilePlugins(
   profile: string,
   operation: 'install' | 'remove',
   args: readonly string[],
-  options: ProfilePluginMutationOptions | string = {},
-
+  options: ProfilePluginMutationOptions | string = {}
 ): ProfilePluginMutationResult {
   const resolvedOptions: ProfilePluginMutationOptions = typeof options === 'string' ? { home: options } : options
   const profileDir = resolveProfileDir(profile, resolvedOptions.home)
@@ -97,15 +96,19 @@ export function mutateProfilePlugins(
     initProfile(profileDir, PROFILE_TEMPLATES[profile] ?? DEFAULT_PROFILE_BUNDLES)
   }
   const before = readProfileManifest(NAME, profileDir)
-  if (args.some(argument => argument.startsWith('-'))) {
+  if (args.some((argument) => argument.startsWith('-'))) {
     throw new Error('dsh: structured plugin management does not accept pnpm options')
   }
-  const result = spawnSync('pnpm', args.map(argument => anchorPathSpec(argument, resolvedOptions.cwd ?? process.cwd())), {
-    cwd: profileDir,
-    stdio: resolvedOptions.output === 'inherit' ? 'inherit' : 'pipe',
-    encoding: resolvedOptions.output === 'inherit' ? undefined : 'utf8',
-    shell: process.platform === 'win32',
-  })
+  const result = spawnSync(
+    'pnpm',
+    args.map((argument) => anchorPathSpec(argument, resolvedOptions.cwd ?? process.cwd())),
+    {
+      cwd: profileDir,
+      stdio: resolvedOptions.output === 'inherit' ? 'inherit' : 'pipe',
+      encoding: resolvedOptions.output === 'inherit' ? undefined : 'utf8',
+      shell: process.platform === 'win32'
+    }
+  )
   if (result.error !== undefined) throw result.error
   if ((result.status ?? 1) !== 0) {
     const detail = `${result.stdout ?? ''}${result.stderr ?? ''}`.trim()
@@ -143,7 +146,7 @@ function reconcileProfilePlugins(before: ProfileManifest, profileDir: string): v
 
 /** Validate a package name before a structured removal request reaches pnpm. */
 export function assertRemovableProfilePlugin(profile: string, packageName: string, home?: string): void {
-  const entry = listProfilePlugins(profile, home).entries.find(item => item.packageName === packageName)
+  const entry = listProfilePlugins(profile, home).entries.find((item) => item.packageName === packageName)
   if (entry?.builtIn === true) throw new Error(`dsh: cannot remove built-in bundle ${JSON.stringify(packageName)}`)
   if (entry === undefined) throw new Error(`dsh: profile ${JSON.stringify(profile)} has no plugin ${JSON.stringify(packageName)}`)
 }

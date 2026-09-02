@@ -168,8 +168,8 @@ describe('buildSubagentTree', () => {
 
     const tree = buildSubagentTree(items)
     expect(tree).toHaveLength(3)
-    expect(tree.map(n => n.item.id)).toEqual(['a', 'b', 'c'])
-    expect(tree.every(n => n.children.length === 0)).toBe(true)
+    expect(tree.map((n) => n.item.id)).toEqual(['a', 'b', 'c'])
+    expect(tree.every((n) => n.children.length === 0)).toBe(true)
   })
 
   it('nests children under their parent by subagent_id', () => {
@@ -182,7 +182,7 @@ describe('buildSubagentTree', () => {
     const tree = buildSubagentTree(items)
     expect(tree).toHaveLength(1)
     expect(tree[0]!.children).toHaveLength(2)
-    expect(tree[0]!.children.map(n => n.item.id)).toEqual(['child-1', 'child-2'])
+    expect(tree[0]!.children.map((n) => n.item.id)).toEqual(['child-1', 'child-2'])
   })
 
   it('builds multi-level nesting', () => {
@@ -203,7 +203,7 @@ describe('buildSubagentTree', () => {
 
     const tree = buildSubagentTree(items)
     expect(tree).toHaveLength(2)
-    expect(tree.map(n => n.item.id)).toEqual(['a', 'orphan'])
+    expect(tree.map((n) => n.item.id)).toEqual(['a', 'orphan'])
   })
 
   it('stable sort: children ordered by (depth, index) not insert order', () => {
@@ -215,7 +215,7 @@ describe('buildSubagentTree', () => {
     ]
 
     const tree = buildSubagentTree(items)
-    expect(tree[0]!.children.map(n => n.item.id)).toEqual(['c1', 'c2', 'c3'])
+    expect(tree[0]!.children.map((n) => n.item.id)).toEqual(['c1', 'c2', 'c3'])
   })
 })
 
@@ -307,7 +307,7 @@ describe('flattenTree + descendantIds', () => {
 
   it('flattens in visit order (depth-first, pre-order)', () => {
     const tree = buildSubagentTree(items)
-    expect(flattenTree(tree).map(n => n.item.id)).toEqual(['p', 'c1', 'gc', 'c2'])
+    expect(flattenTree(tree).map((n) => n.item.id)).toEqual(['p', 'c1', 'gc', 'c2'])
   })
 
   it('collects descendant ids excluding the node itself', () => {
@@ -334,7 +334,7 @@ describe('sparkline', () => {
   it('sparse widths render as expected', () => {
     const out = sparkline([2, 3, 7, 4])
     expect(out).toHaveLength(4)
-    expect([...out].every(ch => /[\s▁-█]/.test(ch))).toBe(true)
+    expect([...out].every((ch) => /[\s▁-█]/.test(ch))).toBe(true)
   })
 })
 
@@ -391,17 +391,17 @@ describe('fmtDuration', () => {
 describe('topLevelSubagents', () => {
   it('returns items with no parent', () => {
     const items = [makeItem({ id: 'a', index: 0 }), makeItem({ id: 'b', index: 1 })]
-    expect(topLevelSubagents(items).map(s => s.id)).toEqual(['a', 'b'])
+    expect(topLevelSubagents(items).map((s) => s.id)).toEqual(['a', 'b'])
   })
 
   it('excludes children whose parent is present', () => {
     const items = [makeItem({ id: 'p', index: 0 }), makeItem({ depth: 1, id: 'c', index: 0, parentId: 'p' })]
 
-    expect(topLevelSubagents(items).map(s => s.id)).toEqual(['p'])
+    expect(topLevelSubagents(items).map((s) => s.id)).toEqual(['p'])
   })
 
   it('promotes orphans whose parent is missing', () => {
     const items = [makeItem({ id: 'a', index: 0 }), makeItem({ depth: 1, id: 'orphan', index: 1, parentId: 'ghost' })]
-    expect(topLevelSubagents(items).map(s => s.id)).toEqual(['a', 'orphan'])
+    expect(topLevelSubagents(items).map((s) => s.id)).toEqual(['a', 'orphan'])
   })
 })

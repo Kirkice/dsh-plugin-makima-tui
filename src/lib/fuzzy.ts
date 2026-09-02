@@ -158,7 +158,7 @@ export function fuzzyRank<T>(items: readonly T[], query: string, toText: (item: 
   const trimmed = query.trim()
 
   if (!trimmed) {
-    return items.map(item => ({ item, score: 0, positions: [] }))
+    return items.map((item) => ({ item, score: 0, positions: [] }))
   }
 
   const ranked: Array<RankedItem<T> & { index: number }> = []

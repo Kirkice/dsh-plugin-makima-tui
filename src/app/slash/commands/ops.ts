@@ -122,41 +122,45 @@ interface RuntimePluginListResponse {
 }
 
 const asRecord = (value: unknown): Record<string, unknown> | null =>
-  typeof value === 'object' && value !== null ? value as Record<string, unknown> : null
+  typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null
 
 const profileEntries = (value: unknown): ManagedPlugin[] => {
   if (!Array.isArray(value)) return []
 
-  return value.flatMap(entry => {
+  return value.flatMap((entry) => {
     const row = asRecord(entry)
     if (!row || typeof row.packageName !== 'string' || typeof row.specifier !== 'string') return []
 
-    return [{
-      builtIn: row.builtIn === true,
-      bundle: row.bundle === true,
-      dependency: row.dependency === true,
-      packageName: row.packageName,
-      specifier: row.specifier
-    }]
+    return [
+      {
+        builtIn: row.builtIn === true,
+        bundle: row.bundle === true,
+        dependency: row.dependency === true,
+        packageName: row.packageName,
+        specifier: row.specifier
+      }
+    ]
   })
 }
 
 const runtimeEntries = (value: unknown): RuntimePlugin[] => {
   if (!Array.isArray(value)) return []
 
-  return value.flatMap(entry => {
+  return value.flatMap((entry) => {
     const row = asRecord(entry)
     if (!row || typeof row.entryId !== 'string' || typeof row.moduleName !== 'string') return []
 
     const fiberPhase = row.fiberPhase
     if (fiberPhase !== null && !['active', 'failed', 'loading', 'pending', 'unloading'].includes(String(fiberPhase))) return []
 
-    return [{
-      enabled: row.enabled === true,
-      entryId: row.entryId,
-      fiberPhase: fiberPhase as RuntimePlugin['fiberPhase'],
-      moduleName: row.moduleName
-    }]
+    return [
+      {
+        enabled: row.enabled === true,
+        entryId: row.entryId,
+        fiberPhase: fiberPhase as RuntimePlugin['fiberPhase'],
+        moduleName: row.moduleName
+      }
+    ]
   })
 }
 
@@ -170,7 +174,7 @@ export const opsCommands: SlashCommand[] = [
       ctx.gateway
         .rpc<ProcessStopResponse>('process.stop', {})
         .then(
-          ctx.guarded<ProcessStopResponse>(r => {
+          ctx.guarded<ProcessStopResponse>((r) => {
             const killed = Number(r.killed ?? 0)
             const noun = killed === 1 ? 'process' : 'processes'
             ctx.transcript.sys(`stopped ${killed} background ${noun}`)
@@ -204,7 +208,7 @@ export const opsCommands: SlashCommand[] = [
       ctx.gateway
         .rpc<ReloadMcpResponse>('reload.mcp', params)
         .then(
-          ctx.guarded<ReloadMcpResponse>(r => {
+          ctx.guarded<ReloadMcpResponse>((r) => {
             if (r.status === 'confirm_required') {
               ctx.transcript.sys(r.message || '/reload-mcp requires confirmation')
 
@@ -213,9 +217,7 @@ export const opsCommands: SlashCommand[] = [
 
             if (r.status === 'reloaded') {
               ctx.transcript.sys(
-                params.always
-                  ? 'MCP servers reloaded · future /reload-mcp will run without confirmation'
-                  : 'MCP servers reloaded'
+                params.always ? 'MCP servers reloaded · future /reload-mcp will run without confirmation' : 'MCP servers reloaded'
               )
 
               return
@@ -236,7 +238,8 @@ export const opsCommands: SlashCommand[] = [
   },
 
   {
-    argumentHint: '[manage|list|reload|tools <server>|enable <server>|disable <server>|enable-tool <tool>|disable-tool <tool>|delete <server>]',
+    argumentHint:
+      '[manage|list|reload|tools <server>|enable <server>|disable <server>|enable-tool <tool>|disable-tool <tool>|delete <server>]',
     help: 'list every live MCP scope and control services or individual MCP tools',
     name: 'mcp',
     run: (arg, ctx) => {
@@ -250,53 +253,109 @@ export const opsCommands: SlashCommand[] = [
 
       if (action === 'list' || action === 'reload') {
         const method = action === 'reload' ? 'mcp.manager.reload' : 'mcp.manager.list'
-        ctx.gateway.rpc<ManagedMcpListResponse>(method, {}).then(ctx.guarded(r => {
-          const servers = r.servers ?? []
-          if (!servers.length) return ctx.transcript.sys(`no MCP tools are visible in the global or live Agent scopes · ${r.config_path ?? '~/.dsh/mcp.json'}`)
-          ctx.transcript.panel('Global MCP Servers', [{
-            rows: servers.map(server => [
-              server.name,
-              `${server.status ?? (server.enabled ? 'connecting' : 'disabled')} · ${server.transport} · ${server.tools ?? 0} tools · ${server.agentIds?.join(', ') || 'global'}${server.managed === false ? server.runtimeDisabled ? ' · external runtime-disabled' : ' · externally managed' : ''}${server.error ? ` · ${server.error}` : ''}`
-            ])
-          }, { text: action === 'reload' ? 'Makima-owned clients reconciled; the inventory covers global and live Agent scopes.' : `Runtime policy: ${r.policy_path ?? '~/.dsh/makima-mcp-policy.json'}` }])
-        })).catch(ctx.guardedErr)
+        ctx.gateway
+          .rpc<ManagedMcpListResponse>(method, {})
+          .then(
+            ctx.guarded((r) => {
+              const servers = r.servers ?? []
+              if (!servers.length)
+                return ctx.transcript.sys(
+                  `no MCP tools are visible in the global or live Agent scopes · ${r.config_path ?? '~/.dsh/mcp.json'}`
+                )
+              ctx.transcript.panel('Global MCP Servers', [
+                {
+                  rows: servers.map((server) => [
+                    server.name,
+                    `${server.status ?? (server.enabled ? 'connecting' : 'disabled')} · ${server.transport} · ${server.tools ?? 0} tools · ${server.agentIds?.join(', ') || 'global'}${server.managed === false ? (server.runtimeDisabled ? ' · external runtime-disabled' : ' · externally managed') : ''}${server.error ? ` · ${server.error}` : ''}`
+                  ])
+                },
+                {
+                  text:
+                    action === 'reload'
+                      ? 'Makima-owned clients reconciled; the inventory covers global and live Agent scopes.'
+                      : `Runtime policy: ${r.policy_path ?? '~/.dsh/makima-mcp-policy.json'}`
+                }
+              ])
+            })
+          )
+          .catch(ctx.guardedErr)
         return
       }
 
       if (action === 'tools') {
         if (!name) return ctx.transcript.sys('usage: /mcp tools <server>')
-        ctx.gateway.rpc<ManagedMcpToolsResponse>('mcp.manager.tools', { name }).then(ctx.guarded(r => {
-          const tools = r.tools ?? []
-          if (!tools.length) return ctx.transcript.sys(`no visible MCP tools for ${name}`)
-          ctx.transcript.panel(`MCP Tools · ${name}`, [{ rows: tools.map(tool => [tool.name, `${tool.enabled ? 'enabled' : 'runtime-disabled'} · ${tool.agentIds?.join(', ') || 'global'}`]) }])
-        })).catch(ctx.guardedErr)
+        ctx.gateway
+          .rpc<ManagedMcpToolsResponse>('mcp.manager.tools', { name })
+          .then(
+            ctx.guarded((r) => {
+              const tools = r.tools ?? []
+              if (!tools.length) return ctx.transcript.sys(`no visible MCP tools for ${name}`)
+              ctx.transcript.panel(`MCP Tools · ${name}`, [
+                {
+                  rows: tools.map((tool) => [
+                    tool.name,
+                    `${tool.enabled ? 'enabled' : 'runtime-disabled'} · ${tool.agentIds?.join(', ') || 'global'}`
+                  ])
+                }
+              ])
+            })
+          )
+          .catch(ctx.guardedErr)
         return
       }
 
       if (!name || !['enable', 'disable', 'delete', 'enable-tool', 'disable-tool'].includes(action)) {
-        return ctx.transcript.sys('usage: /mcp [manage|list|reload|tools <server>|enable <server>|disable <server>|enable-tool <tool>|disable-tool <tool>|delete <server>]')
+        return ctx.transcript.sys(
+          'usage: /mcp [manage|list|reload|tools <server>|enable <server>|disable <server>|enable-tool <tool>|disable-tool <tool>|delete <server>]'
+        )
       }
 
       if (action === 'enable-tool' || action === 'disable-tool') {
-        ctx.gateway.rpc<ManagedMcpMutationResponse>('mcp.manager.set_tool_enabled', { enabled: action === 'enable-tool', name }).then(ctx.guarded(() => {
-          ctx.transcript.sys(`MCP tool ${name} ${action === 'enable-tool' ? 'enabled globally' : 'disabled globally by runtime policy'}`)
-        })).catch(ctx.guardedErr)
+        ctx.gateway
+          .rpc<ManagedMcpMutationResponse>('mcp.manager.set_tool_enabled', { enabled: action === 'enable-tool', name })
+          .then(
+            ctx.guarded(() => {
+              ctx.transcript.sys(
+                `MCP tool ${name} ${action === 'enable-tool' ? 'enabled globally' : 'disabled globally by runtime policy'}`
+              )
+            })
+          )
+          .catch(ctx.guardedErr)
         return
       }
 
       const rpc = action === 'delete' ? 'mcp.manager.delete' : 'mcp.manager.set_enabled'
       const params = action === 'delete' ? { name } : { enabled: action === 'enable', name }
-      ctx.gateway.rpc<ManagedMcpListResponse>('mcp.manager.list', {}).then(ctx.guarded(result => {
-        const server = result.servers?.find(entry => entry.name === name)
-        if (action === 'delete' && server?.managed === false) {
-          ctx.transcript.sys(`MCP ${name} is externally managed and cannot be deleted here; use /mcp disable ${name} for Makima runtime control`)
-          return
-        }
-        return ctx.gateway.rpc<ManagedMcpMutationResponse>(rpc, params).then(ctx.guarded(() => {
-          const outcome = action === 'delete' ? 'deleted and unloaded' : action === 'enable' ? 'enabled' : server?.managed === false ? 'disabled by Makima runtime policy (external service remains running)' : 'disabled and unloaded'
-          ctx.transcript.sys(`MCP ${name} ${outcome}`)
-        })).catch(ctx.guardedErr)
-      })).catch(ctx.guardedErr)
+      ctx.gateway
+        .rpc<ManagedMcpListResponse>('mcp.manager.list', {})
+        .then(
+          ctx.guarded((result) => {
+            const server = result.servers?.find((entry) => entry.name === name)
+            if (action === 'delete' && server?.managed === false) {
+              ctx.transcript.sys(
+                `MCP ${name} is externally managed and cannot be deleted here; use /mcp disable ${name} for Makima runtime control`
+              )
+              return
+            }
+            return ctx.gateway
+              .rpc<ManagedMcpMutationResponse>(rpc, params)
+              .then(
+                ctx.guarded(() => {
+                  const outcome =
+                    action === 'delete'
+                      ? 'deleted and unloaded'
+                      : action === 'enable'
+                        ? 'enabled'
+                        : server?.managed === false
+                          ? 'disabled by Makima runtime policy (external service remains running)'
+                          : 'disabled and unloaded'
+                  ctx.transcript.sys(`MCP ${name} ${outcome}`)
+                })
+              )
+              .catch(ctx.guardedErr)
+          })
+        )
+        .catch(ctx.guardedErr)
     }
   },
 
@@ -307,7 +366,7 @@ export const opsCommands: SlashCommand[] = [
       ctx.gateway
         .rpc<ReloadEnvResponse>('reload.env', {})
         .then(
-          ctx.guarded<ReloadEnvResponse>(r => {
+          ctx.guarded<ReloadEnvResponse>((r) => {
             const n = Number(r.updated ?? 0)
             const noun = n === 1 ? 'var' : 'vars'
 
@@ -327,9 +386,7 @@ export const opsCommands: SlashCommand[] = [
       const action = rawAction.toLowerCase()
 
       if (!['connect', 'disconnect', 'status'].includes(action)) {
-        return ctx.transcript.sys(
-          'usage: /browser [connect|disconnect|status] [url] · persistent: set browser.cdp_url in config.yaml'
-        )
+        return ctx.transcript.sys('usage: /browser [connect|disconnect|status] [url] · persistent: set browser.cdp_url in config.yaml')
       }
 
       const sid = ctx.sid ?? null
@@ -342,11 +399,11 @@ export const opsCommands: SlashCommand[] = [
       ctx.gateway
         .rpc<BrowserManageResponse>('browser.manage', { action, session_id: sid, ...(url && { url }) })
         .then(
-          ctx.guarded<BrowserManageResponse>(r => {
+          ctx.guarded<BrowserManageResponse>((r) => {
             // Without a session we can't subscribe to streamed
             // browser.progress events, so flush the bundled list.
             if (!sid) {
-              r.messages?.forEach(message => ctx.transcript.sys(message))
+              r.messages?.forEach((message) => ctx.transcript.sys(message))
             }
 
             if (action === 'status') {
@@ -389,7 +446,7 @@ export const opsCommands: SlashCommand[] = [
         return ctx.gateway
           .rpc<RollbackListResponse>('rollback.list', { session_id: ctx.sid })
           .then(
-            ctx.guarded<RollbackListResponse>(r => {
+            ctx.guarded<RollbackListResponse>((r) => {
               if (!r.enabled) {
                 return ctx.transcript.sys('checkpoints are not enabled')
               }
@@ -423,7 +480,7 @@ export const opsCommands: SlashCommand[] = [
         return ctx.gateway
           .rpc<RollbackDiffResponse>('rollback.diff', { hash, session_id: ctx.sid })
           .then(
-            ctx.guarded<RollbackDiffResponse>(r => {
+            ctx.guarded<RollbackDiffResponse>((r) => {
               const body = (r.rendered || r.diff || '').trim()
 
               if (!body && !r.stat) {
@@ -447,7 +504,7 @@ export const opsCommands: SlashCommand[] = [
           session_id: ctx.sid
         })
         .then(
-          ctx.guarded<RollbackRestoreResponse>(r => {
+          ctx.guarded<RollbackRestoreResponse>((r) => {
             if (!r.success) {
               return ctx.transcript.sys(`rollback failed: ${r.error || r.message || 'unknown error'}`)
             }
@@ -457,7 +514,7 @@ export const opsCommands: SlashCommand[] = [
             ctx.transcript.sys(`rollback restored ${target}: ${detail}`)
 
             if ((r.history_removed ?? 0) > 0) {
-              ctx.transcript.setHistoryItems(prev => ctx.transcript.trimLastExchange(prev))
+              ctx.transcript.setHistoryItems((prev) => ctx.transcript.trimLastExchange(prev))
             }
           })
         )
@@ -479,7 +536,7 @@ export const opsCommands: SlashCommand[] = [
         const paused = sub === 'pause'
         ctx.gateway.gw
           .request<DelegationPauseResponse>('delegation.pause', { paused })
-          .then(r => {
+          .then((r) => {
             applyDelegationStatus({ paused: r?.paused })
             ctx.transcript.sys(`delegation · ${r?.paused ? 'paused' : 'resumed'}`)
           })
@@ -518,14 +575,14 @@ export const opsCommands: SlashCommand[] = [
             session_id: ctx.sid ?? 'default'
           })
           .then(
-            ctx.guarded<SpawnTreeListResponse>(r => {
+            ctx.guarded<SpawnTreeListResponse>((r) => {
               const entries = r.entries ?? []
 
               if (!entries.length) {
                 return ctx.transcript.sys('no archived spawn trees on disk for this session')
               }
 
-              const rows: [string, string][] = entries.map(e => {
+              const rows: [string, string][] = entries.map((e) => {
                 const ts = e.finished_at ? new Date(e.finished_at * 1000).toLocaleString() : '?'
                 const label = e.label || `${e.count} subagents`
 
@@ -551,7 +608,7 @@ export const opsCommands: SlashCommand[] = [
         ctx.gateway
           .rpc<SpawnTreeLoadResponse>('spawn_tree.load', { path })
           .then(
-            ctx.guarded<SpawnTreeLoadResponse>(r => {
+            ctx.guarded<SpawnTreeLoadResponse>((r) => {
               if (!r.subagents?.length) {
                 return ctx.transcript.sys('snapshot empty or unreadable')
               }
@@ -632,12 +689,12 @@ export const opsCommands: SlashCommand[] = [
       ctx.gateway
         .rpc<SkillsReloadResponse>('skills.reload', {})
         .then(
-          ctx.guarded<SkillsReloadResponse>(r => {
+          ctx.guarded<SkillsReloadResponse>((r) => {
             ctx.transcript.page(r.output || 'skills reloaded', 'Reload Skills')
             ctx.gateway
               .rpc<CommandsCatalogResponse>('commands.catalog', {})
               .then(
-                ctx.guarded<CommandsCatalogResponse>(catalog => {
+                ctx.guarded<CommandsCatalogResponse>((catalog) => {
                   if (!catalog?.pairs) {
                     return
                   }
@@ -682,7 +739,7 @@ export const opsCommands: SlashCommand[] = [
       const runViaSlashWorker = () => {
         ctx.gateway.gw
           .request<SlashExecResponse>('slash.exec', { command: cmd.slice(1), session_id: ctx.sid })
-          .then(r => {
+          .then((r) => {
             if (ctx.stale()) {
               return
             }
@@ -699,7 +756,7 @@ export const opsCommands: SlashCommand[] = [
       if (sub === 'list') {
         rpc<SkillsListResponse>('skills.manage', { action: 'list' })
           .then(
-            ctx.guarded<SkillsListResponse>(r => {
+            ctx.guarded<SkillsListResponse>((r) => {
               const cats = Object.entries(r.skills ?? {}).sort()
 
               if (!cats.length) {
@@ -724,7 +781,7 @@ export const opsCommands: SlashCommand[] = [
 
         rpc<SkillsInspectResponse>('skills.manage', { action: 'inspect', query })
           .then(
-            ctx.guarded<SkillsInspectResponse>(r => {
+            ctx.guarded<SkillsInspectResponse>((r) => {
               const info = r.info ?? {}
 
               if (!info.name) {
@@ -758,14 +815,14 @@ export const opsCommands: SlashCommand[] = [
 
         rpc<SkillsSearchResponse>('skills.manage', { action: 'search', query })
           .then(
-            ctx.guarded<SkillsSearchResponse>(r => {
+            ctx.guarded<SkillsSearchResponse>((r) => {
               const results = r.results ?? []
 
               if (!results.length) {
                 return sys(`no results for: ${query}`)
               }
 
-              panel(`Search: ${query}`, [{ rows: results.map(s => [s.name, s.description ?? '']) }])
+              panel(`Search: ${query}`, [{ rows: results.map((s) => [s.name, s.description ?? '']) }])
             })
           )
           .catch(ctx.guardedErr)
@@ -781,11 +838,7 @@ export const opsCommands: SlashCommand[] = [
         sys(`installing ${query}…`)
 
         rpc<SkillsInstallResponse>('skills.manage', { action: 'install', query })
-          .then(
-            ctx.guarded<SkillsInstallResponse>(r =>
-              sys(r.installed ? `installed ${r.name ?? query}` : 'install failed')
-            )
-          )
+          .then(ctx.guarded<SkillsInstallResponse>((r) => sys(r.installed ? `installed ${r.name ?? query}` : 'install failed')))
           .catch(ctx.guardedErr)
 
         return
@@ -802,14 +855,14 @@ export const opsCommands: SlashCommand[] = [
 
         rpc<SkillsBrowseResponse>('skills.manage', { action: 'browse', page: pageNum })
           .then(
-            ctx.guarded<SkillsBrowseResponse>(r => {
+            ctx.guarded<SkillsBrowseResponse>((r) => {
               const items = r.items ?? []
 
               if (!items.length) {
                 return sys(`no skills on page ${pageNum}${r.total ? ` (total ${r.total})` : ''}`)
               }
 
-              const rows: [string, string][] = items.map(s => [
+              const rows: [string, string][] = items.map((s) => [
                 s.trust ? `${s.name} · ${s.trust}` : s.name,
                 String(s.description ?? '').slice(0, 160)
               ])
@@ -860,7 +913,7 @@ export const opsCommands: SlashCommand[] = [
 
       ctx.gateway.gw
         .request<SlashExecResponse>('slash.exec', { command: cmd.slice(1), session_id: ctx.sid })
-        .then(r => {
+        .then((r) => {
           if (ctx.stale()) {
             return
           }
@@ -880,13 +933,13 @@ export const opsCommands: SlashCommand[] = [
     name: 'change-center',
     run: (_arg, ctx) => {
       void inspectVcs(workspaceCwd(ctx))
-        .then(snapshot => {
+        .then((snapshot) => {
           const rows: [string, string][] = [
             ['Provider', snapshot.kind.toUpperCase()],
             ['Workspace', snapshot.label],
             ['Summary', snapshot.summary]
           ]
-          const items = snapshot.changes.slice(0, 40).map(change => `${change.kind[0]!.toUpperCase()} ${change.path} · ${change.status}`)
+          const items = snapshot.changes.slice(0, 40).map((change) => `${change.kind[0]!.toUpperCase()} ${change.path} · ${change.status}`)
           if (snapshot.changes.length > items.length) items.push(`… +${snapshot.changes.length - items.length} more changes`)
           if (snapshot.kind === 'none') items.push('No source-control client was detected; file changes remain visible in the transcript.')
           ctx.transcript.panel('Change Center', [{ rows }, ...(items.length ? [{ items, title: 'Open changes' }] : [])])
@@ -904,7 +957,7 @@ export const opsCommands: SlashCommand[] = [
       // instead of inventing test results on older harnesses.
       ctx.gateway.gw
         .request<{ checks?: QualityGateCheck[] }>('quality.gate', { session_id: ctx.sid })
-        .then(raw => {
+        .then((raw) => {
           if (ctx.stale()) return
           const checks = Array.isArray(raw?.checks) ? raw.checks : []
           const summary = qualityGateSummary(checks)
@@ -913,11 +966,19 @@ export const opsCommands: SlashCommand[] = [
             ['Checks', `${summary.total} total · ${summary.passed} passed · ${summary.failed} failed`],
             ['In flight', `${summary.running} running · ${summary.pending} pending`]
           ]
-          const items = checks.map(check => `${qualityGateStatusLabel(check.status)} · ${check.name} · ${check.command}${check.summary ? ` — ${check.summary}` : ''}`)
-          if (!checks.length) items.push('No verification results reported yet. Run checks from the agent or workspace, then reopen this panel.')
+          const items = checks.map(
+            (check) =>
+              `${qualityGateStatusLabel(check.status)} · ${check.name} · ${check.command}${check.summary ? ` — ${check.summary}` : ''}`
+          )
+          if (!checks.length)
+            items.push('No verification results reported yet. Run checks from the agent or workspace, then reopen this panel.')
           ctx.transcript.panel('Quality Gate', [{ rows }, { items, title: 'Verification checks' }])
         })
-        .catch(() => ctx.transcript.panel('Quality Gate', [{ rows: [['Gate', 'UNAVAILABLE']], items: ['This gateway does not expose quality.gate yet.'] }]))
+        .catch(() =>
+          ctx.transcript.panel('Quality Gate', [
+            { rows: [['Gate', 'UNAVAILABLE']], items: ['This gateway does not expose quality.gate yet.'] }
+          ])
+        )
     }
   },
 
@@ -940,13 +1001,13 @@ export const opsCommands: SlashCommand[] = [
       if (action === 'runtime' || action === 'status') {
         ctx.gateway.gw
           .request<RuntimePluginListResponse>('plugins.runtime', {})
-          .then(r => {
+          .then((r) => {
             if (ctx.stale()) return
 
             const entries = runtimeEntries(r?.entries)
             if (!entries.length) return ctx.transcript.sys('no runtime plugin entries reported by the Harness loader')
 
-            const lines = entries.map(plugin => {
+            const lines = entries.map((plugin) => {
               const state = plugin.fiberPhase ?? 'inactive'
               const enabled = plugin.enabled ? 'enabled' : 'disabled'
               return `${plugin.enabled && state === 'active' ? '✓' : '!'} ${plugin.moduleName} [${enabled}, ${state}] · ${plugin.entryId}`
@@ -956,7 +1017,6 @@ export const opsCommands: SlashCommand[] = [
           .catch(ctx.guardedErr)
         return
       }
-
     }
   },
 
@@ -970,7 +1030,7 @@ export const opsCommands: SlashCommand[] = [
       if (subcommand !== 'disable' && subcommand !== 'enable') {
         ctx.gateway.gw
           .request<SlashExecResponse>('slash.exec', { command: cmd.slice(1), session_id: ctx.sid })
-          .then(r => {
+          .then((r) => {
             if (ctx.stale()) {
               return
             }
@@ -997,7 +1057,7 @@ export const opsCommands: SlashCommand[] = [
       ctx.gateway
         .rpc<ToolsConfigureResponse>('tools.configure', { action: subcommand, names, session_id: ctx.sid })
         .then(
-          ctx.guarded<ToolsConfigureResponse>(r => {
+          ctx.guarded<ToolsConfigureResponse>((r) => {
             if (r.info) {
               ctx.session.setSessionStartedAt(Date.now())
               ctx.session.resetVisibleHistory(r.info)

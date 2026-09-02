@@ -7,8 +7,7 @@ import { SHOW_FPS } from '../config/env.js'
 import { $fpsState } from '../lib/fpsStore.js'
 import type { Theme } from '../theme.js'
 
-const fpsColor = (fps: number, t: Theme) =>
-  fps >= 50 ? t.color.statusGood : fps >= 30 ? t.color.statusWarn : t.color.error
+const fpsColor = (fps: number, t: Theme) => (fps >= 50 ? t.color.statusGood : fps >= 30 ? t.color.statusWarn : t.color.error)
 
 export function FpsOverlay({ t }: { t: Theme }) {
   if (!SHOW_FPS) {

@@ -17,7 +17,7 @@ interface Exposed {
   virtualHistory: ReturnType<typeof useVirtualHistory>
 }
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const makeStreams = () => {
   const stdout = new PassThrough()
@@ -42,11 +42,7 @@ const mountedSpan = (items: readonly Item[], virtualHistory: ReturnType<typeof u
   return { bottom: virtualHistory.topSpacer + height, top: virtualHistory.topSpacer }
 }
 
-const viewportIsMounted = (
-  items: readonly Item[],
-  virtualHistory: ReturnType<typeof useVirtualHistory>,
-  scroll: ScrollBoxHandle
-) => {
+const viewportIsMounted = (items: readonly Item[], virtualHistory: ReturnType<typeof useVirtualHistory>, scroll: ScrollBoxHandle) => {
   const span = mountedSpan(items, virtualHistory)
   const top = scroll.getScrollTop()
   const bottom = top + scroll.getViewportHeight()
@@ -74,7 +70,7 @@ function Harness({
 
   const virtualHistory = useVirtualHistory(scrollRef, items, columns, {
     coldStartCount: 16,
-    estimateHeight: index => itemHeightForColumns(items[index], columns),
+    estimateHeight: (index) => itemHeightForColumns(items[index], columns),
     maxMounted,
     overscan: 2
   })
@@ -90,7 +86,7 @@ function Harness({
       Box,
       { flexDirection: 'column', width: '100%' },
       virtualHistory.topSpacer > 0 ? React.createElement(Box, { height: virtualHistory.topSpacer }) : null,
-      ...items.slice(virtualHistory.start, virtualHistory.end).map(item =>
+      ...items.slice(virtualHistory.start, virtualHistory.end).map((item) =>
         React.createElement(
           Box,
           {
@@ -134,9 +130,9 @@ describe('useVirtualHistory offset cache reuse', () => {
 
     const instance = renderSync(React.createElement(Harness, { expose, height: 4, items, maxMounted: 80 }), {
       patchConsole: false,
-      stderr: streams.stderr as NodeJS.WriteStream,
-      stdin: streams.stdin as NodeJS.ReadStream,
-      stdout: streams.stdout as NodeJS.WriteStream
+      stderr: streams.stderr as unknown as NodeJS.WriteStream,
+      stdin: streams.stdin as unknown as NodeJS.ReadStream,
+      stdout: streams.stdout as unknown as NodeJS.WriteStream
     })
 
     try {
@@ -161,22 +157,19 @@ describe('useVirtualHistory offset cache reuse', () => {
     const expose = { current: null as Exposed | null }
     const streams = makeStreams()
 
-    const instance = renderSync(
-      React.createElement(Harness, { columns: 40, expose, height: 10, items, maxMounted: 80 }),
-      {
-        patchConsole: false,
-        stderr: streams.stderr as NodeJS.WriteStream,
-        stdin: streams.stdin as NodeJS.ReadStream,
-        stdout: streams.stdout as NodeJS.WriteStream
-      }
-    )
+    const instance = renderSync(React.createElement(Harness, { columns: 40, expose, height: 10, items, maxMounted: 80 }), {
+      patchConsole: false,
+      stderr: streams.stderr as unknown as NodeJS.WriteStream,
+      stdin: streams.stdin as unknown as NodeJS.ReadStream,
+      stdout: streams.stdout as unknown as NodeJS.WriteStream
+    })
 
     try {
       await delay(20)
       instance.rerender(React.createElement(Harness, { columns: 80, expose, height: 10, items, maxMounted: 80 }))
       await delay(80)
 
-      const resizedItems = items.map(item => ({ height: item.heightAfterResize!, key: item.key }))
+      const resizedItems = items.map((item) => ({ height: item.heightAfterResize!, key: item.key }))
 
       expect(viewportIsMounted(resizedItems, expose.current!.virtualHistory, expose.current!.scroll!)).toBe(true)
     } finally {
@@ -190,15 +183,12 @@ describe('useVirtualHistory offset cache reuse', () => {
     const expose = { current: null as Exposed | null }
     const streams = makeStreams()
 
-    const instance = renderSync(
-      React.createElement(Harness, { columns: 70, expose, height: 18, items, maxMounted: 80 }),
-      {
-        patchConsole: false,
-        stderr: streams.stderr as NodeJS.WriteStream,
-        stdin: streams.stdin as NodeJS.ReadStream,
-        stdout: streams.stdout as NodeJS.WriteStream
-      }
-    )
+    const instance = renderSync(React.createElement(Harness, { columns: 70, expose, height: 18, items, maxMounted: 80 }), {
+      patchConsole: false,
+      stderr: streams.stderr as unknown as NodeJS.WriteStream,
+      stdin: streams.stdin as unknown as NodeJS.ReadStream,
+      stdout: streams.stdout as unknown as NodeJS.WriteStream
+    })
 
     try {
       await delay(20)
@@ -221,15 +211,15 @@ describe('useVirtualHistory offset cache reuse', () => {
       { height: 6, key: 'c' }
     ]
 
-    const short = tall.map(item => ({ ...item, height: 2 }))
+    const short = tall.map((item) => ({ ...item, height: 2 }))
     const expose = { current: null as Exposed | null }
     const streams = makeStreams()
 
     const instance = renderSync(React.createElement(Harness, { expose, items: tall }), {
       patchConsole: false,
-      stderr: streams.stderr as NodeJS.WriteStream,
-      stdin: streams.stdin as NodeJS.ReadStream,
-      stdout: streams.stdout as NodeJS.WriteStream
+      stderr: streams.stderr as unknown as NodeJS.WriteStream,
+      stdin: streams.stdin as unknown as NodeJS.ReadStream,
+      stdout: streams.stdout as unknown as NodeJS.WriteStream
     })
 
     try {
@@ -255,9 +245,9 @@ describe('useVirtualHistory offset cache reuse', () => {
 
     const instance = renderSync(React.createElement(Harness, { expose, items: beforeShrink }), {
       patchConsole: false,
-      stderr: streams.stderr as NodeJS.WriteStream,
-      stdin: streams.stdin as NodeJS.ReadStream,
-      stdout: streams.stdout as NodeJS.WriteStream
+      stderr: streams.stderr as unknown as NodeJS.WriteStream,
+      stdin: streams.stdin as unknown as NodeJS.ReadStream,
+      stdout: streams.stdout as unknown as NodeJS.WriteStream
     })
 
     try {

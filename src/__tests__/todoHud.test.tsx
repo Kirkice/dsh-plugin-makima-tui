@@ -44,7 +44,7 @@ const renderToString = (element: React.ReactElement): string => {
   Object.assign(stdout, { columns: 100, isTTY: false, rows: 44 })
   Object.assign(stdin, { isTTY: false })
   Object.assign(stderr, { isTTY: false })
-  stdout.on('data', chunk => {
+  stdout.on('data', (chunk) => {
     output += chunk.toString()
   })
 
@@ -92,13 +92,13 @@ describe('busy: list attached under the busy line', () => {
     expect(renderToString(<LiveTodoPanel />)).not.toContain('tasks (')
   })
 
-  it('suppresses the busy line\'s Next: row — the list itself is right below', () => {
+  it("suppresses the busy line's Next: row — the list itself is right below", () => {
     const out = renderToString(<BusyLine t={DEFAULT_THEME} turnStartedAt={Date.now()} />)
 
     expect(out).not.toContain('Next:')
   })
 
-  it('ctrl+t hidden: panel yields and the busy line\'s Next: row takes over', () => {
+  it("ctrl+t hidden: panel yields and the busy line's Next: row takes over", () => {
     patchTurnState({ todoCollapsed: true })
 
     expect(renderToString(<LiveTodoPanel />).trim()).toBe('')
@@ -108,7 +108,7 @@ describe('busy: list attached under the busy line', () => {
     expect(busy).toContain('Next: Add tests')
   })
 
-  it('busy-line verb is the in-progress todo\'s activeForm', () => {
+  it("busy-line verb is the in-progress todo's activeForm", () => {
     const busy = renderToString(<BusyLine t={DEFAULT_THEME} turnStartedAt={Date.now()} />)
 
     expect(busy).toContain('Extracting the loader…')
@@ -129,10 +129,7 @@ describe('idle: standalone header render persists between turns', () => {
 })
 
 describe('composer footer hint', () => {
-  const footer = () =>
-    renderToString(
-      <ComposerFooter busy inputEmpty mode="bypassPermissions" sh={false} t={DEFAULT_THEME} />
-    )
+  const footer = () => renderToString(<ComposerFooter busy inputEmpty mode="bypassPermissions" sh={false} t={DEFAULT_THEME} />)
 
   it('offers ctrl+t while busy with tasks', () => {
     expect(footer()).toContain('esc to interrupt · ctrl+t to hide tasks')
@@ -157,9 +154,7 @@ describe('composer footer hint', () => {
     // (getSpinnerHintParts:521); only the esc segment is loading-gated. An
     // incomplete list stays pinned while idle, so idle is exactly when the
     // user wants to know how to hide it.
-    const out = renderToString(
-      <ComposerFooter busy={false} inputEmpty mode="bypassPermissions" sh={false} t={DEFAULT_THEME} />
-    )
+    const out = renderToString(<ComposerFooter busy={false} inputEmpty mode="bypassPermissions" sh={false} t={DEFAULT_THEME} />)
 
     expect(out).toContain('? for shortcuts · ctrl+t to hide tasks')
   })
@@ -167,9 +162,7 @@ describe('composer footer hint', () => {
   it('stays quiet while idle with no tasks', () => {
     patchTurnState({ todos: [] })
 
-    const out = renderToString(
-      <ComposerFooter busy={false} inputEmpty mode="bypassPermissions" sh={false} t={DEFAULT_THEME} />
-    )
+    const out = renderToString(<ComposerFooter busy={false} inputEmpty mode="bypassPermissions" sh={false} t={DEFAULT_THEME} />)
 
     expect(out).toContain('? for shortcuts')
     expect(out).not.toContain('ctrl+t')

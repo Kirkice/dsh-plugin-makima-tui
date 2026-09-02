@@ -37,39 +37,34 @@ const changeSummary = (kind: VcsKind, changes: VcsChange[], label: string): VcsS
 })
 
 export const parseGitStatus = (raw: string): VcsChange[] =>
-  raw
-    .split(/\r?\n/)
-    .flatMap(line => {
-      if (line.length < 4 || line.startsWith('##')) return []
-      const code = line.slice(0, 2)
-      const path = line.slice(3).split(' -> ').at(-1)?.trim() ?? ''
-      if (!path) return []
-      const kind: VcsChangeKind = code.includes('D') ? 'deleted' : code.includes('A') || code === '??' ? 'added' : 'modified'
-      return [{ kind, path, status: code }]
-    })
+  raw.split(/\r?\n/).flatMap((line) => {
+    if (line.length < 4 || line.startsWith('##')) return []
+    const code = line.slice(0, 2)
+    const path = line.slice(3).split(' -> ').at(-1)?.trim() ?? ''
+    if (!path) return []
+    const kind: VcsChangeKind = code.includes('D') ? 'deleted' : code.includes('A') || code === '??' ? 'added' : 'modified'
+    return [{ kind, path, status: code }]
+  })
 
 export const parseSvnStatus = (raw: string): VcsChange[] =>
-  raw
-    .split(/\r?\n/)
-    .flatMap(line => {
-      if (!line.trim()) return []
-      const code = line[0] ?? ' '
-      const path = line.slice(8).trim()
-      if (!path || code === ' ') return []
-      const kind: VcsChangeKind = code === 'D' ? 'deleted' : code === 'A' || code === '?' ? 'added' : 'modified'
-      return [{ kind, path, status: code }]
-    })
+  raw.split(/\r?\n/).flatMap((line) => {
+    if (!line.trim()) return []
+    const code = line[0] ?? ' '
+    const path = line.slice(8).trim()
+    if (!path || code === ' ') return []
+    const kind: VcsChangeKind = code === 'D' ? 'deleted' : code === 'A' || code === '?' ? 'added' : 'modified'
+    return [{ kind, path, status: code }]
+  })
 
 export const parseP4Opened = (raw: string): VcsChange[] =>
-  raw
-    .split(/\r?\n/)
-    .flatMap(line => {
-      const match = /^(.*?)#\d+\s+-\s+([^\s]+)/.exec(line.trim())
-      if (!match) return []
-      const action = match[2]!.toLowerCase()
-      const kind: VcsChangeKind = action === 'delete' ? 'deleted' : action === 'add' || action === 'branch' ? 'added' : action === 'edit' ? 'modified' : 'unknown'
-      return [{ kind, path: match[1]!, status: action }]
-    })
+  raw.split(/\r?\n/).flatMap((line) => {
+    const match = /^(.*?)#\d+\s+-\s+([^\s]+)/.exec(line.trim())
+    if (!match) return []
+    const action = match[2]!.toLowerCase()
+    const kind: VcsChangeKind =
+      action === 'delete' ? 'deleted' : action === 'add' || action === 'branch' ? 'added' : action === 'edit' ? 'modified' : 'unknown'
+    return [{ kind, path: match[1]!, status: action }]
+  })
 
 /**
  * Capability-first VCS probe. Each backend retains its native status semantics,

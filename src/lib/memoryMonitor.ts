@@ -74,12 +74,12 @@ async function _ensureEvictInkCaches(): Promise<(level: 'all' | 'half') => unkno
   }
 
   _evictInkCachesPromise ??= import('@makima-tui/ink')
-    .then(mod => {
+    .then((mod) => {
       _evictInkCaches = mod.evictInkCaches as (level: 'all' | 'half') => unknown
 
       return _evictInkCaches
     })
-    .catch(err => {
+    .catch((err) => {
       _evictInkCachesPromise = null
       throw err
     })

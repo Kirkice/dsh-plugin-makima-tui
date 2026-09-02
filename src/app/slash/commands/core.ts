@@ -71,15 +71,13 @@ const mouseModeFromArg = (arg: string, current: MouseTrackingMode): MouseTrackin
 const RESET_WORDS = new Set(['reset', 'clear', 'default'])
 const CYCLE_WORDS = new Set(['cycle', 'toggle'])
 
-const DETAILS_USAGE =
-  'usage: /details [hidden|collapsed|expanded|cycle]  or  /details <section> [hidden|collapsed|expanded|reset]'
+const DETAILS_USAGE = 'usage: /details [hidden|collapsed|expanded|cycle]  or  /details <section> [hidden|collapsed|expanded|reset]'
 
 const DETAILS_SECTION_USAGE = 'usage: /details <section> [hidden|collapsed|expanded|reset]'
 
 // Shown when /exit or /quit is refused in the hosted dashboard chat. Kept as a
 // constant so the test asserts against the same source of truth as production.
-export const DASHBOARD_EXIT_DISABLED_MESSAGE =
-  'exit is disabled in hosted dashboard chat — use /new to start a fresh session'
+export const DASHBOARD_EXIT_DISABLED_MESSAGE = 'exit is disabled in hosted dashboard chat — use /new to start a fresh session'
 
 export const DASHBOARD_UPDATE_DISABLED_MESSAGE =
   'update is disabled in hosted dashboard chat — the hosted environment is managed separately'
@@ -89,7 +87,7 @@ export const coreCommands: SlashCommand[] = [
     help: 'list commands + hotkeys',
     name: 'help',
     run: (_arg, ctx) => {
-      const sections: PanelSection[] = (ctx.local.catalog?.categories ?? []).map(cat => ({
+      const sections: PanelSection[] = (ctx.local.catalog?.categories ?? []).map((cat) => ({
         rows: cat.pairs,
         title: cat.name
       }))
@@ -102,10 +100,7 @@ export const coreCommands: SlashCommand[] = [
         {
           rows: [
             ['/details [hidden|collapsed|expanded|cycle]', 'set global agent detail visibility mode'],
-            [
-              '/details <section> [hidden|collapsed|expanded|reset]',
-              'override one section (thinking/tools/subagents/activity)'
-            ],
+            ['/details <section> [hidden|collapsed|expanded|reset]', 'override one section (thinking/tools/subagents/activity)'],
             ['/fortune [random|daily]', 'show a random or daily local fortune']
           ],
           title: 'TUI'
@@ -236,7 +231,7 @@ export const coreCommands: SlashCommand[] = [
 
       ctx.gateway
         .rpc<SessionStatusResponse>('session.status', { session_id: ctx.sid })
-        .then(ctx.guarded<SessionStatusResponse>(r => ctx.transcript.page(r.output || '(no status)', 'Status')))
+        .then(ctx.guarded<SessionStatusResponse>((r) => ctx.transcript.page(r.output || '(no status)', 'Status')))
         .catch(ctx.guardedErr)
     }
   },
@@ -256,7 +251,7 @@ export const coreCommands: SlashCommand[] = [
         ctx.gateway
           .rpc<SessionTitleResponse>('session.title', { session_id: ctx.sid })
           .then(
-            ctx.guarded<SessionTitleResponse>(r => {
+            ctx.guarded<SessionTitleResponse>((r) => {
               const current = (r?.title ?? '').trim()
               ctx.transcript.sys(current ? `title: ${current}` : 'no title set')
             })
@@ -273,7 +268,7 @@ export const coreCommands: SlashCommand[] = [
       ctx.gateway
         .rpc<SessionTitleResponse>('session.title', { session_id: ctx.sid, title })
         .then(
-          ctx.guarded<SessionTitleResponse>(r => {
+          ctx.guarded<SessionTitleResponse>((r) => {
             const next = (r?.title ?? title).trim()
             const suffix = r?.pending ? ' (queued while session initializes)' : ''
             ctx.transcript.sys(`session title set: ${next}${suffix}`)
@@ -312,7 +307,7 @@ export const coreCommands: SlashCommand[] = [
       if (!arg) {
         gateway
           .rpc<ConfigGetValueResponse>('config.get', { key: 'details_mode' })
-          .then(r => {
+          .then((r) => {
             if (ctx.stale()) {
               return
             }
@@ -320,8 +315,8 @@ export const coreCommands: SlashCommand[] = [
             const mode = parseDetailsMode(r?.value) ?? ui.detailsMode
             patchUiState({ detailsMode: mode, detailsModeCommandOverride: false })
 
-            const overrides = SECTION_NAMES.filter(s => ui.sections[s])
-              .map(s => `${s}=${ui.sections[s]}`)
+            const overrides = SECTION_NAMES.filter((s) => ui.sections[s])
+              .map((s) => `${s}=${ui.sections[s]}`)
               .join(' ')
 
             transcript.sys(`details: ${mode}${overrides ? `  (${overrides})` : ''}`)
@@ -344,9 +339,7 @@ export const coreCommands: SlashCommand[] = [
         const { [first]: _drop, ...rest } = ui.sections
 
         patchUiState({ sections: mode ? { ...rest, [first]: mode } : rest })
-        gateway
-          .rpc<ConfigSetResponse>('config.set', { key: `details_mode.${first}`, value: mode ?? '' })
-          .catch(() => {})
+        gateway.rpc<ConfigSetResponse>('config.set', { key: `details_mode.${first}`, value: mode ?? '' }).catch(() => {})
         transcript.sys(`details ${first}: ${mode ?? 'reset'}`)
 
         return
@@ -358,7 +351,7 @@ export const coreCommands: SlashCommand[] = [
         return transcript.sys(DETAILS_USAGE)
       }
 
-      const sections = Object.fromEntries(SECTION_NAMES.map(section => [section, next]))
+      const sections = Object.fromEntries(SECTION_NAMES.map((section) => [section, next]))
 
       patchUiState({ detailsMode: next, detailsModeCommandOverride: true, sections })
       gateway.rpc<ConfigSetResponse>('config.set', { key: 'details_mode', value: next }).catch(() => {})
@@ -406,7 +399,7 @@ export const coreCommands: SlashCommand[] = [
         return sys('usage: /copy [number]')
       }
 
-      const all = ctx.local.getHistoryItems().filter(m => m.role === 'assistant')
+      const all = ctx.local.getHistoryItems().filter((m) => m.role === 'assistant')
       const target = all[arg ? Math.min(parseInt(arg, 10), all.length) - 1 : all.length - 1]
 
       if (!target) {
@@ -414,7 +407,7 @@ export const coreCommands: SlashCommand[] = [
       }
 
       void writeClipboardText(target.text)
-        .then(nativeOk => {
+        .then((nativeOk) => {
           if (ctx.stale()) {
             return
           }
@@ -426,7 +419,7 @@ export const coreCommands: SlashCommand[] = [
             sys('sent OSC52 copy sequence (terminal support required)')
           }
         })
-        .catch(error => {
+        .catch((error) => {
           if (!ctx.stale()) {
             sys(`copy failed: ${String(error)}`)
           }
@@ -475,7 +468,7 @@ export const coreCommands: SlashCommand[] = [
           : configureTerminalKeybindings(target as 'cursor' | 'vscode' | 'windsurf')
 
       void runner
-        .then(result => {
+        .then((result) => {
           if (ctx.stale()) {
             return
           }
@@ -486,7 +479,7 @@ export const coreCommands: SlashCommand[] = [
             ctx.transcript.sys('restart the IDE terminal for the new keybindings to take effect')
           }
         })
-        .catch(error => {
+        .catch((error) => {
           if (!ctx.stale()) {
             ctx.transcript.sys(`terminal setup failed: ${String(error)}`)
           }
@@ -514,7 +507,7 @@ export const coreCommands: SlashCommand[] = [
       // that never sees the TUI's turns — it only surfaces whatever was
       // persisted before this process started.  Render the TUI's own
       // transcript so `/history` actually reflects what the user just did.
-      const items = ctx.local.getHistoryItems().filter(m => m.role === 'user' || m.role === 'assistant')
+      const items = ctx.local.getHistoryItems().filter((m) => m.role === 'user' || m.role === 'assistant')
 
       if (!items.length) {
         return ctx.transcript.sys('no conversation yet')
@@ -538,9 +531,7 @@ export const coreCommands: SlashCommand[] = [
     help: 'save the current transcript to JSON',
     name: 'save',
     run: (_arg, ctx) => {
-      const hasConversation = ctx.local
-        .getHistoryItems()
-        .some(m => m.role === 'user' || m.role === 'assistant' || m.role === 'tool')
+      const hasConversation = ctx.local.getHistoryItems().some((m) => m.role === 'user' || m.role === 'assistant' || m.role === 'tool')
 
       if (!hasConversation) {
         return ctx.transcript.sys('no conversation yet')
@@ -553,7 +544,7 @@ export const coreCommands: SlashCommand[] = [
       ctx.gateway
         .rpc<SessionSaveResponse>('session.save', { session_id: ctx.sid })
         .then(
-          ctx.guarded<SessionSaveResponse>(r => {
+          ctx.guarded<SessionSaveResponse>((r) => {
             const file = r?.file
 
             if (file) {
@@ -577,13 +568,7 @@ export const coreCommands: SlashCommand[] = [
       const toggle: StatusBarMode = ctx.ui.statusBar === 'off' ? 'top' : 'off'
 
       const next: null | StatusBarMode =
-        !mode || mode === 'toggle'
-          ? toggle
-          : mode === 'on' || mode === 'top'
-            ? 'top'
-            : mode === 'off' || mode === 'bottom'
-              ? mode
-              : null
+        !mode || mode === 'toggle' ? toggle : mode === 'on' || mode === 'top' ? 'top' : mode === 'off' || mode === 'bottom' ? mode : null
 
       if (!next) {
         return ctx.transcript.sys('usage: /statusbar [on|off|top|bottom|toggle]')
@@ -626,9 +611,7 @@ export const coreCommands: SlashCommand[] = [
       // message isn't lost — identical semantics to the gateway handler.
       if (!ctx.ui.busy || !ctx.sid) {
         ctx.composer.enqueue(payload)
-        ctx.transcript.sys(
-          `no active turn — queued for next: "${payload.slice(0, 50)}${payload.length > 50 ? '…' : ''}"`
-        )
+        ctx.transcript.sys(`no active turn — queued for next: "${payload.slice(0, 50)}${payload.length > 50 ? '…' : ''}"`)
 
         return
       }
@@ -636,11 +619,9 @@ export const coreCommands: SlashCommand[] = [
       ctx.gateway
         .rpc<SessionSteerResponse>('session.steer', { session_id: ctx.sid, text: payload })
         .then(
-          ctx.guarded<SessionSteerResponse>(r => {
+          ctx.guarded<SessionSteerResponse>((r) => {
             if (r?.status === 'queued') {
-              ctx.transcript.sys(
-                `steer queued — arrives after next tool call: "${payload.slice(0, 50)}${payload.length > 50 ? '…' : ''}"`
-              )
+              ctx.transcript.sys(`steer queued — arrives after next tool call: "${payload.slice(0, 50)}${payload.length > 50 ? '…' : ''}"`)
             } else {
               ctx.transcript.sys('steer rejected')
             }
@@ -659,7 +640,7 @@ export const coreCommands: SlashCommand[] = [
       }
 
       ctx.gateway.rpc<SessionUndoResponse>('session.undo', { session_id: ctx.sid }).then(
-        ctx.guarded<SessionUndoResponse>(r => {
+        ctx.guarded<SessionUndoResponse>((r) => {
           if ((r.removed ?? 0) > 0) {
             ctx.transcript.setHistoryItems((prev: Msg[]) => ctx.transcript.trimLastExchange(prev))
             ctx.transcript.sys(`undid ${r.removed} messages`)
@@ -686,7 +667,7 @@ export const coreCommands: SlashCommand[] = [
       }
 
       ctx.gateway.rpc<SessionUndoResponse>('session.undo', { session_id: ctx.sid }).then(
-        ctx.guarded<SessionUndoResponse>(r => {
+        ctx.guarded<SessionUndoResponse>((r) => {
           if ((r.removed ?? 0) <= 0) {
             return ctx.transcript.sys('nothing to retry')
           }

@@ -129,7 +129,7 @@ export async function captureMemoryDiagnostics(trigger: MemoryTrigger): Promise<
     timestamp: new Date().toISOString(),
     trigger,
     uptimeSeconds,
-    v8HeapSpaces: heapSpaces?.map(s => ({
+    v8HeapSpaces: heapSpaces?.map((s) => ({
       available: s.space_available_size,
       name: s.space_name,
       size: s.space_size,
@@ -197,7 +197,7 @@ async function pruneHeapdumps(dir: string): Promise<void> {
   const names = await readdir(dir)
 
   const stats = await Promise.all(
-    names.map(async name => {
+    names.map(async (name) => {
       const path = join(dir, name)
       const s = await stat(path).catch(() => null)
 

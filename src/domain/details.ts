@@ -37,10 +37,9 @@ const norm = (v: unknown) =>
     .trim()
     .toLowerCase()
 
-export const parseDetailsMode = (v: unknown): DetailsMode | null => MODES.find(m => m === norm(v)) ?? null
+export const parseDetailsMode = (v: unknown): DetailsMode | null => MODES.find((m) => m === norm(v)) ?? null
 
-export const isSectionName = (v: unknown): v is SectionName =>
-  typeof v === 'string' && (SECTION_NAMES as readonly string[]).includes(v)
+export const isSectionName = (v: unknown): v is SectionName => typeof v === 'string' && (SECTION_NAMES as readonly string[]).includes(v)
 
 export const resolveDetailsMode = (d?: { details_mode?: unknown; thinking_mode?: unknown } | null): DetailsMode =>
   parseDetailsMode(d?.details_mode) ?? THINKING_FALLBACK[norm(d?.thinking_mode)] ?? 'collapsed'
@@ -66,11 +65,7 @@ export const resolveSections = (raw: unknown): SectionVisibility =>
 // startup/config sync we keep those defaults layered above the persisted global
 // config so the TUI still opens live reasoning/tools by default unless the user
 // pins explicit per-section overrides.
-export const sectionMode = (
-  name: SectionName,
-  global: DetailsMode,
-  sections?: SectionVisibility,
-  commandOverride = false
-): DetailsMode => sections?.[name] ?? (commandOverride ? global : (SECTION_DEFAULTS[name] ?? global))
+export const sectionMode = (name: SectionName, global: DetailsMode, sections?: SectionVisibility, commandOverride = false): DetailsMode =>
+  sections?.[name] ?? (commandOverride ? global : (SECTION_DEFAULTS[name] ?? global))
 
 export const nextDetailsMode = (m: DetailsMode): DetailsMode => MODES[(MODES.indexOf(m) + 1) % MODES.length]!

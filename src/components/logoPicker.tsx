@@ -32,11 +32,11 @@ export function LogoPicker({ current, onClose, onSelect, t }: LogoPickerProps) {
     }
 
     if (key.upArrow) {
-      return setIdx(i => Math.max(0, i - 1))
+      return setIdx((i) => Math.max(0, i - 1))
     }
 
     if (key.downArrow) {
-      return setIdx(i => Math.min(LOGO_PALETTE_NAMES.length - 1, i + 1))
+      return setIdx((i) => Math.min(LOGO_PALETTE_NAMES.length - 1, i + 1))
     }
 
     if (key.return) {

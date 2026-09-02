@@ -11,8 +11,7 @@ import type { ActiveTool, DetailsMode, Msg, SectionVisibility } from '../types.j
 import { MessageLine } from './messageLine.js'
 import { TodoPanel } from './todoPanel.js'
 
-const groupedSegments = (segments: Msg[]): Msg[] =>
-  segments.reduce<Msg[]>((acc, msg) => appendToolShelfMessage(acc, msg), [])
+const groupedSegments = (segments: Msg[]): Msg[] => segments.reduce<Msg[]>((acc, msg) => appendToolShelfMessage(acc, msg), [])
 
 interface LiveBlock {
   isStreaming?: boolean
@@ -32,10 +31,10 @@ export const StreamingAssistant = memo(function StreamingAssistant({
   sections
 }: StreamingAssistantProps) {
   const ui = useStore($uiState)
-  const streamSegments = useTurnSelector(state => state.streamSegments)
-  const streamPendingTools = useTurnSelector(state => state.streamPendingTools)
-  const streaming = useTurnSelector(state => state.streaming)
-  const activeTools = useTurnSelector(state => state.tools)
+  const streamSegments = useTurnSelector((state) => state.streamSegments)
+  const streamPendingTools = useTurnSelector((state) => state.streamPendingTools)
+  const streaming = useTurnSelector((state) => state.streaming)
+  const activeTools = useTurnSelector((state) => state.tools)
   const showStreamingArea = Boolean(streaming)
 
   if (!progress.showProgressArea && !showStreamingArea && !activeTools.length) {
@@ -68,7 +67,7 @@ export const StreamingAssistant = memo(function StreamingAssistant({
 
   return (
     <>
-      {blocks.map(block => {
+      {blocks.map((block) => {
         const node = (
           <MessageLine
             cols={cols}
@@ -89,7 +88,7 @@ export const StreamingAssistant = memo(function StreamingAssistant({
         // Advance the grouping predecessor only past blocks that actually
         // paint, so a trail hidden by /details stays transparent here too
         // (active tools live in the prop, so fold them into the check).
-        const checkMsg = block.tools?.length ? { ...block.msg, tools: block.tools.map(tool => tool.name) } : block.msg
+        const checkMsg = block.tools?.length ? { ...block.msg, tools: block.tools.map((tool) => tool.name) } : block.msg
 
         if (blockRenders(checkMsg, detailsCtx)) {
           prev = block.msg
@@ -103,8 +102,8 @@ export const StreamingAssistant = memo(function StreamingAssistant({
 
 export const LiveTodoPanel = memo(function LiveTodoPanel() {
   const ui = useStore($uiState)
-  const todos = useTurnSelector(state => state.todos)
-  const collapsed = useTurnSelector(state => state.todoCollapsed)
+  const todos = useTurnSelector((state) => state.todos)
+  const collapsed = useTurnSelector((state) => state.todoCollapsed)
 
   // Busy with the busy line right above (statusBar off is the only layout
   // where it renders): hang the rows off it through the └ connector, the
@@ -124,9 +123,7 @@ export const LiveTodoPanel = memo(function LiveTodoPanel() {
   // marginBottom keeps the last row off the composer border when the
   // composer's own marginTop is 0 (statusBar='top'); the reference
   // standalone carries its own margin too (TaskListV2.tsx:193).
-  return (
-    <TodoPanel collapsed={collapsed} marginBottom={1} onToggle={toggleTodoCollapsed} t={ui.theme} todos={todos} />
-  )
+  return <TodoPanel collapsed={collapsed} marginBottom={1} onToggle={toggleTodoCollapsed} t={ui.theme} todos={todos} />
 })
 
 interface StreamingAssistantProps {

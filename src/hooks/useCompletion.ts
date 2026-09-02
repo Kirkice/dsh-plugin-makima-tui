@@ -55,9 +55,9 @@ export function useCompletion(input: string, blocked: boolean, gw: GatewayClient
 
   useEffect(() => {
     const clear = () => {
-      setCompletions(prev => (prev.length ? [] : prev))
-      setCompIdx(prev => (prev ? 0 : prev))
-      setCompReplace(prev => (prev ? 0 : prev))
+      setCompletions((prev) => (prev.length ? [] : prev))
+      setCompIdx((prev) => (prev ? 0 : prev))
+      setCompReplace((prev) => (prev ? 0 : prev))
     }
 
     if (blocked) {
@@ -87,7 +87,7 @@ export function useCompletion(input: string, blocked: boolean, gw: GatewayClient
       }
 
       gw.request<CompletionResponse>(request.method, request.params)
-        .then(raw => {
+        .then((raw) => {
           if (ref.current !== input) {
             return
           }

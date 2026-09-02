@@ -15,7 +15,7 @@ const out = resolve(root, 'dist/entry.js')
 const stubDevtools = {
   name: 'stub-react-devtools-core',
   setup(b) {
-    b.onResolve({ filter: /^react-devtools-core$/ }, args => ({
+    b.onResolve({ filter: /^react-devtools-core$/ }, (args) => ({
       path: args.path,
       namespace: 'stub-devtools'
     }))

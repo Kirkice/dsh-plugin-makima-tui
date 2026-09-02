@@ -8,9 +8,9 @@ export interface LaunchResult {
 const resolveClawcodexBin = () => process.env.MAKIMA_TUI_BIN?.trim() || 'clawcodex'
 
 export const launchClawcodexCommand = (args: string[]): Promise<LaunchResult> =>
-  new Promise(resolve => {
+  new Promise((resolve) => {
     const child = spawn(resolveClawcodexBin(), args, { stdio: 'inherit' })
 
-    child.on('error', err => resolve({ code: null, error: err.message }))
-    child.on('exit', code => resolve({ code }))
+    child.on('error', (err) => resolve({ code: null, error: err.message }))
+    child.on('exit', (code) => resolve({ code }))
   })

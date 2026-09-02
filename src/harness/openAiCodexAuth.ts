@@ -123,24 +123,45 @@ export function openAiCodexOAuthConfig(env = process.env): OpenAiCodexOAuthConfi
   if (callback.protocol !== 'http:' || (callback.hostname !== 'localhost' && callback.hostname !== '127.0.0.1')) {
     throw new Error('MAKIMA_OPENAI_CODEX_REDIRECT_URI must be a registered http://localhost or http://127.0.0.1 callback URI')
   }
-  const deviceAuthorizationEndpoint = optionalUrl(env.MAKIMA_OPENAI_CODEX_DEVICE_AUTHORIZE_URL ?? DEFAULT_DEVICE_AUTHORIZE_URL, 'MAKIMA_OPENAI_CODEX_DEVICE_AUTHORIZE_URL')
-  const deviceTokenEndpoint = optionalUrl(env.MAKIMA_OPENAI_CODEX_DEVICE_TOKEN_URL ?? DEFAULT_DEVICE_TOKEN_URL, 'MAKIMA_OPENAI_CODEX_DEVICE_TOKEN_URL')
-  const deviceVerificationUri = optionalUrl(env.MAKIMA_OPENAI_CODEX_DEVICE_VERIFICATION_URI ?? DEFAULT_DEVICE_VERIFICATION_URI, 'MAKIMA_OPENAI_CODEX_DEVICE_VERIFICATION_URI')
-  const deviceRedirectUri = optionalUrl(env.MAKIMA_OPENAI_CODEX_DEVICE_REDIRECT_URI ?? DEFAULT_DEVICE_REDIRECT_URI, 'MAKIMA_OPENAI_CODEX_DEVICE_REDIRECT_URI')
+  const deviceAuthorizationEndpoint = optionalUrl(
+    env.MAKIMA_OPENAI_CODEX_DEVICE_AUTHORIZE_URL ?? DEFAULT_DEVICE_AUTHORIZE_URL,
+    'MAKIMA_OPENAI_CODEX_DEVICE_AUTHORIZE_URL'
+  )
+  const deviceTokenEndpoint = optionalUrl(
+    env.MAKIMA_OPENAI_CODEX_DEVICE_TOKEN_URL ?? DEFAULT_DEVICE_TOKEN_URL,
+    'MAKIMA_OPENAI_CODEX_DEVICE_TOKEN_URL'
+  )
+  const deviceVerificationUri = optionalUrl(
+    env.MAKIMA_OPENAI_CODEX_DEVICE_VERIFICATION_URI ?? DEFAULT_DEVICE_VERIFICATION_URI,
+    'MAKIMA_OPENAI_CODEX_DEVICE_VERIFICATION_URI'
+  )
+  const deviceRedirectUri = optionalUrl(
+    env.MAKIMA_OPENAI_CODEX_DEVICE_REDIRECT_URI ?? DEFAULT_DEVICE_REDIRECT_URI,
+    'MAKIMA_OPENAI_CODEX_DEVICE_REDIRECT_URI'
+  )
   const deviceValues = [deviceAuthorizationEndpoint, deviceTokenEndpoint, deviceVerificationUri, deviceRedirectUri]
-  if (deviceValues.some(Boolean) && deviceValues.some(value => !value)) {
+  if (deviceValues.some(Boolean) && deviceValues.some((value) => !value)) {
     throw new Error('all MAKIMA_OPENAI_CODEX_DEVICE_* OAuth settings are required when Device Code is enabled')
   }
   return {
-    apiBaseUrl: configuredUrl(env.MAKIMA_OPENAI_CODEX_API_BASE_URL ?? DEFAULT_API_BASE_URL, 'MAKIMA_OPENAI_CODEX_API_BASE_URL').replace(/\/$/, ''),
-    authorizationEndpoint: configuredUrl(env.MAKIMA_OPENAI_CODEX_AUTHORIZE_URL ?? 'https://auth.openai.com/oauth/authorize', 'MAKIMA_OPENAI_CODEX_AUTHORIZE_URL'),
+    apiBaseUrl: configuredUrl(env.MAKIMA_OPENAI_CODEX_API_BASE_URL ?? DEFAULT_API_BASE_URL, 'MAKIMA_OPENAI_CODEX_API_BASE_URL').replace(
+      /\/$/,
+      ''
+    ),
+    authorizationEndpoint: configuredUrl(
+      env.MAKIMA_OPENAI_CODEX_AUTHORIZE_URL ?? 'https://auth.openai.com/oauth/authorize',
+      'MAKIMA_OPENAI_CODEX_AUTHORIZE_URL'
+    ),
     callbackTimeoutMs: CALLBACK_TIMEOUT_MS,
     clientId: nonEmpty(env.MAKIMA_OPENAI_CODEX_CLIENT_ID) ?? DEFAULT_CLIENT_ID,
     ...(deviceAuthorizationEndpoint ? { deviceAuthorizationEndpoint, deviceRedirectUri, deviceTokenEndpoint, deviceVerificationUri } : {}),
     originator: nonEmpty(env.MAKIMA_OPENAI_CODEX_ORIGINATOR) ?? 'makima-tui',
     redirectUri,
     scopes: nonEmpty(env.MAKIMA_OPENAI_CODEX_SCOPES) ?? 'openid profile email offline_access',
-    tokenEndpoint: configuredUrl(env.MAKIMA_OPENAI_CODEX_TOKEN_URL ?? 'https://auth.openai.com/oauth/token', 'MAKIMA_OPENAI_CODEX_TOKEN_URL')
+    tokenEndpoint: configuredUrl(
+      env.MAKIMA_OPENAI_CODEX_TOKEN_URL ?? 'https://auth.openai.com/oauth/token',
+      'MAKIMA_OPENAI_CODEX_TOKEN_URL'
+    )
   }
 }
 
@@ -164,7 +185,7 @@ export function parseJwtClaims(token: string): JwtClaims | undefined {
   if (parts.length !== 3) return undefined
   try {
     const parsed: unknown = JSON.parse(Buffer.from(parts[1]!, 'base64url').toString('utf8'))
-    return parsed && typeof parsed === 'object' ? parsed as JwtClaims : undefined
+    return parsed && typeof parsed === 'object' ? (parsed as JwtClaims) : undefined
   } catch {
     return undefined
   }
@@ -174,7 +195,10 @@ export function accountIdFromTokens(tokens: Pick<TokenResponse, 'access_token' |
   for (const token of [tokens.id_token, tokens.access_token]) {
     if (!token) continue
     const claims = parseJwtClaims(token)
-    const accountId = claims?.chatgpt_account_id ?? claims?.['https://api.openai.com/auth']?.chatgpt_account_id ?? claims?.organizations?.find(org => typeof org.id === 'string')?.id
+    const accountId =
+      claims?.chatgpt_account_id ??
+      claims?.['https://api.openai.com/auth']?.chatgpt_account_id ??
+      claims?.organizations?.find((org) => typeof org.id === 'string')?.id
     if (accountId) return accountId
   }
   return undefined
@@ -186,7 +210,17 @@ function isMissing(error: unknown): boolean {
 
 function isCredential(value: unknown): value is OpenAiCodexCredential {
   const candidate = value as Partial<OpenAiCodexCredential> | undefined
-  return candidate?.type === OPENAI_CODEX_PROVIDER && typeof candidate.accessToken === 'string' && candidate.accessToken.length > 0 && typeof candidate.refreshToken === 'string' && candidate.refreshToken.length > 0 && typeof candidate.expiresAt === 'number' && Number.isFinite(candidate.expiresAt) && (candidate.accountId === undefined || typeof candidate.accountId === 'string') && (candidate.email === undefined || typeof candidate.email === 'string')
+  return (
+    candidate?.type === OPENAI_CODEX_PROVIDER &&
+    typeof candidate.accessToken === 'string' &&
+    candidate.accessToken.length > 0 &&
+    typeof candidate.refreshToken === 'string' &&
+    candidate.refreshToken.length > 0 &&
+    typeof candidate.expiresAt === 'number' &&
+    Number.isFinite(candidate.expiresAt) &&
+    (candidate.accountId === undefined || typeof candidate.accountId === 'string') &&
+    (candidate.email === undefined || typeof candidate.email === 'string')
+  )
 }
 
 /** Plugin-owned credential file with owner-only permissions, atomic replacement, and an OS-visible lock. */
@@ -235,7 +269,9 @@ export class OpenAiCodexCredentialStore {
     return this.readUnlocked()
   }
 
-  async modify(fn: (current: OpenAiCodexCredential | undefined) => Promise<OpenAiCodexCredential | undefined>): Promise<OpenAiCodexCredential | undefined> {
+  async modify(
+    fn: (current: OpenAiCodexCredential | undefined) => Promise<OpenAiCodexCredential | undefined>
+  ): Promise<OpenAiCodexCredential | undefined> {
     return this.withLock(async () => {
       const next = await fn(await this.readUnlocked())
       if (next === undefined) return undefined
@@ -252,7 +288,9 @@ export class OpenAiCodexCredentialStore {
         await chmod(this.path, 0o600)
       } finally {
         await handle?.close()
-        await unlink(temp).catch(error => { if (!isMissing(error)) throw error })
+        await unlink(temp).catch((error) => {
+          if (!isMissing(error)) throw error
+        })
       }
       return { ...next }
     })
@@ -264,7 +302,10 @@ export class OpenAiCodexCredentialStore {
 
   async clear(): Promise<void> {
     await this.withLock(async () => {
-      const info = await lstat(this.path).catch(error => { if (isMissing(error)) return undefined; throw error })
+      const info = await lstat(this.path).catch((error) => {
+        if (isMissing(error)) return undefined
+        throw error
+      })
       if (!info) return
       if (!info.isFile() || info.isSymbolicLink()) throw new Error('OpenAI Codex credential path is unsafe')
       await rm(this.path, { force: true })
@@ -281,16 +322,34 @@ export class OpenAiCodexAuthManager {
     private readonly fetcher: typeof fetch = fetch
   ) {}
 
-  async status(): Promise<OpenAiCodexAuthView> { return redactedAuthView(await this.store.load()) }
-  async logout(): Promise<void> { await this.store.clear() }
-  canUseDeviceCode(): boolean { return Boolean(this.config.deviceAuthorizationEndpoint) }
+  async status(): Promise<OpenAiCodexAuthView> {
+    return redactedAuthView(await this.store.load())
+  }
+  async logout(): Promise<void> {
+    await this.store.clear()
+  }
+  canUseDeviceCode(): boolean {
+    return Boolean(this.config.deviceAuthorizationEndpoint)
+  }
 
   async beginLogin(method: LoginMethod = 'browser'): Promise<OAuthLogin> {
     if (method === 'device_code') return this.beginDeviceLogin()
     const { challenge, verifier } = createPkcePair()
     const state = randomBytes(32).toString('base64url')
     const url = new URL(this.config.authorizationEndpoint)
-    for (const [key, value] of Object.entries({ response_type: 'code', client_id: this.config.clientId, redirect_uri: this.config.redirectUri, scope: this.config.scopes, state, code_challenge: challenge, code_challenge_method: 'S256', id_token_add_organizations: 'true', codex_cli_simplified_flow: 'true', originator: this.config.originator })) url.searchParams.set(key, value)
+    for (const [key, value] of Object.entries({
+      response_type: 'code',
+      client_id: this.config.clientId,
+      redirect_uri: this.config.redirectUri,
+      scope: this.config.scopes,
+      state,
+      code_challenge: challenge,
+      code_challenge_method: 'S256',
+      id_token_add_organizations: 'true',
+      codex_cli_simplified_flow: 'true',
+      originator: this.config.originator
+    }))
+      url.searchParams.set(key, value)
     const callback = await listenForCallback(this.config.redirectUri, state, this.config.callbackTimeoutMs)
     return {
       authorizationUrl: url.toString(),
@@ -302,9 +361,15 @@ export class OpenAiCodexAuthManager {
 
   private async beginDeviceLogin(): Promise<OAuthLogin> {
     const { deviceAuthorizationEndpoint, deviceRedirectUri, deviceTokenEndpoint, deviceVerificationUri } = this.config
-    if (!deviceAuthorizationEndpoint || !deviceRedirectUri || !deviceTokenEndpoint || !deviceVerificationUri) throw new Error('OpenAI Device Code login is not configured')
+    if (!deviceAuthorizationEndpoint || !deviceRedirectUri || !deviceTokenEndpoint || !deviceVerificationUri)
+      throw new Error('OpenAI Device Code login is not configured')
     const abort = new AbortController()
-    const response = await this.fetcher(deviceAuthorizationEndpoint, { body: JSON.stringify({ client_id: this.config.clientId }), headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, method: 'POST', signal: abort.signal })
+    const response = await this.fetcher(deviceAuthorizationEndpoint, {
+      body: JSON.stringify({ client_id: this.config.clientId }),
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      method: 'POST',
+      signal: abort.signal
+    })
     const raw: unknown = await response.json().catch(() => undefined)
     if (!response.ok || !isDeviceCodeResponse(raw)) throw new Error('OpenAI Device Code authorization request failed')
     const expiresAt = Date.now() + (raw.expires_in && raw.expires_in > 0 ? raw.expires_in * 1000 : DEVICE_TIMEOUT_MS)
@@ -315,18 +380,28 @@ export class OpenAiCodexAuthManager {
       complete: async () => {
         while (Date.now() < expiresAt) {
           await delay(intervalMs, abort.signal)
-          const poll = await this.fetcher(deviceTokenEndpoint, { body: JSON.stringify({ device_auth_id: raw.device_auth_id, user_code: raw.user_code }), headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, method: 'POST', signal: abort.signal })
+          const poll = await this.fetcher(deviceTokenEndpoint, {
+            body: JSON.stringify({ device_auth_id: raw.device_auth_id, user_code: raw.user_code }),
+            headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+            method: 'POST',
+            signal: abort.signal
+          })
           if (poll.ok) {
             const token: unknown = await poll.json().catch(() => undefined)
             if (!token || typeof token !== 'object') throw new Error('OpenAI Device Code authorization returned invalid data')
             const value = token as Record<string, unknown>
-            if (typeof value.authorization_code !== 'string' || typeof value.code_verifier !== 'string') throw new Error('OpenAI Device Code authorization is incomplete')
+            if (typeof value.authorization_code !== 'string' || typeof value.code_verifier !== 'string')
+              throw new Error('OpenAI Device Code authorization is incomplete')
             return this.persistTokens(value.authorization_code, value.code_verifier, deviceRedirectUri)
           }
           const pending: unknown = await poll.json().catch(() => undefined)
           const code = pending && typeof pending === 'object' ? String((pending as Record<string, unknown>).error ?? '') : ''
-          if (poll.status === 403 || poll.status === 404 || code === 'authorization_pending' || code === 'deviceauth_authorization_pending') continue
-          if (code === 'slow_down') { await delay(5_000, abort.signal); continue }
+          if (poll.status === 403 || poll.status === 404 || code === 'authorization_pending' || code === 'deviceauth_authorization_pending')
+            continue
+          if (code === 'slow_down') {
+            await delay(5_000, abort.signal)
+            continue
+          }
           throw new Error('OpenAI Device Code authorization failed')
         }
         throw new Error('OpenAI Device Code expired')
@@ -346,28 +421,47 @@ export class OpenAiCodexAuthManager {
   }
 
   private async refresh(current: OpenAiCodexCredential): Promise<OpenAiCodexCredential | undefined> {
-    this.refreshInFlight ??= this.store.modify(async stored => {
-      if (!stored) return undefined
-      if (stored.expiresAt > Date.now() + EXPIRY_SKEW_MS) return stored
-      try { return this.credentialFrom(await this.tokenRequest({ grant_type: 'refresh_token', refresh_token: stored.refreshToken }), stored.refreshToken) } catch (error) {
-        if (isInvalidGrant(error)) return undefined
-        throw error
-      }
-    }).finally(() => { this.refreshInFlight = undefined })
+    this.refreshInFlight ??= this.store
+      .modify(async (stored) => {
+        if (!stored) return undefined
+        if (stored.expiresAt > Date.now() + EXPIRY_SKEW_MS) return stored
+        try {
+          return this.credentialFrom(
+            await this.tokenRequest({ grant_type: 'refresh_token', refresh_token: stored.refreshToken }),
+            stored.refreshToken
+          )
+        } catch (error) {
+          if (isInvalidGrant(error)) return undefined
+          throw error
+        }
+      })
+      .finally(() => {
+        this.refreshInFlight = undefined
+      })
     return this.refreshInFlight
   }
 
   private async persistTokens(code: string, verifier: string, redirectUri: string): Promise<OpenAiCodexCredential> {
-    const credential = this.credentialFrom(await this.tokenRequest({ code, code_verifier: verifier, grant_type: 'authorization_code', redirect_uri: redirectUri }))
+    const credential = this.credentialFrom(
+      await this.tokenRequest({ code, code_verifier: verifier, grant_type: 'authorization_code', redirect_uri: redirectUri })
+    )
     await this.store.save(credential)
     return credential
   }
 
   private async tokenRequest(values: Record<string, string>): Promise<TokenResponse> {
-    const response = await this.fetcher(this.config.tokenEndpoint, { body: new URLSearchParams({ client_id: this.config.clientId, ...values }), headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' }, method: 'POST' })
+    const response = await this.fetcher(this.config.tokenEndpoint, {
+      body: new URLSearchParams({ client_id: this.config.clientId, ...values }),
+      headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
+      method: 'POST'
+    })
     const text = await response.text()
     let data: unknown
-    try { data = JSON.parse(text) } catch { data = undefined }
+    try {
+      data = JSON.parse(text)
+    } catch {
+      data = undefined
+    }
     if (!response.ok) throw new OAuthTokenError(response.status, data)
     if (!isTokenResponse(data)) throw new Error('OpenAI OAuth token response is malformed')
     return data
@@ -375,12 +469,28 @@ export class OpenAiCodexAuthManager {
 
   private credentialFrom(tokens: TokenResponse, priorRefreshToken?: string): OpenAiCodexCredential {
     const claims = parseJwtClaims(tokens.id_token ?? tokens.access_token)
-    return { accountId: accountIdFromTokens(tokens), accessToken: tokens.access_token, email: tokens.email ?? claims?.email, expiresAt: Date.now() + tokens.expires_in * 1_000, refreshToken: tokens.refresh_token ?? priorRefreshToken ?? missingRefreshToken(), type: OPENAI_CODEX_PROVIDER }
+    return {
+      accountId: accountIdFromTokens(tokens),
+      accessToken: tokens.access_token,
+      email: tokens.email ?? claims?.email,
+      expiresAt: Date.now() + tokens.expires_in * 1_000,
+      refreshToken: tokens.refresh_token ?? priorRefreshToken ?? missingRefreshToken(),
+      type: OPENAI_CODEX_PROVIDER
+    }
   }
 }
 
 class OAuthTokenError extends Error {
-  constructor(readonly status: number, readonly details: unknown) { super(typeof details === 'object' && details && typeof (details as Record<string, unknown>).error_description === 'string' ? (details as Record<string, string>).error_description : `OpenAI OAuth token request failed (${status})`) }
+  constructor(
+    readonly status: number,
+    readonly details: unknown
+  ) {
+    super(
+      typeof details === 'object' && details && typeof (details as Record<string, unknown>).error_description === 'string'
+        ? (details as Record<string, string>).error_description
+        : `OpenAI OAuth token request failed (${status})`
+    )
+  }
 }
 
 function isInvalidGrant(error: unknown): boolean {
@@ -388,40 +498,94 @@ function isInvalidGrant(error: unknown): boolean {
   const code = typeof error.details === 'object' && error.details ? (error.details as Record<string, unknown>).error : undefined
   return code === 'invalid_grant' || /invalid_grant|revoked|expired|invalid refresh/i.test(error.message)
 }
-function missingRefreshToken(): string { throw new Error('OpenAI OAuth token response did not contain a refresh token') }
-function isTokenResponse(value: unknown): value is TokenResponse { const candidate = value as Partial<TokenResponse> | undefined; return typeof candidate?.access_token === 'string' && candidate.access_token.length > 0 && typeof candidate.expires_in === 'number' && Number.isFinite(candidate.expires_in) && candidate.expires_in > 0 && (candidate.refresh_token === undefined || typeof candidate.refresh_token === 'string') }
-function isDeviceCodeResponse(value: unknown): value is DeviceCodeResponse { const candidate = value as Partial<DeviceCodeResponse> | undefined; return typeof candidate?.device_auth_id === 'string' && candidate.device_auth_id.length > 0 && typeof candidate.user_code === 'string' && candidate.user_code.length > 0 }
+function missingRefreshToken(): string {
+  throw new Error('OpenAI OAuth token response did not contain a refresh token')
+}
+function isTokenResponse(value: unknown): value is TokenResponse {
+  const candidate = value as Partial<TokenResponse> | undefined
+  return (
+    typeof candidate?.access_token === 'string' &&
+    candidate.access_token.length > 0 &&
+    typeof candidate.expires_in === 'number' &&
+    Number.isFinite(candidate.expires_in) &&
+    candidate.expires_in > 0 &&
+    (candidate.refresh_token === undefined || typeof candidate.refresh_token === 'string')
+  )
+}
+function isDeviceCodeResponse(value: unknown): value is DeviceCodeResponse {
+  const candidate = value as Partial<DeviceCodeResponse> | undefined
+  return (
+    typeof candidate?.device_auth_id === 'string' &&
+    candidate.device_auth_id.length > 0 &&
+    typeof candidate.user_code === 'string' &&
+    candidate.user_code.length > 0
+  )
+}
 function delay(milliseconds: number, signal: AbortSignal): Promise<void> {
   if (signal.aborted) return Promise.reject(new Error('OpenAI OAuth login cancelled'))
   return new Promise((resolve, reject) => {
     const timer = setTimeout(resolve, milliseconds)
-    signal.addEventListener('abort', () => {
-      clearTimeout(timer)
-      reject(new Error('OpenAI OAuth login cancelled'))
-    }, { once: true })
+    signal.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(timer)
+        reject(new Error('OpenAI OAuth login cancelled'))
+      },
+      { once: true }
+    )
   })
 }
 
-async function listenForCallback(redirectUri: string, expectedState: string, timeoutMs: number): Promise<{ cancel(): Promise<void>; code: Promise<string> }> {
+async function listenForCallback(
+  redirectUri: string,
+  expectedState: string,
+  timeoutMs: number
+): Promise<{ cancel(): Promise<void>; code: Promise<string> }> {
   const callback = new URL(redirectUri)
   const server = createServer()
   let settled = false
   let resolveCode!: (code: string) => void
   let rejectCode!: (error: Error) => void
-  const code = new Promise<string>((resolve, reject) => { resolveCode = resolve; rejectCode = reject })
-  const close = async () => new Promise<void>(resolve => server.close(() => resolve()))
-  const settle = (fn: () => void) => { if (settled) return; settled = true; clearTimeout(timer); void close(); fn() }
+  const code = new Promise<string>((resolve, reject) => {
+    resolveCode = resolve
+    rejectCode = reject
+  })
+  const close = async () => new Promise<void>((resolve) => server.close(() => resolve()))
+  const settle = (fn: () => void) => {
+    if (settled) return
+    settled = true
+    clearTimeout(timer)
+    void close()
+    fn()
+  }
   const timer = setTimeout(() => settle(() => rejectCode(new Error('OpenAI OAuth callback timed out'))), timeoutMs)
   server.on('request', (request: IncomingMessage, response: ServerResponse) => {
     const requestUrl = new URL(request.url ?? '/', `http://${request.headers.host ?? callback.host}`)
-    if (requestUrl.pathname !== callback.pathname) { response.writeHead(404).end('Not found'); return }
+    if (requestUrl.pathname !== callback.pathname) {
+      response.writeHead(404).end('Not found')
+      return
+    }
     const error = requestUrl.searchParams.get('error')
     const state = requestUrl.searchParams.get('state')
     const authCode = requestUrl.searchParams.get('code')
-    if (error || state !== expectedState || !authCode) { response.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' }).end('OpenAI authorization failed. You may close this tab.'); settle(() => rejectCode(new Error(error ? 'OpenAI authorization failed' : 'OpenAI OAuth callback validation failed'))); return }
-    response.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' }).end('OpenAI authorization completed. You may close this tab and return to Makima TUI.')
+    if (error || state !== expectedState || !authCode) {
+      response
+        .writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' })
+        .end('OpenAI authorization failed. You may close this tab.')
+      settle(() => rejectCode(new Error(error ? 'OpenAI authorization failed' : 'OpenAI OAuth callback validation failed')))
+      return
+    }
+    response
+      .writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' })
+      .end('OpenAI authorization completed. You may close this tab and return to Makima TUI.')
     settle(() => resolveCode(authCode))
   })
-  await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(Number(callback.port || '80'), callback.hostname, () => { server.off('error', reject); resolve() }) })
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject)
+    server.listen(Number(callback.port || '80'), callback.hostname, () => {
+      server.off('error', reject)
+      resolve()
+    })
+  })
   return { cancel: async () => settle(() => rejectCode(new Error('OpenAI OAuth login cancelled'))), code }
 }

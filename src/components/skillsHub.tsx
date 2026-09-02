@@ -27,7 +27,7 @@ export function SkillsHub({ gw, onClose, t }: SkillsHubProps) {
 
   useEffect(() => {
     gw.request<{ skills?: Record<string, string[]> }>('skills.manage', { action: 'list' })
-      .then(r => {
+      .then((r) => {
         setSkillsByCat(r?.skills ?? {})
         setErr('')
         setLoading(false)
@@ -68,7 +68,7 @@ export function SkillsHub({ gw, onClose, t }: SkillsHubProps) {
     setErr('')
 
     gw.request<{ info?: SkillInfo }>('skills.manage', { action: 'inspect', query: name })
-      .then(r => setInfo(r?.info ?? { name }))
+      .then((r) => setInfo(r?.info ?? { name }))
       .catch((e: unknown) => setErr(rpcErrorMessage(e)))
   }
 
@@ -114,13 +114,13 @@ export function SkillsHub({ gw, onClose, t }: SkillsHubProps) {
     const setSel = stage === 'category' ? setCatIdx : setSkillIdx
 
     if (key.upArrow && sel > 0) {
-      setSel(v => v - 1)
+      setSel((v) => v - 1)
 
       return
     }
 
     if (key.downArrow && sel < count - 1) {
-      setSel(v => v + 1)
+      setSel((v) => v + 1)
 
       return
     }
@@ -201,7 +201,7 @@ export function SkillsHub({ gw, onClose, t }: SkillsHubProps) {
   }
 
   if (stage === 'category') {
-    const rows = cats.map(c => `${c} · ${skillsByCat[c]?.length ?? 0} skills`)
+    const rows = cats.map((c) => `${c} · ${skillsByCat[c]?.length ?? 0} skills`)
     const { items, offset } = windowItems(rows, catIdx, VISIBLE)
 
     return (
@@ -266,9 +266,7 @@ export function SkillsHub({ gw, onClose, t }: SkillsHubProps) {
           )
         })}
 
-        {offset + VISIBLE < skills.length && (
-          <Text color={t.color.muted}> ↓ {skills.length - offset - VISIBLE} more</Text>
-        )}
+        {offset + VISIBLE < skills.length && <Text color={t.color.muted}> ↓ {skills.length - offset - VISIBLE} more</Text>}
         <OverlayHint t={t}>
           {skills.length ? '↑/↓ select · Enter open · 1-9,0 quick · Esc back · q close' : 'Esc back · q close'}
         </OverlayHint>

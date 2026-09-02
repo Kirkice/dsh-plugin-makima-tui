@@ -22,7 +22,7 @@ describe('spawnHistoryStore status normalization', () => {
       '/tmp/snap-timeout-error.json'
     )
 
-    const statuses = getSpawnHistory()[0]?.subagents.map(s => s.status)
+    const statuses = getSpawnHistory()[0]?.subagents.map((s) => s.status)
 
     expect(statuses).toEqual(['timeout', 'error'])
   })

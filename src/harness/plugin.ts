@@ -76,7 +76,7 @@ export async function mountCcTui(ctx: Context, config: Config): Promise<void> {
 
       process.stderr.write(`makima-tui lifecycle ${scope}: ${message.slice(0, 2000)}\n`)
     },
-    onSignal: signal => {
+    onSignal: (signal) => {
       if (!allowNoTty) {
         resetTerminalModes(process.stdout, FULLSCREEN)
       }

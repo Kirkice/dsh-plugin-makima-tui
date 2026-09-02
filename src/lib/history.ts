@@ -74,7 +74,7 @@ export function append(line: string) {
 
     const encoded = trimmed
       .split('\n')
-      .map(l => `+${l}`)
+      .map((l) => `+${l}`)
       .join('\n')
 
     appendFileSync(file, `\n# ${ts}\n${encoded}\n`)

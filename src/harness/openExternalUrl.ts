@@ -10,10 +10,7 @@ export interface ExternalUrlLaunchCommand {
  * handler. URLs are always passed as a distinct child-process argument; they
  * are never interpolated into a shell command.
  */
-export function externalUrlLaunchCommand(
-  url: string,
-  platform: NodeJS.Platform = process.platform
-): ExternalUrlLaunchCommand {
+export function externalUrlLaunchCommand(url: string, platform: NodeJS.Platform = process.platform): ExternalUrlLaunchCommand {
   const parsed = new URL(url)
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     throw new Error('Only HTTP(S) URLs can be opened externally')

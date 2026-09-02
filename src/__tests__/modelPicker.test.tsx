@@ -16,7 +16,7 @@ import { ModelPicker } from '../components/modelPicker.js'
 import { stripAnsi } from '../lib/text.js'
 import { DEFAULT_THEME } from '../theme.js'
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const ARROW_DOWN = '[B'
 const ENTER = '\r'
@@ -33,8 +33,8 @@ const ESU = '[?2026l'
 const lastFrame = (output: string): string => {
   const frames = output
     .split(BSU)
-    .map(chunk => chunk.split(ESU)[0] ?? '')
-    .filter(frame => stripAnsi(frame).trim() !== '')
+    .map((chunk) => chunk.split(ESU)[0] ?? '')
+    .filter((frame) => stripAnsi(frame).trim() !== '')
 
   return stripAnsi(frames.at(-1) ?? '')
 }
@@ -90,7 +90,7 @@ function mount(replies: FakeReplies = {}) {
         const answer = replies.effort ?? { current: '', levels: [], supported: false }
 
         if (replies.effortDeferred) {
-          return new Promise(resolve => {
+          return new Promise((resolve) => {
             releaseEffort = () => resolve(answer)
           })
         }
@@ -113,9 +113,9 @@ function mount(replies: FakeReplies = {}) {
     {
       exitOnCtrlC: false,
       patchConsole: false,
-      stderr: stderr as NodeJS.WriteStream,
-      stdin: stdin as NodeJS.ReadStream,
-      stdout: stdout as NodeJS.WriteStream
+      stderr: stderr as unknown as NodeJS.WriteStream,
+      stdin: stdin as unknown as NodeJS.ReadStream,
+      stdout: stdout as unknown as NodeJS.WriteStream
     }
   )
 
@@ -176,7 +176,7 @@ describe('ModelPicker step 3 — effort', () => {
     await p.press(ARROW_DOWN) // second model
     await p.press(ENTER)
 
-    const ask = p.requests.find(r => r.method === 'model.effort_options')
+    const ask = p.requests.find((r) => r.method === 'model.effort_options')
 
     expect(ask?.params).toEqual({ model: 'claude-haiku-4-5', provider: 'anthropic' })
     p.unmount()
@@ -298,9 +298,7 @@ describe('ModelPicker step 3 — effort', () => {
             requests.push(method)
 
             return Promise.resolve(
-              method === 'model.options'
-                ? { model: 'claude-opus-5', provider: 'anthropic', providers: PROVIDERS }
-                : {}
+              method === 'model.options' ? { model: 'claude-opus-5', provider: 'anthropic', providers: PROVIDERS } : {}
             )
           }
         } as never,
@@ -312,9 +310,9 @@ describe('ModelPicker step 3 — effort', () => {
       {
         exitOnCtrlC: false,
         patchConsole: false,
-        stderr: new PassThrough() as NodeJS.WriteStream,
-        stdin: stdin as NodeJS.ReadStream,
-        stdout: stdout as NodeJS.WriteStream
+        stderr: new PassThrough() as unknown as NodeJS.WriteStream,
+        stdin: stdin as unknown as NodeJS.ReadStream,
+        stdout: stdout as unknown as NodeJS.WriteStream
       }
     )
 

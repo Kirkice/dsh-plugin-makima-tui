@@ -12,7 +12,7 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const SRC = join(ROOT, 'src')
 const violations = []
 
-const walk = dir => {
+const walk = (dir) => {
   for (const name of readdirSync(dir)) {
     const path = join(dir, name)
     const st = statSync(path)
@@ -22,7 +22,9 @@ const walk = dir => {
     } else if (/\.(ts|tsx)$/.test(name)) {
       const rel = relative(ROOT, path)
 
-      if (rel.split(/[\\/]/).slice(0, 2).join('/') === 'src/harness') { continue }
+      if (rel.split(/[\\/]/).slice(0, 2).join('/') === 'src/harness') {
+        continue
+      }
 
       const body = readFileSync(path, 'utf8')
       const matches = body.match(/^\s*(?:import|export)[^'"\n]*['"](@deepseek-ai\/[^'"]+)['"]/gm) ?? []
@@ -39,7 +41,9 @@ walk(SRC)
 if (violations.length) {
   console.error('adapter boundary violated — @deepseek-ai/* imports outside src/harness/:')
 
-  for (const v of violations) { console.error('  ' + v) }
+  for (const v of violations) {
+    console.error('  ' + v)
+  }
 
   process.exit(1)
 }

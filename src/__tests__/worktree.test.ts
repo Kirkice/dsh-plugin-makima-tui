@@ -64,9 +64,7 @@ describe('planWorktreeExit', () => {
 
     if (plan.kind === 'dialog') {
       expect(plan.removeIsDanger).toBe(true)
-      expect(plan.subtitle).toBe(
-        `You have 3 uncommitted files and 2 commits on ${BR}. All will be lost if you remove.`
-      )
+      expect(plan.subtitle).toBe(`You have 3 uncommitted files and 2 commits on ${BR}. All will be lost if you remove.`)
     }
   })
 
@@ -87,10 +85,7 @@ describe('planWorktreeExit', () => {
   })
 
   it('fails closed on git_ok:false — dialog with generic subtitle, no fabricated counts', () => {
-    const plan = planWorktreeExit(
-      { active: true, commits: 7, dirty_files: 9, git_ok: false, ok: true },
-      BR
-    )
+    const plan = planWorktreeExit({ active: true, commits: 7, dirty_files: 9, git_ok: false, ok: true }, BR)
 
     expect(plan.kind).toBe('dialog')
 

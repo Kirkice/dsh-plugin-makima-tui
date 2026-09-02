@@ -8,14 +8,7 @@ import { sectionMode } from '../domain/details.js'
 import { userDisplay } from '../domain/messages.js'
 import { ROLE } from '../domain/roles.js'
 import { transcriptBodyWidth, transcriptGutterWidth } from '../lib/inputMetrics.js'
-import {
-  boundedLiveRenderText,
-  compactPreview,
-  hasAnsi,
-  isPasteBackedText,
-  sanitizeAnsiForRender,
-  stripAnsi
-} from '../lib/text.js'
+import { boundedLiveRenderText, compactPreview, hasAnsi, isPasteBackedText, sanitizeAnsiForRender, stripAnsi } from '../lib/text.js'
 import type { Theme } from '../theme.js'
 import type { ActiveTool, DetailsMode, Msg, SectionVisibility } from '../types.js'
 
@@ -166,12 +159,7 @@ export const MessageLine = memo(function MessageLine({
     // expensive work (highlight + word diff) sits behind its module-level
     // render cache, so a re-render is a WeakMap hit.
     const mdFallback = (
-      <Md
-        cols={transcriptBodyWidth(cols, msg.role, t.brand.prompt, TERMUX_TUI_MODE)}
-        compact={compact}
-        t={t}
-        text={msg.text}
-      />
+      <Md cols={transcriptBodyWidth(cols, msg.role, t.brand.prompt, TERMUX_TUI_MODE)} compact={compact} t={t} text={msg.text} />
     )
 
     return (
@@ -201,8 +189,7 @@ export const MessageLine = memo(function MessageLine({
   const { body, glyph, prefix } = ROLE[useUserPointer ? 'user' : msg.role](t)
   const gutterWidth = transcriptGutterWidth(msg.role, t.brand.prompt)
 
-  const showDetails =
-    (toolsMode !== 'hidden' && Boolean(msg.tools?.length)) || (thinkingMode !== 'hidden' && Boolean(thinking))
+  const showDetails = (toolsMode !== 'hidden' && Boolean(msg.tools?.length)) || (thinkingMode !== 'hidden' && Boolean(thinking))
 
   const showResponseSeparator = shouldShowResponseSeparator(msg, showDetails)
 
@@ -219,7 +206,7 @@ export const MessageLine = memo(function MessageLine({
 
       return (
         <Box flexDirection="column">
-          <Box onClick={() => setSystemOpen(v => !v)}>
+          <Box onClick={() => setSystemOpen((v) => !v)}>
             <Text color={t.color.accent}>{systemOpen ? '▾ ' : '▸ '}</Text>
             <Text color={t.color.muted}>{firstLine}</Text>
             <Text color={t.color.muted} dimColor>
@@ -307,29 +294,28 @@ export const MessageLine = memo(function MessageLine({
         </Box>
       )}
 
-      {showResponseSeparator && (() => {
-        const divider = responseDivider(cols, gutterWidth)
+      {showResponseSeparator &&
+        (() => {
+          const divider = responseDivider(cols, gutterWidth)
 
-        return (
-          <Box marginBottom={1}>
-            <NoSelect flexShrink={0} fromLeftEdge width={gutterWidth}>
+          return (
+            <Box marginBottom={1}>
+              <NoSelect flexShrink={0} fromLeftEdge width={gutterWidth}>
+                <Text color={t.color.accent}>◆</Text>
+              </NoSelect>
+              <Text color={t.color.frame}>{divider.left}</Text>
+              <Text bold color={t.color.highlight}>
+                {RESPONSE_LABEL}
+              </Text>
               <Text color={t.color.accent}>◆</Text>
-            </NoSelect>
-            <Text color={t.color.frame}>{divider.left}</Text>
-            <Text bold color={t.color.highlight}>
-              {RESPONSE_LABEL}
-            </Text>
-            <Text color={t.color.accent}>◆</Text>
-            <Text color={t.color.frame}>{divider.right}</Text>
-          </Box>
-        )
-      })()}
+              <Text color={t.color.frame}>{divider.right}</Text>
+            </Box>
+          )
+        })()}
 
       <Box>
         <NoSelect flexShrink={0} fromLeftEdge marginTop={useUserPointer ? 1 : 0} width={gutterWidth}>
-          <Text color={prefix}>
-            {glyph}{' '}
-          </Text>
+          <Text color={prefix}>{glyph} </Text>
         </NoSelect>
 
         {useUserPointer ? (

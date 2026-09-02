@@ -95,8 +95,7 @@ export function shouldFallThroughForScroll(key: {
 export const shouldAcceptPlaceholderSuggestion = (
   key: { shift: boolean; tab: boolean },
   state: { busy: boolean; completionsLen: number; conversationEmpty: boolean; input: string }
-): boolean =>
-  key.tab && !key.shift && !state.completionsLen && !state.input && state.conversationEmpty && !state.busy
+): boolean => key.tab && !key.shift && !state.completionsLen && !state.input && state.conversationEmpty && !state.busy
 
 /**
  * Plain Tab accepts the end-of-turn recap suggestion showing as the
@@ -109,8 +108,7 @@ export const shouldAcceptPlaceholderSuggestion = (
 export const shouldAcceptPendingSuggestion = (
   key: { shift: boolean; tab: boolean },
   state: { busy: boolean; completionsLen: number; input: string; suggestion: null | string }
-): boolean =>
-  key.tab && !key.shift && !state.completionsLen && !state.input && !state.busy && Boolean(state.suggestion)
+): boolean => key.tab && !key.shift && !state.completionsLen && !state.input && !state.busy && Boolean(state.suggestion)
 
 export function applyVoiceRecordResponse(
   response: null | VoiceRecordResponse,
@@ -181,7 +179,7 @@ export function useInputHandlers(ctx: InputHandlerContext): InputHandlerResult {
     if (overlay.approval) {
       return gateway
         .rpc<ApprovalRespondResponse>('approval.respond', { choice: 'deny', session_id: getUiState().sid })
-        .then(r => r && (patchOverlayState({ approval: null }), patchTurnState({ outcome: 'denied' })))
+        .then((r) => r && (patchOverlayState({ approval: null }), patchTurnState({ outcome: 'denied' })))
     }
 
     if (overlay.planApproval) {
@@ -189,12 +187,7 @@ export function useInputHandlers(ctx: InputHandlerContext): InputHandlerResult {
       // mode), same as the dialog's own Esc.
       return gateway
         .rpc<ApprovalRespondResponse>('planApproval.respond', { choice: 'deny', session_id: getUiState().sid })
-        .then(
-          r =>
-            r &&
-            (patchOverlayState({ planApproval: null }),
-            patchTurnState({ outcome: 'plan rejected — still planning' }))
-        )
+        .then((r) => r && (patchOverlayState({ planApproval: null }), patchTurnState({ outcome: 'plan rejected — still planning' })))
     }
 
     if (overlay.questions) {
@@ -205,21 +198,19 @@ export function useInputHandlers(ctx: InputHandlerContext): InputHandlerResult {
       // answerQuestions AFTER it calls useInputHandlers.
       return gateway
         .rpc<QuestionRespondResponse>('question.respond', { answers: null, session_id: getUiState().sid })
-        .then(
-          r => r && (patchOverlayState({ questions: null }), patchTurnState({ outcome: 'questions dismissed' }))
-        )
+        .then((r) => r && (patchOverlayState({ questions: null }), patchTurnState({ outcome: 'questions dismissed' })))
     }
 
     if (overlay.sudo) {
       return gateway
         .rpc<SudoRespondResponse>('sudo.respond', { password: '', request_id: overlay.sudo.requestId })
-        .then(r => r && (patchOverlayState({ sudo: null }), actions.sys('sudo cancelled')))
+        .then((r) => r && (patchOverlayState({ sudo: null }), actions.sys('sudo cancelled')))
     }
 
     if (overlay.secret) {
       return gateway
         .rpc<SecretRespondResponse>('secret.respond', { request_id: overlay.secret.requestId, value: '' })
-        .then(r => r && (patchOverlayState({ secret: null }), actions.sys('secret entry cancelled')))
+        .then((r) => r && (patchOverlayState({ secret: null }), actions.sys('secret entry cancelled')))
     }
 
     if (overlay.modelPicker) {
@@ -344,7 +335,7 @@ export function useInputHandlers(ctx: InputHandlerContext): InputHandlerResult {
 
     gateway
       .rpc<VoiceRecordResponse>('voice.record', { action, session_id: getUiState().sid })
-      .then(r => applyVoiceRecordResponse(r, starting, voice, actions.sys))
+      .then((r) => applyVoiceRecordResponse(r, starting, voice, actions.sys))
       .catch((e: Error) => {
         // Revert optimistic UI on failure.
         if (starting) {
@@ -365,7 +356,7 @@ export function useInputHandlers(ctx: InputHandlerContext): InputHandlerResult {
         }
 
         const move = (delta: number) =>
-          patchOverlayState(prev => {
+          patchOverlayState((prev) => {
             if (!prev.detailPicker || prev.detailPicker.items.length === 0) {
               return prev
             }
@@ -393,11 +384,11 @@ export function useInputHandlers(ctx: InputHandlerContext): InputHandlerResult {
           }
 
           const expanded = !getUiState().detailExpanded[target.key]
-          patchUiState(state => ({
+          patchUiState((state) => ({
             ...state,
             detailExpanded: { ...state.detailExpanded, [target.key]: expanded }
           }))
-          patchOverlayState(prev => {
+          patchOverlayState((prev) => {
             if (!prev.detailPicker) {
               return prev
             }
@@ -406,9 +397,7 @@ export function useInputHandlers(ctx: InputHandlerContext): InputHandlerResult {
               ...prev,
               detailPicker: {
                 ...prev.detailPicker,
-                items: prev.detailPicker.items.map(item =>
-                  item.key === target.key ? { ...item, expanded } : item
-                )
+                items: prev.detailPicker.items.map((item) => (item.key === target.key ? { ...item, expanded } : item))
               }
             }
           })
@@ -431,8 +420,7 @@ export function useInputHandlers(ctx: InputHandlerContext): InputHandlerResult {
       // answering felt like the prompt had locked the entire UI.  Explicitly
       // skip the prompt-overlay early-return for scroll keys so they fall
       // through to the wheel / PageUp / Shift+arrow handlers below.
-      const promptOverlay =
-        overlay.approval || overlay.billing || overlay.clarify || overlay.confirm || overlay.questions
+      const promptOverlay = overlay.approval || overlay.billing || overlay.clarify || overlay.confirm || overlay.questions
 
       const fallThroughForScroll = promptOverlay && shouldFallThroughForScroll(key)
 
@@ -450,7 +438,7 @@ export function useInputHandlers(ctx: InputHandlerContext): InputHandlerResult {
         }
 
         const move = (delta: number | 'top' | 'bottom') =>
-          patchOverlayState(prev => {
+          patchOverlayState((prev) => {
             if (!prev.pager) {
               return prev
             }
@@ -484,7 +472,7 @@ export function useInputHandlers(ctx: InputHandlerContext): InputHandlerResult {
         }
 
         if (key.return || ch === ' ' || key.pageDown) {
-          patchOverlayState(prev => {
+          patchOverlayState((prev) => {
             if (!prev.pager) {
               return prev
             }
@@ -522,7 +510,7 @@ export function useInputHandlers(ctx: InputHandlerContext): InputHandlerResult {
     if (cState.completions.length && cState.input && cState.historyIdx === null && (key.upArrow || key.downArrow)) {
       const len = cState.completions.length
 
-      cActions.setCompIdx(i => (key.upArrow ? (i - 1 + len) % len : (i + 1) % len))
+      cActions.setCompIdx((i) => (key.upArrow ? (i - 1 + len) % len : (i + 1) % len))
 
       return
     }
@@ -630,8 +618,7 @@ export function useInputHandlers(ctx: InputHandlerContext): InputHandlerResult {
       const inputSel = getInputSelection()
       const cursor = inputSel && inputSel.start === inputSel.end ? inputSel.start : null
 
-      const noLineAbove =
-        !cState.input || (cursor !== null && cState.input.lastIndexOf('\n', Math.max(0, cursor - 1)) < 0)
+      const noLineAbove = !cState.input || (cursor !== null && cState.input.lastIndexOf('\n', Math.max(0, cursor - 1)) < 0)
 
       if (noLineAbove) {
         cycleQueue(1) || cycleHistory(-1)
@@ -764,24 +751,19 @@ export function useInputHandlers(ctx: InputHandlerContext): InputHandlerResult {
         return void actions.sys('mode needs an active session')
       }
 
-      return void gateway
-        .rpc<{ mode?: string }>('permission.cycle', {})
-        .then(r => {
-          if (r?.mode) {
-            patchUiState({ permissionMode: r.mode })
-            actions.sys(`permission mode: ${r.mode}`)
-          }
-        })
+      return void gateway.rpc<{ mode?: string }>('permission.cycle', {}).then((r) => {
+        if (r?.mode) {
+          patchUiState({ permissionMode: r.mode })
+          actions.sys(`permission mode: ${r.mode}`)
+        }
+      })
     }
 
     if (key.tab && cState.completions.length) {
       const row = cState.completions[cState.compIdx]
 
       if (row?.text) {
-        const text =
-          cState.input.startsWith('/') && row.text.startsWith('/') && cState.compReplace > 0
-            ? row.text.slice(1)
-            : row.text
+        const text = cState.input.startsWith('/') && row.text.startsWith('/') && cState.compReplace > 0 ? row.text.slice(1) : row.text
 
         cActions.setInput(cState.input.slice(0, cState.compReplace) + text)
       }

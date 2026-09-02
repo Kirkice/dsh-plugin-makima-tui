@@ -77,7 +77,7 @@ describe('fitsHorizontal', () => {
 
   it('is monotonic in terminal width for a fixed left column', () => {
     const widths = [70, 80, 90, 100, 120, 160]
-    const results = widths.map(c => fitsHorizontal(c, 45))
+    const results = widths.map((c) => fitsHorizontal(c, 45))
 
     expect(results).toEqual([...results].sort((a, b) => Number(a) - Number(b)))
   })
@@ -225,7 +225,7 @@ describe('borderTitleParts', () => {
     expect(borderTitleParts(30, 'Acme Engineering Assistant', '1.2.1')).toBeNull()
   })
 
-  it('never returns a title that reaches ink\'s collapse threshold', () => {
+  it("never returns a title that reaches ink's collapse threshold", () => {
     for (let cols = 8; cols <= 200; cols++) {
       for (const name of ['clawcodex', 'Acme Engineering Assistant', '目目目目目目目目']) {
         const parts = borderTitleParts(cols, name, '1.2.1')

@@ -27,25 +27,18 @@ interface ModeBadge {
 // so the badge and the picker never name the same mode two different ways.
 // `plan` / `dontAsk` / `auto` have no picker row and keep their own wording.
 export const MODE_BADGES: Record<string, ModeBadge> = {
-  acceptEdits: { color: t => t.color.autoAccept, label: 'approve for me on', symbol: '▶▶' },
-  auto: { color: t => t.color.warn, label: 'auto mode on', symbol: '▶▶' },
-  bypassPermissions: { color: t => t.color.error, label: 'full access on', symbol: '▶▶' },
-  dontAsk: { color: t => t.color.error, label: "don't ask on", symbol: '▶▶' },
-  plan: { color: t => t.color.planMode, label: 'plan mode on', symbol: '⏸' }
+  acceptEdits: { color: (t) => t.color.autoAccept, label: 'approve for me on', symbol: '▶▶' },
+  auto: { color: (t) => t.color.warn, label: 'auto mode on', symbol: '▶▶' },
+  bypassPermissions: { color: (t) => t.color.error, label: 'full access on', symbol: '▶▶' },
+  dontAsk: { color: (t) => t.color.error, label: "don't ask on", symbol: '▶▶' },
+  plan: { color: (t) => t.color.planMode, label: 'plan mode on', symbol: '⏸' }
 }
 
-export const ComposerFooter = memo(function ComposerFooter({
-  busy,
-  inputEmpty,
-  mode,
-  sh,
-  t,
-  voiceLabel = ''
-}: ComposerFooterProps) {
+export const ComposerFooter = memo(function ComposerFooter({ busy, inputEmpty, mode, sh, t, voiceLabel = '' }: ComposerFooterProps) {
   // Reads the store directly like BusyLine/LiveTodoPanel — the hint must
   // track live todo state, and hooks must run before any early return.
-  const todoCount = useTurnSelector(state => state.todos.length)
-  const todoCollapsed = useTurnSelector(state => state.todoCollapsed)
+  const todoCount = useTurnSelector((state) => state.todos.length)
+  const todoCollapsed = useTurnSelector((state) => state.todoCollapsed)
 
   // CC suppressHint: nothing while the user is typing.
   if (!inputEmpty) {
@@ -79,7 +72,8 @@ export const ComposerFooter = memo(function ComposerFooter({
     </Text>
   ) : (
     <Text color={t.color.muted} dim>
-      {idleHint}{todoHint} · Enter send · Shift+Enter newline
+      {idleHint}
+      {todoHint} · Enter send · Shift+Enter newline
     </Text>
   )
 

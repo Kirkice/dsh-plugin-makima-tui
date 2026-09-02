@@ -27,11 +27,7 @@ export const PLACEHOLDER = pick(PLACEHOLDERS)
  * worked (it checks the real input), which is exactly why the miss was
  * invisible to the state-level tests.
  */
-export const composerPlaceholder = (state: {
-  busy: boolean
-  conversationEmpty: boolean
-  pendingSuggestion: null | string
-}): string => {
+export const composerPlaceholder = (state: { busy: boolean; conversationEmpty: boolean; pendingSuggestion: null | string }): string => {
   if (state.busy) {
     return ''
   }

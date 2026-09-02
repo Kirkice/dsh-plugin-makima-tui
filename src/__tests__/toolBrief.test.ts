@@ -93,9 +93,7 @@ describe('briefText', () => {
   const counts = (over: Partial<BriefCounts>): BriefCounts => ({ ...emptyBriefCounts(), ...over })
 
   it('capitalizes only the first clause and joins the rest with commas', () => {
-    expect(briefText(counts({ bash: 1, list: 1, read: 3 }))).toBe(
-      'Read 3 files, listed 1 directory, ran 1 shell command'
-    )
+    expect(briefText(counts({ bash: 1, list: 1, read: 3 }))).toBe('Read 3 files, listed 1 directory, ran 1 shell command')
   })
 
   it('orders clauses search → read → list → shell', () => {
@@ -138,20 +136,20 @@ describe('briefRuns', () => {
   it('breaks the run at a standalone call and keeps source order', () => {
     const runs = briefRuns(['Read(a)', 'Edit(b)', 'Bash(echo hi)'], id)
 
-    expect(runs.map(r => r.kind)).toEqual(['brief', 'flat', 'brief'])
+    expect(runs.map((r) => r.kind)).toEqual(['brief', 'flat', 'brief'])
     expect(runs[1]!.items).toEqual(['Edit(b)'])
   })
 
   it('never merges two standalone calls into one block', () => {
     const runs = briefRuns(['Edit(a)', 'Edit(b)'], id)
 
-    expect(runs.map(r => r.kind)).toEqual(['flat', 'flat'])
+    expect(runs.map((r) => r.kind)).toEqual(['flat', 'flat'])
   })
 
   it('breaks a failing call out so its message survives the fold', () => {
-    const runs = briefRuns(['Read(a)', 'Bash(boom)', 'Read(c)'], id, item => item === 'Bash(boom)')
+    const runs = briefRuns(['Read(a)', 'Bash(boom)', 'Read(c)'], id, (item) => item === 'Bash(boom)')
 
-    expect(runs.map(r => r.kind)).toEqual(['brief', 'flat', 'brief'])
+    expect(runs.map((r) => r.kind)).toEqual(['brief', 'flat', 'brief'])
     expect(runs[1]!.items).toEqual(['Bash(boom)'])
   })
 })
@@ -178,8 +176,8 @@ const ESU = '[?2026l'
 const lastFrame = (output: string): string => {
   const frames = output
     .split(BSU)
-    .map(chunk => chunk.split(ESU)[0] ?? '')
-    .filter(frame => stripAnsi(frame).trim() !== '')
+    .map((chunk) => chunk.split(ESU)[0] ?? '')
+    .filter((frame) => stripAnsi(frame).trim() !== '')
 
   return frames.at(-1) ?? ''
 }
@@ -219,9 +217,7 @@ describe('ToolTrail compact reading model', () => {
   ]
 
   it('summarizes consecutive exploration calls in collapsed mode', () => {
-    const out = stripAnsi(
-      renderToString(React.createElement(ToolTrail, { detailsMode: 'collapsed', t: DEFAULT_THEME, trail }))
-    )
+    const out = stripAnsi(renderToString(React.createElement(ToolTrail, { detailsMode: 'collapsed', t: DEFAULT_THEME, trail })))
 
     expect(out).toContain('Read 2 files, listed 1 directory, ran 1 shell command')
     expect(out).toContain('(ctrl+o to expand)')
@@ -230,9 +226,7 @@ describe('ToolTrail compact reading model', () => {
   })
 
   it('restores every tool call and its result in expanded mode', () => {
-    const out = stripAnsi(
-      renderToString(React.createElement(ToolTrail, { detailsMode: 'expanded', t: DEFAULT_THEME, trail }))
-    )
+    const out = stripAnsi(renderToString(React.createElement(ToolTrail, { detailsMode: 'expanded', t: DEFAULT_THEME, trail })))
 
     expect(out).toContain('Read(src/alpha.py)')
     expect(out).toContain('Read(src/beta.py)')
@@ -282,9 +276,7 @@ describe('ToolTrail compact reading model', () => {
   it('swaps in the fuller result under ctrl+o', () => {
     const verboseTrail = ['', '', 'Bash(ls src) :: Result:\nalpha.py\nbeta.py\ngamma.py ✓', '']
     const out = stripAnsi(
-      renderToString(
-        React.createElement(ToolTrail, { detailsMode: 'expanded', t: DEFAULT_THEME, trail, verboseTrail })
-      )
+      renderToString(React.createElement(ToolTrail, { detailsMode: 'expanded', t: DEFAULT_THEME, trail, verboseTrail }))
     )
 
     expect(out).toContain('gamma.py')
@@ -295,9 +287,7 @@ describe('ToolTrail compact reading model', () => {
     const verboseTrail = ['Bash(ls src) :: Result:\nalpha.py ✓']
 
     const out = stripAnsi(
-      renderToString(
-        React.createElement(ToolTrail, { detailsMode: 'collapsed', t: DEFAULT_THEME, trail: held, verboseTrail })
-      )
+      renderToString(React.createElement(ToolTrail, { detailsMode: 'collapsed', t: DEFAULT_THEME, trail: held, verboseTrail }))
     )
 
     expect(out).toContain('… +8 lines (ctrl+o to expand)')
@@ -308,9 +298,7 @@ describe('ToolTrail compact reading model', () => {
     // pointing at a key that changes nothing is worse than silence
     const held = [buildToolTrailLine('Bash', 'ls src', false, 'alpha.py\nbeta.py\n… +8 lines')]
 
-    const out = stripAnsi(
-      renderToString(React.createElement(ToolTrail, { detailsMode: 'collapsed', t: DEFAULT_THEME, trail: held }))
-    )
+    const out = stripAnsi(renderToString(React.createElement(ToolTrail, { detailsMode: 'collapsed', t: DEFAULT_THEME, trail: held })))
 
     expect(out).toContain('… +8 lines')
     expect(out).not.toContain('(ctrl+o to expand)')
@@ -323,9 +311,7 @@ describe('ToolTrail compact reading model', () => {
       buildToolTrailLine('Bash', 'cat missing.txt', true, 'Error: No such file or directory')
     ]
 
-    const out = stripAnsi(
-      renderToString(React.createElement(ToolTrail, { detailsMode: 'collapsed', t: DEFAULT_THEME, trail: mixed }))
-    )
+    const out = stripAnsi(renderToString(React.createElement(ToolTrail, { detailsMode: 'collapsed', t: DEFAULT_THEME, trail: mixed })))
 
     expect(out).toContain('Read 1 file')
     expect(out).not.toContain('Read(src/alpha.py)')
@@ -335,13 +321,11 @@ describe('ToolTrail compact reading model', () => {
   })
 
   it('separates blocks with a blank line', () => {
-    const out = stripAnsi(
-      renderToString(React.createElement(ToolTrail, { detailsMode: 'expanded', t: DEFAULT_THEME, trail }))
-    )
+    const out = stripAnsi(renderToString(React.createElement(ToolTrail, { detailsMode: 'expanded', t: DEFAULT_THEME, trail })))
 
     const rows = out.split('\n')
-    const first = rows.findIndex(r => r.includes('Read(src/alpha.py)'))
-    const second = rows.findIndex(r => r.includes('Read(src/beta.py)'))
+    const first = rows.findIndex((r) => r.includes('Read(src/alpha.py)'))
+    const second = rows.findIndex((r) => r.includes('Read(src/beta.py)'))
 
     // ⏺ call / ⎿ result / blank / ⏺ next call
     expect(second - first).toBe(3)
@@ -352,11 +336,9 @@ describe('ToolTrail compact reading model', () => {
   // string literal because a formatter collapses bare JSX whitespace, and the
   // looser /⎿\s+/ assertions elsewhere cannot see the difference.
   it('keeps the result gutter three columns wide', () => {
-    const out = stripAnsi(
-      renderToString(React.createElement(ToolTrail, { detailsMode: 'expanded', t: DEFAULT_THEME, trail }))
-    )
+    const out = stripAnsi(renderToString(React.createElement(ToolTrail, { detailsMode: 'expanded', t: DEFAULT_THEME, trail })))
 
-    expect(out.split('\n').find(row => row.includes('⎿'))).toMatch(/^ {2}⎿ {2}\S/)
+    expect(out.split('\n').find((row) => row.includes('⎿'))).toMatch(/^ {2}⎿ {2}\S/)
   })
 })
 
@@ -430,10 +412,7 @@ describe('estimatedMsgHeight matches the painted trail', () => {
     ],
     [
       'a call with no result row',
-      trailMsg([
-        buildToolTrailLine('Bash', 'true', false, ''),
-        buildToolTrailLine('Read', 'a.py', false, 'Read 1 line')
-      ])
+      trailMsg([buildToolTrailLine('Bash', 'true', false, ''), buildToolTrailLine('Read', 'a.py', false, 'Read 1 line')])
     ],
     [
       // Edit details carry a full path and are capped in LINES, never columns,
@@ -498,9 +477,7 @@ describe('estimatedMsgHeight matches the painted trail', () => {
   // Response` separator, and the reasoning panel's own header row.
   describe('through MessageLine', () => {
     const proseRows = (msg: Msg, cols: number) => {
-      const rows = stripAnsi(
-        renderToString(React.createElement(MessageLine, { cols, msg, t: DEFAULT_THEME }), cols)
-      ).split('\n')
+      const rows = stripAnsi(renderToString(React.createElement(MessageLine, { cols, msg, t: DEFAULT_THEME }), cols)).split('\n')
 
       while (rows.length && rows[rows.length - 1]!.trim() === '') {
         rows.pop()
@@ -557,9 +534,7 @@ describe('estimatedMsgHeight matches the painted trail', () => {
   for (const cols of [60, 100]) {
     for (const [name, msg] of cases) {
       it(`agrees on ${name} (collapsed, cols=${cols})`, () => {
-        expect(estimatedMsgHeight(msg, cols, { compact: false, details: true })).toBe(
-          paintedRows(msg, 'collapsed', cols)
-        )
+        expect(estimatedMsgHeight(msg, cols, { compact: false, details: true })).toBe(paintedRows(msg, 'collapsed', cols))
       })
 
       it(`agrees on ${name} (expanded, cols=${cols})`, () => {

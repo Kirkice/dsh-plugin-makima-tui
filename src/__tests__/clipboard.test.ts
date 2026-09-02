@@ -28,9 +28,7 @@ describe('readClipboardText', () => {
   it('tries powershell.exe first on WSL', async () => {
     const run = vi.fn().mockResolvedValue({ stdout: 'from wsl\n' })
 
-    await expect(readClipboardText('linux', run, { WSL_INTEROP: '/tmp/socket' } as NodeJS.ProcessEnv)).resolves.toBe(
-      'from wsl\n'
-    )
+    await expect(readClipboardText('linux', run, { WSL_INTEROP: '/tmp/socket' } as NodeJS.ProcessEnv)).resolves.toBe('from wsl\n')
     expect(run).toHaveBeenCalledWith(
       'powershell.exe',
       ['-NoProfile', '-NonInteractive', '-Command', 'Get-Clipboard -Raw'],
@@ -41,9 +39,7 @@ describe('readClipboardText', () => {
   it('uses wl-paste on Wayland Linux', async () => {
     const run = vi.fn().mockResolvedValue({ stdout: 'from wayland\n' })
 
-    await expect(readClipboardText('linux', run, { WAYLAND_DISPLAY: 'wayland-1' } as NodeJS.ProcessEnv)).resolves.toBe(
-      'from wayland\n'
-    )
+    await expect(readClipboardText('linux', run, { WAYLAND_DISPLAY: 'wayland-1' } as NodeJS.ProcessEnv)).resolves.toBe('from wayland\n')
     expect(run).toHaveBeenCalledWith(
       'wl-paste',
       ['--type', 'text'],
@@ -52,14 +48,9 @@ describe('readClipboardText', () => {
   })
 
   it('falls back to xclip on Linux when wl-paste fails', async () => {
-    const run = vi
-      .fn()
-      .mockRejectedValueOnce(new Error('wl-paste missing'))
-      .mockResolvedValueOnce({ stdout: 'from xclip\n' })
+    const run = vi.fn().mockRejectedValueOnce(new Error('wl-paste missing')).mockResolvedValueOnce({ stdout: 'from xclip\n' })
 
-    await expect(readClipboardText('linux', run, { WAYLAND_DISPLAY: 'wayland-1' } as NodeJS.ProcessEnv)).resolves.toBe(
-      'from xclip\n'
-    )
+    await expect(readClipboardText('linux', run, { WAYLAND_DISPLAY: 'wayland-1' } as NodeJS.ProcessEnv)).resolves.toBe('from xclip\n')
     expect(run).toHaveBeenNthCalledWith(
       1,
       'wl-paste',
@@ -77,9 +68,7 @@ describe('readClipboardText', () => {
   it('returns null when every clipboard backend fails', async () => {
     const run = vi.fn().mockRejectedValue(new Error('clipboard failed'))
 
-    await expect(
-      readClipboardText('linux', run, { WAYLAND_DISPLAY: 'wayland-1' } as NodeJS.ProcessEnv)
-    ).resolves.toBeNull()
+    await expect(readClipboardText('linux', run, { WAYLAND_DISPLAY: 'wayland-1' } as NodeJS.ProcessEnv)).resolves.toBeNull()
   })
 })
 
@@ -135,11 +124,7 @@ describe('writeClipboardText', () => {
     const start = vi.fn().mockReturnValue(child)
 
     await expect(writeClipboardText('hello world', 'darwin', start as any)).resolves.toBe(true)
-    expect(start).toHaveBeenCalledWith(
-      'pbcopy',
-      [],
-      expect.objectContaining({ stdio: ['pipe', 'ignore', 'ignore'], windowsHide: true })
-    )
+    expect(start).toHaveBeenCalledWith('pbcopy', [], expect.objectContaining({ stdio: ['pipe', 'ignore', 'ignore'], windowsHide: true }))
     expect(stdin.end).toHaveBeenCalledWith('hello world')
   })
 
@@ -176,9 +161,7 @@ describe('writeClipboardText', () => {
 
     const start = vi.fn().mockReturnValue(child)
 
-    await expect(
-      writeClipboardText('wayland text', 'linux', start as any, { WAYLAND_DISPLAY: 'wayland-1' })
-    ).resolves.toBe(true)
+    await expect(writeClipboardText('wayland text', 'linux', start as any, { WAYLAND_DISPLAY: 'wayland-1' })).resolves.toBe(true)
     expect(start).toHaveBeenCalledWith(
       'wl-copy',
       ['--type', 'text/plain'],
@@ -206,9 +189,7 @@ describe('writeClipboardText', () => {
 
     const start = vi.fn().mockReturnValue(child)
 
-    await expect(writeClipboardText('x11 text', 'linux', start as any, { WAYLAND_DISPLAY: 'wayland-1' })).resolves.toBe(
-      true
-    )
+    await expect(writeClipboardText('x11 text', 'linux', start as any, { WAYLAND_DISPLAY: 'wayland-1' })).resolves.toBe(true)
     expect(start).toHaveBeenNthCalledWith(1, 'wl-copy', ['--type', 'text/plain'], expect.anything())
     expect(start).toHaveBeenNthCalledWith(2, 'xclip', ['-selection', 'clipboard', '-in'], expect.anything())
   })
@@ -231,9 +212,7 @@ describe('writeClipboardText', () => {
 
     const start = vi.fn().mockReturnValue(child)
 
-    await expect(
-      writeClipboardText('xsel text', 'linux', start as any, { WAYLAND_DISPLAY: 'wayland-1' })
-    ).resolves.toBe(true)
+    await expect(writeClipboardText('xsel text', 'linux', start as any, { WAYLAND_DISPLAY: 'wayland-1' })).resolves.toBe(true)
     expect(start).toHaveBeenNthCalledWith(3, 'xsel', ['--clipboard', '--input'], expect.anything())
   })
 
@@ -253,14 +232,8 @@ describe('writeClipboardText', () => {
 
     const start = vi.fn().mockReturnValue(child)
 
-    await expect(writeClipboardText('wsl text', 'linux', start as any, { WSL_DISTRO_NAME: 'Ubuntu' })).resolves.toBe(
-      true
-    )
-    expect(start).toHaveBeenCalledWith(
-      'powershell.exe',
-      expect.arrayContaining(['-NoProfile', '-NonInteractive']),
-      expect.anything()
-    )
+    await expect(writeClipboardText('wsl text', 'linux', start as any, { WSL_DISTRO_NAME: 'Ubuntu' })).resolves.toBe(true)
+    expect(start).toHaveBeenCalledWith('powershell.exe', expect.arrayContaining(['-NoProfile', '-NonInteractive']), expect.anything())
     // PowerShell uses base64-encoded UTF-8 via command argument, not stdin
     expect(stdin.end).not.toHaveBeenCalled()
     const calledArgs = start.mock.calls[0][1] as string[]
@@ -293,12 +266,7 @@ describe('writeClipboardText', () => {
         WSL_DISTRO_NAME: 'Ubuntu'
       })
     ).resolves.toBe(true)
-    expect(start).toHaveBeenNthCalledWith(
-      1,
-      'powershell.exe',
-      expect.arrayContaining(['-NoProfile', '-NonInteractive']),
-      expect.anything()
-    )
+    expect(start).toHaveBeenNthCalledWith(1, 'powershell.exe', expect.arrayContaining(['-NoProfile', '-NonInteractive']), expect.anything())
     // PowerShell uses base64-encoded UTF-8 via command argument, not stdin
     expect(stdin.end).not.toHaveBeenCalled()
     const calledArgs = start.mock.calls[0][1] as string[]
@@ -325,11 +293,7 @@ describe('writeClipboardText', () => {
     const start = vi.fn().mockReturnValue(child)
 
     await expect(writeClipboardText('windows text', 'win32', start as any)).resolves.toBe(true)
-    expect(start).toHaveBeenCalledWith(
-      'powershell',
-      expect.arrayContaining(['-NoProfile', '-NonInteractive']),
-      expect.anything()
-    )
+    expect(start).toHaveBeenCalledWith('powershell', expect.arrayContaining(['-NoProfile', '-NonInteractive']), expect.anything())
     // PowerShell uses base64-encoded UTF-8 via command argument, not stdin
     expect(stdin.end).not.toHaveBeenCalled()
   })

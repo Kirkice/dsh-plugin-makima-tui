@@ -48,20 +48,21 @@ function BreathingMarker({ stalled, t, tick }: { stalled: boolean; t: Theme; tic
   }
 
   const phase = tick % MARKER_COLORS
-  const color = phase === 0 || phase === MARKER_COLORS - 1 ? t.color.muted : phase === 3 || phase === 4 ? t.color.claudeShimmer : t.color.accent
+  const color =
+    phase === 0 || phase === MARKER_COLORS - 1 ? t.color.muted : phase === 3 || phase === 4 ? t.color.claudeShimmer : t.color.accent
 
   return <Text color={color}>› </Text>
 }
 
 export const BusyLine = memo(function BusyLine({ t, turnStartedAt }: BusyLineProps) {
   const ui = useStore($uiState)
-  const todos = useTurnSelector(state => state.todos)
-  const todoCollapsed = useTurnSelector(state => state.todoCollapsed)
-  const tools = useTurnSelector(state => state.tools)
-  const streamedChars = useTurnSelector(state => state.streamedChars)
-  const lastDeltaAt = useTurnSelector(state => state.lastDeltaAt)
-  const reasoningStreaming = useTurnSelector(state => state.reasoningStreaming)
-  const subagents = useTurnSelector(state => state.subagents)
+  const todos = useTurnSelector((state) => state.todos)
+  const todoCollapsed = useTurnSelector((state) => state.todoCollapsed)
+  const tools = useTurnSelector((state) => state.tools)
+  const streamedChars = useTurnSelector((state) => state.streamedChars)
+  const lastDeltaAt = useTurnSelector((state) => state.lastDeltaAt)
+  const reasoningStreaming = useTurnSelector((state) => state.reasoningStreaming)
+  const subagents = useTurnSelector((state) => state.subagents)
   const delegation = useStore($delegationState)
 
   const [tick, setTick] = useState(0)
@@ -79,7 +80,7 @@ export const BusyLine = memo(function BusyLine({ t, turnStartedAt }: BusyLinePro
       return
     }
 
-    const shimmer = setInterval(() => setTick(n => n + 1), SHIMMER_TICK_MS)
+    const shimmer = setInterval(() => setTick((n) => n + 1), SHIMMER_TICK_MS)
     const clock = setInterval(() => setNow(Date.now()), 1000)
 
     return () => {
@@ -92,7 +93,7 @@ export const BusyLine = memo(function BusyLine({ t, turnStartedAt }: BusyLinePro
     return null
   }
 
-  const activeTodo = todos.find(todo => todo.status === 'in_progress')
+  const activeTodo = todos.find((todo) => todo.status === 'in_progress')
   const verb = `${activeTodo?.activeForm ?? activeTodo?.content ?? fallbackVerb}…`
 
   const shimmerTick = tick
@@ -132,7 +133,7 @@ export const BusyLine = memo(function BusyLine({ t, turnStartedAt }: BusyLinePro
   // it only shows while the full checklist is toggled OFF (ctrl+t). With the
   // list attached right below through the └ connector, it would duplicate
   // the first pending row.
-  const nextTodo = todoCollapsed ? todos.find(todo => todo.status === 'pending') : undefined
+  const nextTodo = todoCollapsed ? todos.find((todo) => todo.status === 'pending') : undefined
 
   return (
     <Box flexDirection="column" marginTop={1}>

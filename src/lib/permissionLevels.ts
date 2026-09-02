@@ -36,8 +36,7 @@ export const PERMISSION_LEVELS: readonly PermissionLevel[] = [
     mode: 'default'
   },
   {
-    description:
-      'Auto-accept file edits in this workspace and a small set of safe shell commands. Everything else still asks.',
+    description: 'Auto-accept file edits in this workspace and a small set of safe shell commands. Everything else still asks.',
     key: 'approve',
     label: 'Approve for me',
     mode: 'acceptEdits'
@@ -51,11 +50,10 @@ export const PERMISSION_LEVELS: readonly PermissionLevel[] = [
   }
 ]
 
-export const PERMISSION_LEVEL_KEYS: readonly string[] = PERMISSION_LEVELS.map(l => l.key)
+export const PERMISSION_LEVEL_KEYS: readonly string[] = PERMISSION_LEVELS.map((l) => l.key)
 
 /** Look up a level by key (case-insensitive); undefined when not a level. */
-export const levelForKey = (key: string): PermissionLevel | undefined =>
-  PERMISSION_LEVELS.find(l => l.key === key.trim().toLowerCase())
+export const levelForKey = (key: string): PermissionLevel | undefined => PERMISSION_LEVELS.find((l) => l.key === key.trim().toLowerCase())
 
 /**
  * The level a mode belongs to, or undefined for off-ladder modes.
@@ -64,8 +62,7 @@ export const levelForKey = (key: string): PermissionLevel | undefined =>
  * picker row. Callers must render those as "no level selected" rather than
  * silently showing one of the three.
  */
-export const levelForMode = (mode: null | string | undefined): PermissionLevel | undefined =>
-  PERMISSION_LEVELS.find(l => l.mode === mode)
+export const levelForMode = (mode: null | string | undefined): PermissionLevel | undefined => PERMISSION_LEVELS.find((l) => l.mode === mode)
 
 /** `/permissions <key>` → engine mode; undefined when key is not a level. */
 export const modeForKey = (key: string): string | undefined => levelForKey(key)?.mode

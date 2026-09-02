@@ -22,14 +22,8 @@ import type { SessionInfo } from '../types.js'
  * still-correct label would be a worse bug than the stale one. A null `info`
  * means the switch beat the backend's init; seed the minimum the type needs.
  */
-export function infoAfterModelSwitch(
-  info: null | SessionInfo | undefined,
-  model: string,
-  provider?: string
-): SessionInfo {
-  const next: SessionInfo = info
-    ? { ...info, model }
-    : { model, skills: {}, tools: {} }
+export function infoAfterModelSwitch(info: null | SessionInfo | undefined, model: string, provider?: string): SessionInfo {
+  const next: SessionInfo = info ? { ...info, model } : { model, skills: {}, tools: {} }
 
   if (provider) {
     next.profile_name = provider

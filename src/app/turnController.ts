@@ -77,7 +77,7 @@ const buildDiffSegment = (diff: StructuredDiffPayload): null | { diffData: MsgDi
       return null
     }
 
-    const body = hunks.flatMap(hunk => hunk.lines).join('\n')
+    const body = hunks.flatMap((hunk) => hunk.lines).join('\n')
 
     return {
       diffData: { ...diff, hunks, ...(dropped > 0 && { truncatedLines: dropped }) },
@@ -102,7 +102,7 @@ const buildDiffSegment = (diff: StructuredDiffPayload): null | { diffData: MsgDi
 
   return {
     diffData: { ...diff },
-    text: `\`\`\`diff\n${preview.map(line => '+' + line).join('\n')}\n\`\`\``
+    text: `\`\`\`diff\n${preview.map((line) => '+' + line).join('\n')}\n\`\`\``
   }
 }
 
@@ -158,18 +158,22 @@ const parseTodos = (value: unknown): null | TodoItem[] => {
 
       const activeForm = String(row.activeForm ?? '').trim()
 
-      return {
-        ...(activeForm && { activeForm }),
+      const todo: TodoItem = {
         content: String(row.content ?? '').trim(),
         id: String(row.id ?? '').trim() || `todo-${index}`,
         status
       }
+
+      if (activeForm) {
+        todo.activeForm = activeForm
+      }
+
+      return todo
     })
     .filter((item): item is TodoItem => Boolean(item?.content))
 }
 
-const textSegments = (segments: Msg[]) =>
-  segments.filter(msg => msg.role === 'assistant' && msg.kind !== 'diff').map(msg => msg.text)
+const textSegments = (segments: Msg[]) => segments.filter((msg) => msg.role === 'assistant' && msg.kind !== 'diff').map((msg) => msg.text)
 
 // A backend may close an assistant/message at a tool boundary and begin its
 // next message by repeating the final paragraph for continuity. The live TUI
@@ -473,9 +477,7 @@ class TurnController {
     // `⎿ Interrupted · …`, folded into the collapsed brief like any other
     // settled call (NOT as an error, or it would break out of the brief and
     // read as a failure it was not).
-    const interruptedTools = this.activeTools.map(tool =>
-      buildToolTrailLine(tool.name, tool.context ?? '', false, interruptNote)
-    )
+    const interruptedTools = this.activeTools.map((tool) => buildToolTrailLine(tool.name, tool.context ?? '', false, interruptNote))
     const tools = [...this.pendingSegmentTools, ...interruptedTools]
     const toolsVerbose = [...this.pendingSegmentToolsVerbose, ...interruptedTools.map(() => '')]
 
@@ -540,9 +542,9 @@ class TurnController {
   }
 
   pruneTransient() {
-    this.turnTools = this.turnTools.filter(line => !isTransientTrailLine(line))
-    patchTurnState(state => {
-      const next = state.turnTrail.filter(line => !isTransientTrailLine(line))
+    this.turnTools = this.turnTools.filter((line) => !isTransientTrailLine(line))
+    patchTurnState((state) => {
+      const next = state.turnTrail.filter((line) => !isTransientTrailLine(line))
 
       return next.length === state.turnTrail.length ? state : { ...state, turnTrail: next }
     })
@@ -587,11 +589,7 @@ class TurnController {
   flushStreamingSegment() {
     const raw = this.bufRef.trimStart()
 
-    const split = raw
-      ? hasReasoningTag(raw)
-        ? splitReasoning(raw)
-        : { reasoning: '', text: raw }
-      : { reasoning: '', text: '' }
+    const split = raw ? (hasReasoningTag(raw) ? splitReasoning(raw) : { reasoning: '', text: raw }) : { reasoning: '', text: '' }
 
     if (split.reasoning && !this.reasoningText.trim()) {
       this.reasoningText = split.reasoning
@@ -700,10 +698,7 @@ class TurnController {
       return
     }
 
-    this.segmentMessages = [
-      ...this.segmentMessages,
-      { kind: 'diff', role: 'assistant', text: block, ...(tools.length && { tools }) }
-    ]
+    this.segmentMessages = [...this.segmentMessages, { kind: 'diff', role: 'assistant', text: block, ...(tools.length && { tools }) }]
     patchTurnState({ streamSegments: this.segmentMessages })
   }
 
@@ -738,10 +733,8 @@ class TurnController {
   }
 
   pushActivity(text: string, tone: ActivityItem['tone'] = 'info', replaceLabel?: string) {
-    patchTurnState(state => {
-      const base = replaceLabel
-        ? state.activity.filter(item => !sameToolTrailGroup(replaceLabel, item.text))
-        : state.activity
+    patchTurnState((state) => {
+      const base = replaceLabel ? state.activity.filter((item) => !sameToolTrailGroup(replaceLabel, item.text)) : state.activity
 
       const tail = base.at(-1)
 
@@ -758,12 +751,12 @@ class TurnController {
       return
     }
 
-    patchTurnState(state => {
+    patchTurnState((state) => {
       if (state.turnTrail.at(-1) === line) {
         return state
       }
 
-      const next = [...state.turnTrail.filter(item => !isTransientTrailLine(item)), line].slice(-TRAIL_LIMIT)
+      const next = [...state.turnTrail.filter((item) => !isTransientTrailLine(item)), line].slice(-TRAIL_LIMIT)
 
       this.turnTools = next
 
@@ -831,14 +824,13 @@ class TurnController {
     // assistant narration stays put.
     const finalHasOwnDiffFence = /```(?:diff|patch)\b/i.test(finalText)
 
-    const segments = this.segmentMessages.filter(msg => {
+    const segments = this.segmentMessages.filter((msg) => {
       const body = diffSegmentBody(msg)
 
       return body === null || (!finalHasOwnDiffFence && !finalText.includes(body))
     })
 
-    const hasReasoningSegment =
-      this.reasoningSegmentIndex !== null || segments.some(msg => Boolean(msg.thinking?.trim()))
+    const hasReasoningSegment = this.reasoningSegmentIndex !== null || segments.some((msg) => Boolean(msg.thinking?.trim()))
 
     const finalThinking = hasReasoningSegment ? '' : savedReasoning.trim()
 
@@ -854,11 +846,7 @@ class TurnController {
 
     // Archive prepended so the trail msg anchors under the user prompt,
     // not between thinking/tools and final assistant text.
-    const finalMessages: Msg[] = [
-      ...archiveDoneTodos(),
-      ...segments,
-      ...(hasDetails(finalDetails) ? [finalDetails] : [])
-    ]
+    const finalMessages: Msg[] = [...archiveDoneTodos(), ...segments, ...(hasDetails(finalDetails) ? [finalDetails] : [])]
 
     if (finalText) {
       finalMessages.push({ role: 'assistant', text: finalText })
@@ -909,7 +897,7 @@ class TurnController {
     // — visible as overlapping coloured text and lost prose under
     // `display.final_response_markdown: render`.
     this.bufRef += text
-    patchTurnState(state => ({
+    patchTurnState((state) => ({
       ...state,
       lastDeltaAt: Date.now(),
       streamedChars: state.streamedChars + text.length
@@ -949,7 +937,7 @@ class TurnController {
 
     this.reasoningText += text
     this.activeReasoningText += text
-    patchTurnState(state => ({
+    patchTurnState((state) => ({
       ...state,
       lastDeltaAt: Date.now(),
       streamedChars: state.streamedChars + text.length
@@ -980,7 +968,7 @@ class TurnController {
 
     this.recordTodos(todos)
     patchTurnState({ lastDeltaAt: Date.now() })
-    const name = this.activeTools.find(tool => tool.id === toolId)?.name ?? fallbackName
+    const name = this.activeTools.find((tool) => tool.id === toolId)?.name ?? fallbackName
     const line = this.completeTool(toolId, fallbackName, error, summary, duration, resultText, rawText)
 
     // The original renders NOTHING inline for the checklist tools — TodoWrite
@@ -1030,13 +1018,7 @@ class TurnController {
     this.publishToolState()
   }
 
-  recordStructuredDiffToolComplete(
-    diff: StructuredDiffPayload,
-    toolId: string,
-    fallbackName?: string,
-    error?: string,
-    duration?: number
-  ) {
+  recordStructuredDiffToolComplete(diff: StructuredDiffPayload, toolId: string, fallbackName?: string, error?: string, duration?: number) {
     if (this.interrupted) {
       return
     }
@@ -1069,7 +1051,7 @@ class TurnController {
     resultText?: string,
     rawText?: string
   ) {
-    const done = this.activeTools.find(tool => tool.id === toolId)
+    const done = this.activeTools.find((tool) => tool.id === toolId)
     const name = done?.name ?? fallbackName ?? 'tool'
     const label = toolTrailLabel(name)
     const fallbackDuration = done?.startedAt ? (Date.now() - done.startedAt) / 1000 : undefined
@@ -1085,14 +1067,7 @@ class TurnController {
     const verboseArgs = done?.verboseArgs?.trim() === (done?.context || '').trim() ? undefined : done?.verboseArgs
 
     this.lastVerboseLine = rawText
-      ? buildVerboseToolTrailLine(
-          name,
-          done?.context || '',
-          Boolean(error),
-          duration ?? fallbackDuration,
-          verboseArgs,
-          rawText
-        )
+      ? buildVerboseToolTrailLine(name, done?.context || '', Boolean(error), duration ?? fallbackDuration, verboseArgs, rawText)
       : ''
 
     // Claude flat render: the call args already live in the label
@@ -1106,9 +1081,9 @@ class TurnController {
       duration ?? fallbackDuration
     )
 
-    this.activeTools = this.activeTools.filter(tool => tool.id !== toolId)
+    this.activeTools = this.activeTools.filter((tool) => tool.id !== toolId)
 
-    const next = this.turnTools.filter(item => !sameToolTrailGroup(label, item))
+    const next = this.turnTools.filter((item) => !sameToolTrailGroup(label, item))
 
     if (!this.activeTools.length) {
       next.push('analyzing tool output…')
@@ -1132,7 +1107,7 @@ class TurnController {
       return
     }
 
-    const index = this.activeTools.findIndex(tool => tool.name === toolName)
+    const index = this.activeTools.findIndex((tool) => tool.name === toolName)
 
     if (index < 0) {
       return
@@ -1281,8 +1256,8 @@ class TurnController {
     // for older gateways that omit the field — those produce a flat list.
     const id = p.subagent_id || `sa:${p.task_index}:${p.goal || 'subagent'}`
 
-    patchTurnState(state => {
-      const existing = state.subagents.find(item => item.id === id)
+    patchTurnState((state) => {
+      const existing = state.subagents.find((item) => item.id === id)
 
       // Late events (subagent.complete/tool/progress arriving after message.complete
       // has already fired idle()) would otherwise resurrect a finished
@@ -1313,7 +1288,7 @@ class TurnController {
       // when the event actually carries the field; `??` preserves prior
       // values across streaming events that emit partial payloads.
       const outputTail = p.output_tail
-        ? p.output_tail.map(e => ({
+        ? p.output_tail.map((e) => ({
             isError: Boolean(e.is_error),
             preview: String(e.preview ?? ''),
             tool: String(e.tool ?? 'tool')
@@ -1345,7 +1320,7 @@ class TurnController {
       // Without it, grandchildren can shuffle relative to siblings when
       // events arrive out of order under high concurrency.
       const subagents = existing
-        ? state.subagents.map(item => (item.id === id ? next : item))
+        ? state.subagents.map((item) => (item.id === id ? next : item))
         : [...state.subagents, next].sort((a, b) => a.depth - b.depth || a.index - b.index)
 
       return { ...state, subagents }

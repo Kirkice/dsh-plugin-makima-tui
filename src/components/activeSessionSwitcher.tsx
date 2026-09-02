@@ -47,7 +47,7 @@ const ctrlChar = (letter: string) => String.fromCharCode(letter.charCodeAt(0) - 
 export const fixedSessionColumnStyle = () => ({ flexShrink: 0 })
 
 /** Compact workspace detail for persisted sessions, including older records without one. */
-export const sessionWorkspaceLabel = (cwd?: string) => cwd ? `workspace: ${shortCwd(cwd, 48)}` : 'workspace: unavailable'
+export const sessionWorkspaceLabel = (cwd?: string) => (cwd ? `workspace: ${shortCwd(cwd, 48)}` : 'workspace: unavailable')
 
 function SessionWorkspace({ cwd, t }: { cwd?: string; t: Theme }) {
   if (!cwd) {
@@ -63,8 +63,7 @@ function SessionWorkspace({ cwd, t }: { cwd?: string; t: Theme }) {
 
 export const activeSessionCountLabel = (count: number) => `${count} live ${count === 1 ? 'session' : 'sessions'}`
 
-export const sessionsCountLabel = (liveCount: number, resumableCount: number) =>
-  `${liveCount} live · ${resumableCount} resumable`
+export const sessionsCountLabel = (liveCount: number, resumableCount: number) => `${liveCount} live · ${resumableCount} resumable`
 
 export type SessionRowKind = 'history' | 'live' | 'new'
 
@@ -101,9 +100,9 @@ export const relativeSessionAge = (ts?: number) => {
 
 /** Drop already-live sessions from the resumable history list (dedupe by id). */
 export const resumableHistory = (history: readonly SessionListItem[], live: readonly SessionActiveItem[]) => {
-  const liveIds = new Set(live.map(s => s.id))
+  const liveIds = new Set(live.map((s) => s.id))
 
-  return history.filter(h => !liveIds.has(h.id))
+  return history.filter((h) => !liveIds.has(h.id))
 }
 
 export const resumeRowContextHintSegments: OrchestratorHintSegment[] = [
@@ -150,7 +149,7 @@ export const orchestratorGlobalHotkeyHintSegments: OrchestratorHintSegment[] = [
   { role: 'text', text: ' close' }
 ]
 
-const hintText = (segments: readonly OrchestratorHintSegment[]) => segments.map(segment => segment.text).join('')
+const hintText = (segments: readonly OrchestratorHintSegment[]) => segments.map((segment) => segment.text).join('')
 
 export const orchestratorContextHint = (newSelected: boolean) => hintText(orchestratorContextHintSegments(newSelected))
 
@@ -173,8 +172,7 @@ export const selectedSessionRowStyle = (t: Theme) => ({
   color: t.color.text
 })
 
-export const newSessionMarkerColor = (t: Theme, selected: boolean) =>
-  selected ? selectedSessionRowStyle(t).color : t.color.label
+export const newSessionMarkerColor = (t: Theme, selected: boolean) => (selected ? selectedSessionRowStyle(t).color : t.color.label)
 
 export const newSessionRowIndex = (sessionCount: number) => Math.max(0, sessionCount)
 
@@ -185,11 +183,8 @@ export const canTypeOrchestratorPrompt = (index: number, sessionCount: number) =
 export const clampOrchestratorSelection = (index: number, sessionCount: number) =>
   Math.max(0, Math.min(index, newSessionRowIndex(sessionCount)))
 
-export const currentSessionSelectionIndex = (
-  sessions: readonly SessionActiveItem[],
-  currentSessionId: null | string
-) => {
-  const index = sessions.findIndex(s => Boolean(s.current) || (!!currentSessionId && s.id === currentSessionId))
+export const currentSessionSelectionIndex = (sessions: readonly SessionActiveItem[], currentSessionId: null | string) => {
+  const index = sessions.findIndex((s) => Boolean(s.current) || (!!currentSessionId && s.id === currentSessionId))
 
   return index >= 0 ? index : 0
 }
@@ -214,7 +209,7 @@ export const closeFallbackAfterClose = (
     return { action: 'stay' }
   }
 
-  const next = remaining.find(s => s.id !== closedId)
+  const next = remaining.find((s) => s.id !== closedId)
 
   return next ? { action: 'activate', sessionId: next.id } : { action: 'new' }
 }
@@ -265,15 +260,10 @@ export const draftModelDisplayLabel = (value: string) => {
 
 export type OrchestratorRowClickAction = { action: 'activate'; sessionId: string } | { action: 'select-new' }
 
-export const orchestratorRowClickAction = (
-  index: number,
-  sessions: readonly SessionActiveItem[]
-): OrchestratorRowClickAction => {
+export const orchestratorRowClickAction = (index: number, sessions: readonly SessionActiveItem[]): OrchestratorRowClickAction => {
   const target = sessions[index]
 
-  return target && !isNewSessionRow(index, sessions.length)
-    ? { action: 'activate', sessionId: target.id }
-    : { action: 'select-new' }
+  return target && !isNewSessionRow(index, sessions.length) ? { action: 'activate', sessionId: target.id } : { action: 'select-new' }
 }
 
 export const draftTitleFromPrompt = (prompt: string, max = TITLE_MAX) => {
@@ -418,7 +408,7 @@ export function ActiveSessionSwitcher({
         setHistory(hist)
         // Re-anchor selection to the same row by identity (the live list can
         // grow/shrink between polls, which would otherwise drift a flat index).
-        setSel(s => {
+        setSel((s) => {
           if (initializeSelection) {
             // Land on the current live session (shifted +1 past the pinned new
             // row); with no live sessions, start on the new row itself.
@@ -435,13 +425,13 @@ export function ActiveSessionSwitcher({
 
           if (s - 1 < prevItems.length) {
             const id = prevItems[s - 1]?.id
-            const i = id ? next.findIndex(x => x.id === id) : -1
+            const i = id ? next.findIndex((x) => x.id === id) : -1
 
             return i >= 0 ? i + 1 : clamp()
           }
 
           const id = prevHist[s - 1 - prevItems.length]?.id
-          const i = id ? hist.findIndex(x => x.id === id) : -1
+          const i = id ? hist.findIndex((x) => x.id === id) : -1
 
           return i >= 0 ? 1 + next.length + i : clamp()
         })
@@ -513,7 +503,7 @@ export function ActiveSessionSwitcher({
       } else if (fallback.action === 'new') {
         onNew()
       } else {
-        setSel(s => Math.max(0, Math.min(s, remaining.length + history.length)))
+        setSel((s) => Math.max(0, Math.min(s, remaining.length + history.length)))
       }
     } catch (e: unknown) {
       setErr(rpcErrorMessage(e))
@@ -524,7 +514,7 @@ export function ActiveSessionSwitcher({
 
   const performDelete = useCallback(
     (id: string) => {
-      const target = history.find(h => h.id === id)
+      const target = history.find((h) => h.id === id)
 
       if (!target || deleting) {
         return
@@ -532,7 +522,7 @@ export function ActiveSessionSwitcher({
 
       setDeleting(true)
       gw.request<SessionDeleteResponse>('session.delete', { session_id: target.id })
-        .then(raw => {
+        .then((raw) => {
           const r = asRpcResult<SessionDeleteResponse>(raw)
 
           if (!r || r.deleted !== target.id) {
@@ -542,9 +532,9 @@ export function ActiveSessionSwitcher({
             return
           }
 
-          rawHistoryRef.current = rawHistoryRef.current.filter(h => h.id !== target.id)
-          setHistory(prev => prev.filter(h => h.id !== target.id))
-          setSel(s => Math.max(0, Math.min(s, items.length + history.length - 1)))
+          rawHistoryRef.current = rawHistoryRef.current.filter((h) => h.id !== target.id)
+          setHistory((prev) => prev.filter((h) => h.id !== target.id))
+          setSel((s) => Math.max(0, Math.min(s, items.length + history.length - 1)))
           setErr('')
           setDeleting(false)
         })
@@ -591,11 +581,13 @@ export function ActiveSessionSwitcher({
     if (!id || !title || deleting) return
     setDeleting(true)
     gw.request<SessionRenameResponse>('session.rename', { session_id: id, title })
-      .then(raw => {
+      .then((raw) => {
         const result = asRpcResult<SessionRenameResponse>(raw)
         if (!result || result.session_id !== id) throw new Error('invalid response: session.rename')
-        setHistory(prev => prev.map(item => item.id === id ? { ...item, title: result.title, title_source: 'manual' } : item))
-        rawHistoryRef.current = rawHistoryRef.current.map(item => item.id === id ? { ...item, title: result.title, title_source: 'manual' } : item)
+        setHistory((prev) => prev.map((item) => (item.id === id ? { ...item, title: result.title, title_source: 'manual' } : item)))
+        rawHistoryRef.current = rawHistoryRef.current.map((item) =>
+          item.id === id ? { ...item, title: result.title, title_source: 'manual' } : item
+        )
         setRenaming(false)
         setErr('')
       })
@@ -617,7 +609,7 @@ export function ActiveSessionSwitcher({
     }
 
     if (historyDetailsId) {
-      const selectedHistory = history.find(h => h.id === historyDetailsId)
+      const selectedHistory = history.find((h) => h.id === historyDetailsId)
       if (key.escape || lower === 'b') {
         setHistoryDetailsId(null)
       } else if (key.return) {
@@ -691,11 +683,11 @@ export function ActiveSessionSwitcher({
     }
 
     if (key.upArrow && sel > 0) {
-      return setSel(s => Math.max(0, s - 1))
+      return setSel((s) => Math.max(0, s - 1))
     }
 
     if (key.downArrow && sel < total - 1) {
-      return setSel(s => Math.min(total - 1, s + 1))
+      return setSel((s) => Math.min(total - 1, s + 1))
     }
 
     if (key.return) {
@@ -726,7 +718,7 @@ export function ActiveSessionSwitcher({
         allowPersistGlobal={false}
         gw={gw}
         onCancel={() => setPickingModel(false)}
-        onSelect={value => {
+        onSelect={(value) => {
           setDraftModel(draftModelArgFromPickerValue(value))
           setPickingModel(false)
         }}
@@ -740,24 +732,44 @@ export function ActiveSessionSwitcher({
     return <Text color={t.color.muted}>loading sessions…</Text>
   }
 
-  const detail = historyDetailsId ? history.find(item => item.id === historyDetailsId) : undefined
+  const detail = historyDetailsId ? history.find((item) => item.id === historyDetailsId) : undefined
   if (detail) {
     return (
       <Box flexDirection="column" width={width}>
-        <Text bold color={t.color.accent}>Saved session</Text>
+        <Text bold color={t.color.accent}>
+          Saved session
+        </Text>
         {renaming ? (
-          <Box><Text color={t.color.label}>title › </Text><TextInput columns={Math.max(20, width - 9)} onChange={setRenameDraft} onSubmit={saveRename} value={renameDraft} /></Box>
+          <Box>
+            <Text color={t.color.label}>title › </Text>
+            <TextInput columns={Math.max(20, width - 9)} onChange={setRenameDraft} onSubmit={saveRename} value={renameDraft} />
+          </Box>
         ) : (
-          <Text bold wrap="wrap">{detail.title}</Text>
+          <Text bold wrap="wrap">
+            {detail.title}
+          </Text>
         )}
-        {detail.preview && <Text color={t.color.muted} wrap="wrap">last prompt: {detail.preview}</Text>}
-        <Text color={t.color.muted}>{detail.message_count} user messages · {relativeSessionAge(detail.last_active ?? detail.started_at)}</Text>
+        {detail.preview && (
+          <Text color={t.color.muted} wrap="wrap">
+            last prompt: {detail.preview}
+          </Text>
+        )}
+        <Text color={t.color.muted}>
+          {detail.message_count} user messages · {relativeSessionAge(detail.last_active ?? detail.started_at)}
+        </Text>
         <SessionWorkspace cwd={detail.cwd} t={t} />
         <Box marginTop={1} flexDirection="column">
           <Text color={t.color.muted}>Session ID is intentionally hidden here.</Text>
-          {renaming
-            ? <Text color={t.color.muted}><Text color={t.color.accent}>Enter</Text> save · <Text color={t.color.accent}>Esc</Text> cancel</Text>
-            : <Text color={t.color.muted}><Text color={t.color.accent}>Enter</Text> resume · <Text color={t.color.accent}>r</Text> rename · <Text color={t.color.accent}>d</Text> request delete · <Text color={t.color.accent}>Esc/b</Text> back</Text>}
+          {renaming ? (
+            <Text color={t.color.muted}>
+              <Text color={t.color.accent}>Enter</Text> save · <Text color={t.color.accent}>Esc</Text> cancel
+            </Text>
+          ) : (
+            <Text color={t.color.muted}>
+              <Text color={t.color.accent}>Enter</Text> resume · <Text color={t.color.accent}>r</Text> rename ·{' '}
+              <Text color={t.color.accent}>d</Text> request delete · <Text color={t.color.accent}>Esc/b</Text> back
+            </Text>
+          )}
         </Box>
       </Box>
     )
@@ -824,7 +836,7 @@ export function ActiveSessionSwitcher({
       {offset > 0 && <Text color={t.color.muted}> ↑ {offset} more</Text>}
       {!listLen && <Text color={t.color.muted}>no other sessions — Enter on +new to start one</Text>}
 
-      {visibleRows.map(i => {
+      {visibleRows.map((i) => {
         const selected = sel === i
         const selectedStyle = selected ? selectedSessionRowStyle(t) : null
         const rowTextColor = selectedStyle?.color
@@ -841,13 +853,7 @@ export function ActiveSessionSwitcher({
               : h.title || h.preview || '(untitled)'
 
           return (
-            <Box
-              backgroundColor={selectedStyle?.backgroundColor}
-              flexDirection="row"
-              key={h.id}
-              onClick={handleRowClick(i)}
-              width="100%"
-            >
+            <Box backgroundColor={selectedStyle?.backgroundColor} flexDirection="row" key={h.id} onClick={handleRowClick(i)} width="100%">
               <Text bold={selected} color={rowTextColor ?? t.color.muted}>
                 {selected ? '▸ ' : '  '}
               </Text>
@@ -871,11 +877,7 @@ export function ActiveSessionSwitcher({
               </Box>
 
               <Box flexDirection="column" flexGrow={1} flexShrink={1} minWidth={0}>
-                <Text
-                  bold={selected}
-                  color={pendingDelete ? t.color.label : (rowTextColor ?? t.color.muted)}
-                  wrap="truncate-end"
-                >
+                <Text bold={selected} color={pendingDelete ? t.color.label : (rowTextColor ?? t.color.muted)} wrap="truncate-end">
                   {title}
                 </Text>
                 {!pendingDelete && (
@@ -894,13 +896,7 @@ export function ActiveSessionSwitcher({
         const title = closingId === s.id ? 'closing…' : s.title || s.preview || '(untitled)'
 
         return (
-          <Box
-            backgroundColor={selectedStyle?.backgroundColor}
-            flexDirection="row"
-            key={s.id}
-            onClick={handleRowClick(i)}
-            width="100%"
-          >
+          <Box backgroundColor={selectedStyle?.backgroundColor} flexDirection="row" key={s.id} onClick={handleRowClick(i)} width="100%">
             <Text bold={selected} color={rowTextColor ?? t.color.muted}>
               {selected ? '▸ ' : '  '}
             </Text>
@@ -919,10 +915,7 @@ export function ActiveSessionSwitcher({
 
             <Box {...fixedSessionColumnStyle()} width={11}>
               <Text
-                color={
-                  rowTextColor ??
-                  (status === 'working' ? t.color.ok : status === 'waiting' ? t.color.label : t.color.muted)
-                }
+                color={rowTextColor ?? (status === 'working' ? t.color.ok : status === 'waiting' ? t.color.label : t.color.muted)}
                 wrap="truncate-end"
               >
                 {STATUS_GLYPH[status] ?? '·'} {STATUS_LABEL[status] ?? status}
@@ -961,9 +954,7 @@ export function ActiveSessionSwitcher({
       ) : (
         <Box flexDirection="column" marginTop={1}>
           <OrchestratorHintText
-            segments={
-              selectedKind === 'history' ? resumeRowContextHintSegments : orchestratorContextHintSegments(false)
-            }
+            segments={selectedKind === 'history' ? resumeRowContextHintSegments : orchestratorContextHintSegments(false)}
             t={t}
           />
           <Text color={t.color.muted} wrap="truncate-end">

@@ -7,13 +7,7 @@ import type { ConfigFullResponse, ConfigMtimeResponse, ReloadMcpResponse } from 
 import { DEFAULT_VOICE_RECORD_KEY, type ParsedVoiceRecordKey, parseVoiceRecordKey } from '../lib/platform.js'
 import { asRpcResult } from '../lib/rpc.js'
 
-import {
-  type BusyInputMode,
-  DEFAULT_INDICATOR_STYLE,
-  INDICATOR_STYLES,
-  type IndicatorStyle,
-  type StatusBarMode
-} from './interfaces.js'
+import { type BusyInputMode, DEFAULT_INDICATOR_STYLE, INDICATOR_STYLES, type IndicatorStyle, type StatusBarMode } from './interfaces.js'
 import { turnController } from './turnController.js'
 import { patchUiState } from './uiStore.js'
 
@@ -27,13 +21,7 @@ const STATUSBAR_ALIAS: Record<string, StatusBarMode> = {
 // Unset defaults to 'off' — CC-clean chrome (the original has no persistent
 // status bar; set tui_statusbar: top|bottom to restore the legacy rule).
 export const normalizeStatusBar = (raw: unknown): StatusBarMode =>
-  raw === false
-    ? 'off'
-    : raw === true
-      ? 'top'
-      : typeof raw === 'string'
-        ? (STATUSBAR_ALIAS[raw.trim().toLowerCase()] ?? 'off')
-        : 'off'
+  raw === false ? 'off' : raw === true ? 'top' : typeof raw === 'string' ? (STATUSBAR_ALIAS[raw.trim().toLowerCase()] ?? 'off') : 'off'
 
 const BUSY_MODES = new Set<BusyInputMode>(['interrupt', 'queue', 'steer'])
 
@@ -79,10 +67,7 @@ const hasOwn = (obj: object, key: PropertyKey) => Object.prototype.hasOwnPropert
 // which silences tmux's "No image in clipboard" spam over the prompt row.
 // `buttons` adds 1002 so terminal-side text selection drags still register.
 // Legacy `tui_mouse` is honored only if `mouse_tracking` is absent.
-export const normalizeMouseTracking = (display: {
-  mouse_tracking?: unknown
-  tui_mouse?: unknown
-}): MouseTrackingMode => {
+export const normalizeMouseTracking = (display: { mouse_tracking?: unknown; tui_mouse?: unknown }): MouseTrackingMode => {
   const raw = hasOwn(display, 'mouse_tracking') ? display.mouse_tracking : display.tui_mouse
 
   if (raw === false || raw === 0) {
@@ -241,13 +226,7 @@ export const applyDisplay = (
   })
 }
 
-export function useConfigSync({
-  gw,
-  setBellOnComplete,
-  setVoiceEnabled,
-  setVoiceRecordKey,
-  sid
-}: UseConfigSyncOptions) {
+export function useConfigSync({ gw, setBellOnComplete, setVoiceEnabled, setVoiceRecordKey, sid }: UseConfigSyncOptions) {
   const mtimeRef = useRef(0)
 
   useEffect(() => {
@@ -260,7 +239,7 @@ export function useConfigSync({
     // Environment flags are enough to initialize the UI bit; the heavier status
     // check still runs when the user opens /voice.
     setVoiceEnabled(process.env.MAKIMA_TUI_VOICE === '1')
-    quietRpc<ConfigMtimeResponse>(gw, 'config.get', { key: 'mtime' }).then(r => {
+    quietRpc<ConfigMtimeResponse>(gw, 'config.get', { key: 'mtime' }).then((r) => {
       mtimeRef.current = Number(r?.mtime ?? 0)
     })
     void hydrateFullConfig(gw, setBellOnComplete, setVoiceRecordKey)
@@ -272,7 +251,7 @@ export function useConfigSync({
     }
 
     const id = setInterval(() => {
-      quietRpc<ConfigMtimeResponse>(gw, 'config.get', { key: 'mtime' }).then(r => {
+      quietRpc<ConfigMtimeResponse>(gw, 'config.get', { key: 'mtime' }).then((r) => {
         const next = Number(r?.mtime ?? 0)
 
         if (!mtimeRef.current) {
@@ -290,7 +269,7 @@ export function useConfigSync({
         mtimeRef.current = next
 
         quietRpc<ReloadMcpResponse>(gw, 'reload.mcp', { session_id: sid, confirm: true }).then(
-          r => r && turnController.pushActivity('MCP reloaded after config change')
+          (r) => r && turnController.pushActivity('MCP reloaded after config change')
         )
         void hydrateFullConfig(gw, setBellOnComplete, setVoiceRecordKey)
       })

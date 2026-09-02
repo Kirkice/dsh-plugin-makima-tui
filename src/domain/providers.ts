@@ -5,7 +5,5 @@ export const providerDisplayNames = (providers: readonly { name: string; slug: s
     counts.set(p.name, (counts.get(p.name) ?? 0) + 1)
   }
 
-  return providers.map(p =>
-    (counts.get(p.name) ?? 0) > 1 && p.slug && p.slug !== p.name ? `${p.name} (${p.slug})` : p.name
-  )
+  return providers.map((p) => ((counts.get(p.name) ?? 0) > 1 && p.slug && p.slug !== p.name ? `${p.name} (${p.slug})` : p.name))
 }

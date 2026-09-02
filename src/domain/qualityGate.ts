@@ -19,10 +19,13 @@ export interface QualityGateSummary {
 
 /** Derives a conservative release signal from independently reported checks. */
 export const qualityGateSummary = (checks: readonly QualityGateCheck[]): QualityGateSummary => {
-  const counts = checks.reduce(
-    (acc, check) => ({ ...acc, [check.status]: acc[check.status] + 1 }),
-    { failed: 0, passed: 0, pending: 0, running: 0, skipped: 0 } as Record<QualityGateStatus, number>
-  )
+  const counts = checks.reduce((acc, check) => ({ ...acc, [check.status]: acc[check.status] + 1 }), {
+    failed: 0,
+    passed: 0,
+    pending: 0,
+    running: 0,
+    skipped: 0
+  } as Record<QualityGateStatus, number>)
   const status: QualityGateStatus = counts.failed
     ? 'failed'
     : counts.running
@@ -38,10 +41,15 @@ export const qualityGateSummary = (checks: readonly QualityGateCheck[]): Quality
 
 export const qualityGateStatusLabel = (status: QualityGateStatus): string => {
   switch (status) {
-    case 'failed': return 'FAILED'
-    case 'passed': return 'PASSED'
-    case 'pending': return 'PENDING'
-    case 'running': return 'RUNNING'
-    default: return 'NO CHECKS'
+    case 'failed':
+      return 'FAILED'
+    case 'passed':
+      return 'PASSED'
+    case 'pending':
+      return 'PENDING'
+    case 'running':
+      return 'RUNNING'
+    default:
+      return 'NO CHECKS'
   }
 }

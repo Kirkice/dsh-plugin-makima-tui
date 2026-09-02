@@ -69,12 +69,9 @@ export const hydrateLiveSessionInflight = (inflight?: null | SessionInflightTurn
   turnController.hydrateStreamingText(assistant)
 }
 
-export const scheduleResumeScrollToBottom = (
-  scrollRef: RefObject<null | ScrollBoxHandle>,
-  delays: readonly number[] = [0, 80, 240]
-) => {
+export const scheduleResumeScrollToBottom = (scrollRef: RefObject<null | ScrollBoxHandle>, delays: readonly number[] = [0, 80, 240]) => {
   const startedAt = Date.now()
-  const timers = delays.map(delay =>
+  const timers = delays.map((delay) =>
     setTimeout(() => {
       const scroll = scrollRef.current
 
@@ -97,15 +94,18 @@ export const scheduleResumeScrollToBottom = (
   // the viewport. It intentionally runs after markdown/Yoga have had time to
   // measure the restored rows.
   timers.push(
-    setTimeout(() => {
-      const scroll = scrollRef.current
+    setTimeout(
+      () => {
+        const scroll = scrollRef.current
 
-      if (!scroll || scroll.getLastManualScrollAt() > startedAt) {
-        return
-      }
+        if (!scroll || scroll.getLastManualScrollAt() > startedAt) {
+          return
+        }
 
-      scroll.scrollTo(Number.MAX_SAFE_INTEGER)
-    }, Math.max(600, ...delays) + 360)
+        scroll.scrollTo(Number.MAX_SAFE_INTEGER)
+      },
+      Math.max(600, ...delays) + 360
+    )
   )
 
   return () => {
@@ -282,7 +282,7 @@ export function useSessionLifecycle(opts: UseSessionLifecycleOptions) {
           session_id: r.session_id,
           title: requestedTitle
         })
-          .then(result => {
+          .then((result) => {
             if (!result || getUiState().sid !== r.session_id) {
               return
             }
@@ -306,10 +306,7 @@ export function useSessionLifecycle(opts: UseSessionLifecycleOptions) {
     [closeSession, colsRef, panel, resetSession, rpc, setHistoryItems, setSessionStartedAt, sys]
   )
 
-  const newSession = useCallback(
-    (msg?: string, title?: string) => startNewSession(msg, title, false),
-    [startNewSession]
-  )
+  const newSession = useCallback((msg?: string, title?: string) => startNewSession(msg, title, false), [startNewSession])
 
   const newLiveSession = useCallback(
     (msg = 'new live session started', title?: string) => {
@@ -326,7 +323,7 @@ export function useSessionLifecycle(opts: UseSessionLifecycleOptions) {
       patchUiState({ status: 'switching session…' })
 
       gw.request<SessionActivateResponse>('session.activate', { session_id: id })
-        .then(raw => {
+        .then((raw) => {
           const r = asRpcResult<SessionActivateResponse>(raw)
 
           if (!r) {
@@ -367,7 +364,7 @@ export function useSessionLifecycle(opts: UseSessionLifecycleOptions) {
       patchOverlayState({ sessions: false })
       patchUiState({ status: 'resuming…' })
 
-      rpc<SetupStatusResponse>('setup.status', {}).then(setup => {
+      rpc<SetupStatusResponse>('setup.status', {}).then((setup) => {
         if (setup?.provider_configured === false) {
           panel(SETUP_REQUIRED_TITLE, buildSetupRequiredSections())
           patchUiState({ status: 'setup required' })
@@ -378,7 +375,7 @@ export function useSessionLifecycle(opts: UseSessionLifecycleOptions) {
         const previousSid = getUiState().sid
 
         gw.request<SessionResumeResponse>('session.resume', { cols: colsRef.current, session_id: id })
-          .then(raw => {
+          .then((raw) => {
             const r = asRpcResult<SessionResumeResponse>(raw)
 
             if (!r) {
@@ -411,7 +408,6 @@ export function useSessionLifecycle(opts: UseSessionLifecycleOptions) {
             if (previousSid && previousSid !== r.session_id) {
               void closeSession(previousSid)
             }
-
           })
           .catch((e: Error) => {
             sys(`error: ${e.message}`)

@@ -11,19 +11,36 @@ export interface IngressImage {
 }
 
 const mediaTypeOf = (data: Uint8Array, hint = ''): ImageMediaType | undefined => {
-  if (data.length >= 8 && data[0] === 0x89 && data[1] === 0x50 && data[2] === 0x4e && data[3] === 0x47 && data[4] === 0x0d && data[5] === 0x0a && data[6] === 0x1a && data[7] === 0x0a) return 'image/png'
+  if (
+    data.length >= 8 &&
+    data[0] === 0x89 &&
+    data[1] === 0x50 &&
+    data[2] === 0x4e &&
+    data[3] === 0x47 &&
+    data[4] === 0x0d &&
+    data[5] === 0x0a &&
+    data[6] === 0x1a &&
+    data[7] === 0x0a
+  )
+    return 'image/png'
   if (data.length >= 3 && data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff) return 'image/jpeg'
   if (data.length >= 6 && String.fromCharCode(...data.slice(0, 6)) === 'GIF87a') return 'image/gif'
   if (data.length >= 6 && String.fromCharCode(...data.slice(0, 6)) === 'GIF89a') return 'image/gif'
-  if (data.length >= 12 && String.fromCharCode(...data.slice(0, 4)) === 'RIFF' && String.fromCharCode(...data.slice(8, 12)) === 'WEBP') return 'image/webp'
+  if (data.length >= 12 && String.fromCharCode(...data.slice(0, 4)) === 'RIFF' && String.fromCharCode(...data.slice(8, 12)) === 'WEBP')
+    return 'image/webp'
 
   switch (extname(hint).toLowerCase()) {
-    case '.png': return 'image/png'
+    case '.png':
+      return 'image/png'
     case '.jpg':
-    case '.jpeg': return 'image/jpeg'
-    case '.gif': return 'image/gif'
-    case '.webp': return 'image/webp'
-    default: return undefined
+    case '.jpeg':
+      return 'image/jpeg'
+    case '.gif':
+      return 'image/gif'
+    case '.webp':
+      return 'image/webp'
+    default:
+      return undefined
   }
 }
 
@@ -41,10 +58,7 @@ export async function readImageFile(path: string): Promise<IngressImage> {
  * STA process so Windows Forms can retrieve the bitmap, then encodes it as PNG
  * before returning base64 over stdout. No temporary image file is created.
  */
-export function readWindowsClipboardImage(
-  run = spawnSync,
-  platform = process.platform
-): IngressImage | undefined {
+export function readWindowsClipboardImage(run = spawnSync, platform = process.platform): IngressImage | undefined {
   if (platform !== 'win32') return undefined
 
   const script = [

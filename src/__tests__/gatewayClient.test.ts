@@ -73,12 +73,15 @@ describe('GatewayClient NDJSON adapter', () => {
   afterEach(() => {
     gw.kill()
 
-    if (prevWs === undefined) {delete process.env.MAKIMA_TUI_WORKSPACE}
-    else {process.env.MAKIMA_TUI_WORKSPACE = prevWs}
+    if (prevWs === undefined) {
+      delete process.env.MAKIMA_TUI_WORKSPACE
+    } else {
+      process.env.MAKIMA_TUI_WORKSPACE = prevWs
+    }
   })
 
-  const types = () => events.map(e => e.type)
-  const last = (t: string) => [...events].reverse().find(e => e.type === t)
+  const types = () => events.map((e) => e.type)
+  const last = (t: string) => [...events].reverse().find((e) => e.type === t)
 
   // Emit a tool_use then await its tool.start (so toolInputs is populated),
   // then emit the matching tool_result and await its tool.complete.
@@ -161,7 +164,8 @@ describe('GatewayClient NDJSON adapter', () => {
   })
 
   it('does not collapse the file_unchanged dedup stub', async () => {
-    const stub = 'File unchanged since last read. The content from the earlier Read tool_result in this conversation is still current — refer to that instead of re-reading.'
+    const stub =
+      'File unchanged since last read. The content from the earlier Read tool_result in this conversation is still current — refer to that instead of re-reading.'
     const p = await runTool('t1', 'Read', { file_path: '/ws/a.ts' }, stub)
     expect(p.result_text).toBe(stub)
   })
@@ -178,7 +182,8 @@ describe('GatewayClient NDJSON adapter', () => {
   // the agent-server forwards searchCount/durationSeconds on tool_use_result
   // and the raw blob stays reachable behind ctrl+o via result_raw.
   it('collapses a WebSearch result to "Did N searches in Xs" from the envelope', async () => {
-    const blob = 'Web search results for query: "q"\n\n**A** -- snippet (https://a.example)\n\nLinks: [{"title": "A", "url": "https://a.example"}]'
+    const blob =
+      'Web search results for query: "q"\n\n**A** -- snippet (https://a.example)\n\nLinks: [{"title": "A", "url": "https://a.example"}]'
 
     proc.line(toolUse('t1', 'WebSearch', { query: 'q' }))
     await vi.waitFor(() => expect(last('tool.start')).toBeTruthy())
@@ -251,7 +256,7 @@ describe('GatewayClient NDJSON adapter', () => {
     let req: any
     await vi.waitFor(() => {
       seen.push(...stdinFrames())
-      req = seen.find(f => f.type === 'control_request' && f.request?.subtype === subtype)
+      req = seen.find((f) => f.type === 'control_request' && f.request?.subtype === subtype)
       expect(req).toBeTruthy()
     })
     proc.line({ response: { request_id: req.request_id, response }, type: 'control_response' })
@@ -321,7 +326,7 @@ describe('GatewayClient NDJSON adapter', () => {
     // survive relaunch; it must reach the control request, not be dropped.
     void gw.request('config.set', { key: 'permission_mode', persist: true, value: 'default' })
     await vi.waitFor(() => {
-      const f = stdinFrames().find(x => x.request?.subtype === 'set_permission_mode')
+      const f = stdinFrames().find((x) => x.request?.subtype === 'set_permission_mode')
 
       expect(f?.request?.persist).toBe(true)
     })
@@ -352,7 +357,7 @@ describe('GatewayClient NDJSON adapter', () => {
     await replyToControl('set_model', { model: 'deepseek-v4-pro', ok: true })
     await expect(p).resolves.toEqual({ value: 'deepseek-v4-pro' })
 
-    const req = seen.find(f => f.request?.subtype === 'set_model')!.request
+    const req = seen.find((f) => f.request?.subtype === 'set_model')!.request
     expect(req.model).toBe('deepseek-v4-pro')
     expect(req.provider).toBe('deepseek')
   })
@@ -362,7 +367,7 @@ describe('GatewayClient NDJSON adapter', () => {
     await replyToControl('set_model', { model: 'x-model', ok: true })
     await expect(p).resolves.toEqual({ value: 'x-model' })
 
-    const req = seen.find(f => f.request?.subtype === 'set_model')!.request
+    const req = seen.find((f) => f.request?.subtype === 'set_model')!.request
     expect(req.model).toBe('x-model')
     expect('provider' in req).toBe(false)
   })
@@ -411,7 +416,7 @@ describe('GatewayClient NDJSON adapter', () => {
       supported: true
     })
 
-    const req = seen.find(f => f.request?.subtype === 'effort_options')!.request
+    const req = seen.find((f) => f.request?.subtype === 'effort_options')!.request
     expect(req.model).toBe('claude-opus-5')
     expect(req.provider).toBe('anthropic')
   })
@@ -454,9 +459,7 @@ describe('GatewayClient NDJSON adapter', () => {
       let req: any
       await vi.waitFor(() => {
         seen.push(...stdinFrames())
-        req = seen.find(
-          f => f.type === 'control_request' && f.request?.subtype === subtype && !answered.has(f.request_id)
-        )
+        req = seen.find((f) => f.type === 'control_request' && f.request?.subtype === subtype && !answered.has(f.request_id))
         expect(req).toBeTruthy()
       })
       answered.add(req.request_id)
@@ -482,10 +485,10 @@ describe('GatewayClient NDJSON adapter', () => {
 
     await expect(p).resolves.toEqual({ provider: 'openai', value: 'gpt-5.4' })
 
-    const switched = seen.find(f => f.request?.subtype === 'set_provider')!.request
+    const switched = seen.find((f) => f.request?.subtype === 'set_provider')!.request
     expect(switched.provider).toBe('openai')
     // Two set_model frames: the probe that got refused, then the retry.
-    expect(seen.filter(f => f.request?.subtype === 'set_model')).toHaveLength(2)
+    expect(seen.filter((f) => f.request?.subtype === 'set_model')).toHaveLength(2)
   })
 
   it('prefers the provider the retry itself reports over the requested one', async () => {
@@ -520,7 +523,7 @@ describe('GatewayClient NDJSON adapter', () => {
     await reply('set_model', { error: 'still wrong provider', ok: false, provider_mismatch: true })
 
     await expect(p).rejects.toThrow('still wrong provider')
-    expect(seen.filter(f => f.request?.subtype === 'set_provider')).toHaveLength(1)
+    expect(seen.filter((f) => f.request?.subtype === 'set_provider')).toHaveLength(1)
   })
 
   // ── model.options / save_key / disconnect ─────────────────────────────────
@@ -556,7 +559,7 @@ describe('GatewayClient NDJSON adapter', () => {
     })
 
     await expect(p).rejects.toThrow('Run `clawcodex login`')
-    expect(seen.find(f => f.request?.subtype === 'get_settings')).toBeUndefined()
+    expect(seen.find((f) => f.request?.subtype === 'get_settings')).toBeUndefined()
   })
 
   it('falls back to the active provider only when the backend never answers', async () => {
@@ -568,14 +571,14 @@ describe('GatewayClient NDJSON adapter', () => {
       const p = gw.request('model.options', {})
       await vi.waitFor(() => {
         seen.push(...stdinFrames())
-        expect(seen.find(f => f.request?.subtype === 'list_model_providers')).toBeTruthy()
+        expect(seen.find((f) => f.request?.subtype === 'list_model_providers')).toBeTruthy()
       })
       await vi.advanceTimersByTimeAsync(5_100) // past RPC_TIMEOUT_MS
       await vi.waitFor(() => {
         seen.push(...stdinFrames())
-        expect(seen.find(f => f.request?.subtype === 'get_settings')).toBeTruthy()
+        expect(seen.find((f) => f.request?.subtype === 'get_settings')).toBeTruthy()
       })
-      const req = seen.find(f => f.request?.subtype === 'get_settings')!
+      const req = seen.find((f) => f.request?.subtype === 'get_settings')!
       proc.line({
         response: {
           request_id: req.request_id,
@@ -606,7 +609,7 @@ describe('GatewayClient NDJSON adapter', () => {
 
     await expect(p).rejects.toThrow("rolled back to 'anthropic'")
 
-    const switches = seen.filter(f => f.request?.subtype === 'set_provider')
+    const switches = seen.filter((f) => f.request?.subtype === 'set_provider')
     expect(switches).toHaveLength(2)
     expect(switches[1]!.request.provider).toBe('anthropic')
   })
@@ -628,7 +631,7 @@ describe('GatewayClient NDJSON adapter', () => {
       await vi.advanceTimersByTimeAsync(5_100) // the retried set_model never answers
 
       await rejects
-      expect(seen.filter(f => f.request?.subtype === 'set_provider')).toHaveLength(1)
+      expect(seen.filter((f) => f.request?.subtype === 'set_provider')).toHaveLength(1)
     } finally {
       vi.useRealTimers()
     }
@@ -656,7 +659,7 @@ describe('GatewayClient NDJSON adapter', () => {
     const r: any = await p
     expect(r.provider).toMatchObject({ authenticated: true, slug: 'together' })
 
-    const req = seen.find(f => f.request?.subtype === 'save_provider_key')!.request
+    const req = seen.find((f) => f.request?.subtype === 'save_provider_key')!.request
     expect(req).toMatchObject({ api_key: 'sk-tog-1', slug: 'together' })
   })
 
@@ -695,7 +698,7 @@ describe('GatewayClient NDJSON adapter', () => {
       notice: '⚡ launching workflow /deep-research',
       type: 'send'
     })
-    const req = seen.find(f => f.request?.subtype === 'workflow_command')
+    const req = seen.find((f) => f.request?.subtype === 'workflow_command')
     expect(req.request).toMatchObject({ args: 'what is love', name: 'deep-research' })
   })
 
@@ -720,7 +723,7 @@ describe('GatewayClient NDJSON adapter', () => {
       name: 'loop',
       type: 'skill'
     })
-    const req = seen.find(f => f.request?.subtype === 'skill_command')
+    const req = seen.find((f) => f.request?.subtype === 'skill_command')
     expect(req.request).toMatchObject({ args: '5m check the deploy', name: 'loop' })
   })
 
@@ -735,7 +738,7 @@ describe('GatewayClient NDJSON adapter', () => {
     const p = gw.request<{ items: Array<{ text: string }> }>('complete.slash', { text: '/lo' })
     await replyToControl('list_workflow_commands', { commands: [], ok: true })
     const r = await p
-    expect(r.items.map(i => i.text)).not.toContain('/loop')
+    expect(r.items.map((i) => i.text)).not.toContain('/loop')
   })
 
   it('maps cron_status system envelopes to a cron transcript line and a cron.state snapshot', async () => {
@@ -761,7 +764,7 @@ describe('GatewayClient NDJSON adapter', () => {
       type: 'system'
     })
     await vi.waitFor(() => expect(last('cron.state')).toBeTruthy())
-    expect(events.some(e => e.type === 'status.update')).toBe(false)
+    expect(events.some((e) => e.type === 'status.update')).toBe(false)
     expect(last('cron.state')?.payload?.scheduled?.wakeup?.reason).toBe('watching CI')
   })
 
@@ -772,28 +775,28 @@ describe('GatewayClient NDJSON adapter', () => {
       ok: true
     })
     const r = await p
-    expect(r.items.map(i => i.text)).toContain('/deep-research')
+    expect(r.items.map((i) => i.text)).toContain('/deep-research')
   })
 
   it('lists /exit in the slash-completion menu (user-reported: /exit executed but never showed as a command)', async () => {
     const p = gw.request<{ items: Array<{ text: string }> }>('complete.slash', { text: '/ex' })
     await replyToControl('list_workflow_commands', { commands: [], ok: true })
     const r = await p
-    expect(r.items.map(i => i.text)).toContain('/exit')
+    expect(r.items.map((i) => i.text)).toContain('/exit')
   })
 
   it('lists /skills in the slash-completion menu (user-reported: /skills missing)', async () => {
     const p = gw.request<{ items: Array<{ text: string }> }>('complete.slash', { text: '/sk' })
     await replyToControl('list_workflow_commands', { commands: [], ok: true })
     const r = await p
-    expect(r.items.map(i => i.text)).toContain('/skills')
+    expect(r.items.map((i) => i.text)).toContain('/skills')
   })
 
   it('carries argument hints on completion items (user-reported: no value suggestions)', async () => {
     const p = gw.request<{ items: Array<{ hint?: string; text: string }> }>('complete.slash', { text: '/ef' })
     await replyToControl('list_workflow_commands', { commands: [], ok: true })
     const r = await p
-    const effort = r.items.find(i => i.text === '/effort')
+    const effort = r.items.find((i) => i.text === '/effort')
     // Must track the backend ladder (VALID_EFFORT_VALUES): xhigh/max are the
     // levels Claude Opus 5 wants, and `minimal` is a GPT-5 level the backend
     // rejects — advertising it sent users at a guaranteed error.
@@ -807,7 +810,7 @@ describe('GatewayClient NDJSON adapter', () => {
       ok: true
     })
     const r = await p
-    expect(r.items.find(i => i.text === '/deep-research')?.hint).toBe('<question>')
+    expect(r.items.find((i) => i.text === '/deep-research')?.hint).toBe('<question>')
   })
 
   it('exposes argument hints in the command catalog (ghost-text lookup source)', async () => {
@@ -858,7 +861,7 @@ describe('GatewayClient NDJSON adapter', () => {
     })
 
     expect(r.info).toMatchObject({ name: 'qa', path: '/u/qa' })
-    expect(stdinFrames().filter(f => f.request?.subtype === 'list_skills')).toHaveLength(0)
+    expect(stdinFrames().filter((f) => f.request?.subtype === 'list_skills')).toHaveLength(0)
   })
 
   it('skills.manage install/browse reject as unsupported instead of faking success', async () => {
@@ -921,9 +924,15 @@ describe('GatewayClient NDJSON adapter', () => {
   // ch13 round-4 — agent_progress → subagent.* (item 2)
   it('maps agent_progress to subagent.start + subagent.progress', async () => {
     proc.line({
-      activity: 'reading src/', agent_id: 'a1', description: 'explore the repo',
-      model: 'claude-haiku-4-5', name: 'Explore', status: 'running',
-      subagent_type: 'Explore', tokens: 120, tool_use_count: 2,
+      activity: 'reading src/',
+      agent_id: 'a1',
+      description: 'explore the repo',
+      model: 'claude-haiku-4-5',
+      name: 'Explore',
+      status: 'running',
+      subagent_type: 'Explore',
+      tokens: 120,
+      tool_use_count: 2,
       type: 'agent_progress'
     })
     await vi.waitFor(() => expect(last('subagent.start')).toBeTruthy())
@@ -943,7 +952,7 @@ describe('GatewayClient NDJSON adapter', () => {
     await vi.waitFor(() => expect(last('subagent.progress')).toBeTruthy())
     proc.line({ ...base, activity: 'done', status: 'completed' })
     await vi.waitFor(() => expect(last('subagent.complete')).toBeTruthy())
-    const starts = events.filter(e => e.type === 'subagent.start' && e.payload.subagent_id === 'a2')
+    const starts = events.filter((e) => e.type === 'subagent.start' && e.payload.subagent_id === 'a2')
     expect(starts.length).toBe(1)
     expect(last('subagent.complete').payload.status).toBe('completed')
   })
@@ -952,10 +961,15 @@ describe('GatewayClient NDJSON adapter', () => {
   it('forwards a can_use_tool suggestion as a persistable approval option', async () => {
     proc.line({
       request: {
-        input: { command: 'ls' }, subtype: 'can_use_tool', tool_name: 'Bash',
-        suggestions: [{ type: 'addRules', destination: 'localSettings', behavior: 'allow', rules: [{ tool_name: 'Bash', rule_content: 'ls:*' }] }]
+        input: { command: 'ls' },
+        subtype: 'can_use_tool',
+        tool_name: 'Bash',
+        suggestions: [
+          { type: 'addRules', destination: 'localSettings', behavior: 'allow', rules: [{ tool_name: 'Bash', rule_content: 'ls:*' }] }
+        ]
       },
-      request_id: 'r1', type: 'control_request'
+      request_id: 'r1',
+      type: 'control_request'
     })
     await vi.waitFor(() => expect(last('approval.request')).toBeTruthy())
     const p = last('approval.request').payload
@@ -974,9 +988,7 @@ describe('GatewayClient NDJSON adapter', () => {
   // wire contract in both directions.
 
   it('forks ask_user_question into a question.request instead of the approval box', async () => {
-    const questions = [
-      { question: 'Which posts?', header: 'Scope', options: [{ label: 'Two' }, { label: 'All' }] }
-    ]
+    const questions = [{ question: 'Which posts?', header: 'Scope', options: [{ label: 'Two' }, { label: 'All' }] }]
 
     proc.line({ request: { questions, subtype: 'ask_user_question' }, request_id: 'q1', type: 'control_request' })
     await vi.waitFor(() => expect(last('question.request')).toBeTruthy())
@@ -1000,13 +1012,14 @@ describe('GatewayClient NDJSON adapter', () => {
 
     proc.line({
       request: { questions: [{ question: 'Which posts?' }], subtype: 'ask_user_question' },
-      request_id: 'q7', type: 'control_request'
+      request_id: 'q7',
+      type: 'control_request'
     })
     await vi.waitFor(() => expect(last('question.request')).toBeTruthy())
 
     await gw.request('question.respond', { answers: { 'Which posts?': 'Two' } })
 
-    const resp = sent.find(m => m.type === 'control_response')
+    const resp = sent.find((m) => m.type === 'control_response')
     expect(resp.response.request_id).toBe('q7')
     expect(resp.response.response).toEqual({ action: 'submit', answers: { 'Which posts?': 'Two' } })
   })
@@ -1021,13 +1034,14 @@ describe('GatewayClient NDJSON adapter', () => {
 
     proc.line({
       request: { questions: [{ question: 'Which posts?' }], subtype: 'ask_user_question' },
-      request_id: 'q8', type: 'control_request'
+      request_id: 'q8',
+      type: 'control_request'
     })
     await vi.waitFor(() => expect(last('question.request')).toBeTruthy())
 
     await gw.request('question.respond', { answers: null })
 
-    const resp = sent.find(m => m.type === 'control_response')
+    const resp = sent.find((m) => m.type === 'control_response')
     expect(resp.response.request_id).toBe('q8')
     expect(resp.response.response).toEqual({ action: 'cancel' })
   })
@@ -1052,14 +1066,15 @@ describe('GatewayClient NDJSON adapter', () => {
 
     proc.line({
       request: { questions: [{ question: 'Q' }], subtype: 'ask_user_question' },
-      request_id: 'q9', type: 'control_request'
+      request_id: 'q9',
+      type: 'control_request'
     })
     await vi.waitFor(() => expect(last('question.request')).toBeTruthy())
 
     await gw.request('question.respond', { answers: { Q: 'A' } })
     await gw.request('question.respond', { answers: null })
 
-    expect(sent.filter(m => m.type === 'control_response')).toHaveLength(1)
+    expect(sent.filter((m) => m.type === 'control_response')).toHaveLength(1)
   })
 
   it('sends chosen_updates when the user picks "always"; none for "once"', async () => {
@@ -1069,15 +1084,20 @@ describe('GatewayClient NDJSON adapter', () => {
 
     proc.line({
       request: {
-        input: { command: 'ls' }, subtype: 'can_use_tool', tool_name: 'Bash',
-        suggestions: [{ type: 'addRules', destination: 'localSettings', behavior: 'allow', rules: [{ tool_name: 'Bash', rule_content: 'ls:*' }] }]
+        input: { command: 'ls' },
+        subtype: 'can_use_tool',
+        tool_name: 'Bash',
+        suggestions: [
+          { type: 'addRules', destination: 'localSettings', behavior: 'allow', rules: [{ tool_name: 'Bash', rule_content: 'ls:*' }] }
+        ]
       },
-      request_id: 'r2', type: 'control_request'
+      request_id: 'r2',
+      type: 'control_request'
     })
     await vi.waitFor(() => expect(last('approval.request')).toBeTruthy())
 
     await gw.request('approval.respond', { choice: 'always' })
-    const resp = sent.find(m => m.type === 'control_response')?.response?.response
+    const resp = sent.find((m) => m.type === 'control_response')?.response?.response
     expect(resp.behavior).toBe('allow')
     expect(resp.chosen_updates).toHaveLength(1)
     expect(resp.chosen_updates[0].rules[0].rule_content).toBe('ls:*')
@@ -1092,14 +1112,24 @@ describe('GatewayClient NDJSON adapter', () => {
     ;(gw as any).send = (m: any) => sent.push(m)
     proc.line({
       request: {
-        input: { command: 'git status' }, subtype: 'can_use_tool', tool_name: 'Bash',
-        suggestions: [{ type: 'addRules', destination: 'localSettings', behavior: 'allow', rules: [{ tool_name: 'Bash', rule_content: 'git status:*' }] }]
+        input: { command: 'git status' },
+        subtype: 'can_use_tool',
+        tool_name: 'Bash',
+        suggestions: [
+          {
+            type: 'addRules',
+            destination: 'localSettings',
+            behavior: 'allow',
+            rules: [{ tool_name: 'Bash', rule_content: 'git status:*' }]
+          }
+        ]
       },
-      request_id: 'r3', type: 'control_request'
+      request_id: 'r3',
+      type: 'control_request'
     })
     await vi.waitFor(() => expect(last('approval.request')).toBeTruthy())
     await gw.request('approval.respond', { choice: 'always', rule: 'git:*' })
-    const resp = sent.find(m => m.type === 'control_response')?.response?.response
+    const resp = sent.find((m) => m.type === 'control_response')?.response?.response
     expect(resp.chosen_updates[0].rules[0].rule_content).toBe('git:*')
     expect(resp.chosen_updates[0].destination).toBe('localSettings')
   })
@@ -1115,11 +1145,14 @@ describe('GatewayClient NDJSON adapter', () => {
     const setModeSuggestion = { type: 'setMode', destination: 'session', mode: 'acceptEdits' }
     proc.line({
       request: {
-        input: { file_path: '/a/b.ts' }, subtype: 'can_use_tool', tool_name: 'Write',
+        input: { file_path: '/a/b.ts' },
+        subtype: 'can_use_tool',
+        tool_name: 'Write',
         session_label: 'allow all edits during this session',
         suggestions: [setModeSuggestion]
       },
-      request_id: 'r4', type: 'control_request'
+      request_id: 'r4',
+      type: 'control_request'
     })
     await vi.waitFor(() => expect(last('approval.request')).toBeTruthy())
     // The box still offers a persistable option for non-Bash tools, with the
@@ -1129,7 +1162,7 @@ describe('GatewayClient NDJSON adapter', () => {
     expect(last('approval.request').payload.session_label).toBe('allow all edits during this session')
 
     await gw.request('approval.respond', { choice: 'always' })
-    const resp = sent.find(m => m.type === 'control_response')?.response?.response
+    const resp = sent.find((m) => m.type === 'control_response')?.response?.response
     // Suggestion passes through AS-IS: session scope kept, no rules injected.
     expect(resp.chosen_updates[0]).toEqual(setModeSuggestion)
     expect(resp.chosen_updates[0].destination).toBe('session')
@@ -1145,7 +1178,9 @@ describe('GatewayClient NDJSON adapter', () => {
     ;(gw as any).send = (m: any) => sent.push(m)
 
     const bundle = {
-      type: 'addRules', destination: 'localSettings', behavior: 'allow',
+      type: 'addRules',
+      destination: 'localSettings',
+      behavior: 'allow',
       rules: [
         { tool_name: 'Bash', rule_content: 'grep:*' },
         { tool_name: 'Bash', rule_content: 'tr:*' },
@@ -1155,10 +1190,13 @@ describe('GatewayClient NDJSON adapter', () => {
 
     proc.line({
       request: {
-        input: { command: "grep x f | tr a b | sort -u" }, subtype: 'can_use_tool', tool_name: 'Bash',
+        input: { command: 'grep x f | tr a b | sort -u' },
+        subtype: 'can_use_tool',
+        tool_name: 'Bash',
         suggestions: [bundle]
       },
-      request_id: 'r5', type: 'control_request'
+      request_id: 'r5',
+      type: 'control_request'
     })
     await vi.waitFor(() => expect(last('approval.request')).toBeTruthy())
     const p = last('approval.request').payload
@@ -1167,7 +1205,7 @@ describe('GatewayClient NDJSON adapter', () => {
     expect(p.rule_label).toBe('Bash(grep:*), Bash(tr:*), Bash(sort -u)')
 
     await gw.request('approval.respond', { choice: 'always' })
-    const resp = sent.find(m => m.type === 'control_response')?.response?.response
+    const resp = sent.find((m) => m.type === 'control_response')?.response?.response
     expect(resp.chosen_updates[0]).toEqual(bundle) // whole bundle, untouched
   })
 
@@ -1180,10 +1218,16 @@ describe('GatewayClient NDJSON adapter', () => {
   it('maps image.attach to the attach_image control and returns its metadata', async () => {
     const p = gw.request('image.attach', { path: '/tmp/shot.png' })
     await replyToControl('attach_image', {
-      height: 914, name: 'shot.png', token_estimate: 976, width: 1568
+      height: 914,
+      name: 'shot.png',
+      token_estimate: 976,
+      width: 1568
     })
     await expect(p).resolves.toEqual({
-      height: 914, name: 'shot.png', token_estimate: 976, width: 1568
+      height: 914,
+      name: 'shot.png',
+      token_estimate: 976,
+      width: 1568
     })
   })
 
@@ -1195,7 +1239,7 @@ describe('GatewayClient NDJSON adapter', () => {
     void gw.request('image.attach', { path: raw })
     await vi.waitFor(() => {
       seen.push(...stdinFrames())
-      const req = seen.find(f => f.request?.subtype === 'attach_image')
+      const req = seen.find((f) => f.request?.subtype === 'attach_image')
       expect(req?.request?.path).toBe(raw)
     })
   })
@@ -1203,7 +1247,10 @@ describe('GatewayClient NDJSON adapter', () => {
   it('maps image.clipboard to the clipboard_image control', async () => {
     const p = gw.request('image.clipboard', {})
     await replyToControl('clipboard_image', {
-      height: 220, name: 'clipboard image', token_estimate: 300, width: 760
+      height: 220,
+      name: 'clipboard image',
+      token_estimate: 300,
+      width: 760
     })
     await expect(p).resolves.toMatchObject({ name: 'clipboard image' })
   })
@@ -1218,10 +1265,15 @@ describe('GatewayClient NDJSON adapter', () => {
   it('maps input.detect_drop to the detect_file_drop control', async () => {
     const p = gw.request('input.detect_drop', { text: '/tmp/data.csv' })
     await replyToControl('detect_file_drop', {
-      is_image: false, matched: true, name: 'data.csv', text: '@/tmp/data.csv'
+      is_image: false,
+      matched: true,
+      name: 'data.csv',
+      text: '@/tmp/data.csv'
     })
     await expect(p).resolves.toMatchObject({
-      is_image: false, matched: true, text: '@/tmp/data.csv'
+      is_image: false,
+      matched: true,
+      text: '@/tmp/data.csv'
     })
   })
 
@@ -1233,7 +1285,11 @@ describe('GatewayClient NDJSON adapter', () => {
   it('maps clipboard.paste to the clipboard_image control', async () => {
     const p = gw.request('clipboard.paste', { session_id: 's1' })
     await replyToControl('clipboard_image', {
-      attached: true, count: 3, height: 220, name: 'clipboard image', width: 760
+      attached: true,
+      count: 3,
+      height: 220,
+      name: 'clipboard image',
+      width: 760
     })
     await expect(p).resolves.toMatchObject({ attached: true, count: 3 })
   })
@@ -1262,7 +1318,7 @@ describe('GatewayClient NDJSON adapter', () => {
     void gw.request('image.clipboard', { placeholder: true })
     await vi.waitFor(() => {
       seen.push(...stdinFrames())
-      const req = seen.find(f => f.request?.subtype === 'clipboard_image')
+      const req = seen.find((f) => f.request?.subtype === 'clipboard_image')
       expect(req?.request?.placeholder).toBe(true)
     })
   })
@@ -1273,7 +1329,7 @@ describe('GatewayClient NDJSON adapter', () => {
     void gw.request('image.attach', { path: '/tmp/a.png' })
     await vi.waitFor(() => {
       seen.push(...stdinFrames())
-      const req = seen.find(f => f.request?.subtype === 'attach_image')
+      const req = seen.find((f) => f.request?.subtype === 'attach_image')
       expect(req?.request?.placeholder).toBe(false)
     })
   })
@@ -1283,7 +1339,7 @@ describe('GatewayClient NDJSON adapter', () => {
     void gw.request('input.detect_drop', { placeholder: 'yes', text: '/tmp/a.png' })
     await vi.waitFor(() => {
       seen.push(...stdinFrames())
-      const req = seen.find(f => f.request?.subtype === 'detect_file_drop')
+      const req = seen.find((f) => f.request?.subtype === 'detect_file_drop')
       expect(req?.request?.placeholder).toBe(false)
     })
   })

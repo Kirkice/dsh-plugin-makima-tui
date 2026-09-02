@@ -55,7 +55,7 @@ export const TodoPanel = memo(function TodoPanel({
     }
 
     if (!isControlled) {
-      setLocalCollapsed(v => !v)
+      setLocalCollapsed((v) => !v)
     }
   }
 
@@ -63,24 +63,22 @@ export const TodoPanel = memo(function TodoPanel({
     return null
   }
 
-  const done = todos.filter(todo => todo.status === 'completed').length
-  const inProgress = todos.filter(todo => todo.status === 'in_progress').length
+  const done = todos.filter((todo) => todo.status === 'completed').length
+  const inProgress = todos.filter((todo) => todo.status === 'in_progress').length
   const open = todos.length - done - inProgress
 
   // Original standalone header: "N tasks (X done, Y in progress, Z open)".
-  const headerCounts = [
-    `${done} done`,
-    ...(inProgress > 0 ? [`${inProgress} active`] : []),
-    ...(open > 0 ? [`${open} open`] : [])
-  ].join(' · ')
+  const headerCounts = [`${done} done`, ...(inProgress > 0 ? [`${inProgress} active`] : []), ...(open > 0 ? [`${open} open`] : [])].join(
+    ' · '
+  )
 
   const visible = todos.slice(0, MAX_VISIBLE_TODOS)
   const hidden = todos.slice(MAX_VISIBLE_TODOS)
   const hiddenParts: Array<[string, number, string]> = (
     [
-      ['in_progress', hidden.filter(todo => todo.status === 'in_progress').length, 'active'],
-      ['pending', hidden.filter(todo => todo.status === 'pending').length, 'pending'],
-      ['completed', hidden.filter(todo => todo.status === 'completed').length, 'done']
+      ['in_progress', hidden.filter((todo) => todo.status === 'in_progress').length, 'active'],
+      ['pending', hidden.filter((todo) => todo.status === 'pending').length, 'pending'],
+      ['completed', hidden.filter((todo) => todo.status === 'completed').length, 'done']
     ] as Array<[string, number, string]>
   ).filter(([, count]) => count > 0)
 
@@ -88,7 +86,7 @@ export const TodoPanel = memo(function TodoPanel({
 
   const rows = (
     <>
-      {visible.map(todo => {
+      {visible.map((todo) => {
         const isDone = todo.status === 'completed'
         const isActive = todo.status === 'in_progress'
         const isCancelled = todo.status === 'cancelled'
@@ -130,7 +128,9 @@ export const TodoPanel = memo(function TodoPanel({
       <Box onClick={handleToggle}>
         <Text color={t.color.muted}>
           <Text color={t.color.highlight}>{effectiveCollapsed ? '▸ ' : '▾ '}</Text>
-          <Text bold color={t.color.highlight}>TODO</Text>
+          <Text bold color={t.color.highlight}>
+            TODO
+          </Text>
           <Text color={t.color.command}> · {todos.length}</Text> {todos.length === 1 ? 'task' : 'tasks'}{' '}
           <Text color={t.color.statusFg} dim>
             · {headerCounts}

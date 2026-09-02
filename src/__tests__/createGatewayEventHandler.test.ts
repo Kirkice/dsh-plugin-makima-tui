@@ -47,8 +47,7 @@ const buildCtx = (appended: Msg[]) =>
     },
     transcript: {
       appendMessage: (msg: Msg) => appended.push(msg),
-      panel: (title: string, sections: any[]) =>
-        appended.push({ kind: 'panel', panelData: { sections, title }, role: 'system', text: '' }),
+      panel: (title: string, sections: any[]) => appended.push({ kind: 'panel', panelData: { sections, title }, role: 'system', text: '' }),
       setHistoryItems: vi.fn()
     },
     voice: {
@@ -87,11 +86,11 @@ describe('createGatewayEventHandler', () => {
 
     onEvent({ payload: { text: 'Started a todo list.' }, type: 'message.complete' } as any)
 
-    const finalText = appended.find(msg => msg.role === 'assistant' && msg.text === 'Started a todo list.')
+    const finalText = appended.find((msg) => msg.role === 'assistant' && msg.text === 'Started a todo list.')
 
     expect(finalText).toBeDefined()
     // No transcript archive for an unfinished list — it stays live.
-    expect(appended.find(msg => msg.kind === 'trail' && msg.todos?.length)).toBeUndefined()
+    expect(appended.find((msg) => msg.kind === 'trail' && msg.todos?.length)).toBeUndefined()
     expect(getTurnState().todos).toEqual(todos)
   })
 
@@ -289,13 +288,13 @@ describe('createGatewayEventHandler', () => {
     onEvent({ payload: { context: 'beta', name: 'read_file', tool_id: 'tool-2' }, type: 'tool.start' } as any)
     onEvent({ payload: { name: 'read_file', summary: 'second done', tool_id: 'tool-2' }, type: 'tool.complete' } as any)
 
-    expect(getTurnState().streamSegments.filter(msg => msg.kind === 'trail' && msg.tools?.length)).toHaveLength(1)
+    expect(getTurnState().streamSegments.filter((msg) => msg.kind === 'trail' && msg.tools?.length)).toHaveLength(1)
     expect(getTurnState().streamSegments[0]?.tools).toHaveLength(2)
     expect(getTurnState().streamPendingTools).toEqual([])
 
     onEvent({ payload: { text: '' }, type: 'message.complete' } as any)
 
-    const toolTrails = appended.filter(msg => msg.kind === 'trail' && msg.tools?.length)
+    const toolTrails = appended.filter((msg) => msg.kind === 'trail' && msg.tools?.length)
     expect(toolTrails).toHaveLength(1)
     expect(toolTrails[0]?.tools).toHaveLength(2)
     expect(toolTrails[0]?.tools?.[0]).toContain('Search Files')
@@ -384,7 +383,7 @@ describe('createGatewayEventHandler', () => {
     turnController.flushStreamingSegment()
     onEvent({ payload: { text: 'final answer' }, type: 'message.complete' } as any)
 
-    expect(appended.map(msg => msg.thinking).filter(Boolean)).toEqual([streamed])
+    expect(appended.map((msg) => msg.thinking).filter(Boolean)).toEqual([streamed])
     expect(appended[appended.length - 1]).toMatchObject({ role: 'assistant', text: 'final answer' })
   })
 
@@ -399,7 +398,7 @@ describe('createGatewayEventHandler', () => {
     turnController.flushStreamingSegment()
     onEvent({ payload: { text: `${repeated}\n\n后续说明。` }, type: 'message.complete' } as any)
 
-    expect(appended.filter(msg => msg.role === 'assistant').map(msg => msg.text)).toEqual([beforeTool, '后续说明。'])
+    expect(appended.filter((msg) => msg.role === 'assistant').map((msg) => msg.text)).toEqual([beforeTool, '后续说明。'])
   })
 
   it('does not remove an ordinary short prefix shared with a settled segment', () => {
@@ -499,17 +498,16 @@ describe('createGatewayEventHandler', () => {
       payload: {
         cwd: '/repo',
         python: '/opt/venv/bin/python',
-        stderr_tail:
-          '[startup] timed out\nModuleNotFoundError: No module named openai\nFileNotFoundError: ~/.clawcodex/config.yaml'
+        stderr_tail: '[startup] timed out\nModuleNotFoundError: No module named openai\nFileNotFoundError: ~/.clawcodex/config.yaml'
       },
       type: 'gateway.start_timeout'
     } as any)
 
-    const messages = getTurnState().activity.map(a => a.text)
+    const messages = getTurnState().activity.map((a) => a.text)
 
-    expect(messages.some(m => m.includes('gateway startup timed out'))).toBe(true)
-    expect(messages.some(m => m.includes('ModuleNotFoundError'))).toBe(true)
-    expect(messages.some(m => m.includes('FileNotFoundError'))).toBe(true)
+    expect(messages.some((m) => m.includes('gateway startup timed out'))).toBe(true)
+    expect(messages.some((m) => m.includes('ModuleNotFoundError'))).toBe(true)
+    expect(messages.some((m) => m.includes('FileNotFoundError'))).toBe(true)
   })
 
   it('prefers raw text over Rich-rendered ANSI on message.complete (#16391)', () => {
@@ -522,7 +520,7 @@ describe('createGatewayEventHandler', () => {
 
     onEvent({ payload: { rendered, text: raw }, type: 'message.complete' } as any)
 
-    const assistant = appended.find(msg => msg.role === 'assistant')
+    const assistant = appended.find((msg) => msg.role === 'assistant')
     expect(assistant?.text).toBe(raw)
     expect(assistant?.text).not.toContain('\u001b[')
   })
@@ -534,7 +532,7 @@ describe('createGatewayEventHandler', () => {
 
     onEvent({ payload: { rendered }, type: 'message.complete' } as any)
 
-    const assistant = appended.find(msg => msg.role === 'assistant')
+    const assistant = appended.find((msg) => msg.role === 'assistant')
     expect(assistant?.text).toBe(rendered)
   })
 
@@ -550,7 +548,7 @@ describe('createGatewayEventHandler', () => {
     onEvent({ payload: { text: ' second.' }, type: 'message.delta' } as any)
     onEvent({ payload: {}, type: 'message.complete' } as any)
 
-    const assistant = appended.find(msg => msg.role === 'assistant')
+    const assistant = appended.find((msg) => msg.role === 'assistant')
     expect(assistant?.text).toBe('First. second.')
   })
 
@@ -623,7 +621,7 @@ describe('createGatewayEventHandler', () => {
     onEvent({ payload: { text: 'After edit.' }, type: 'message.delta' } as any)
     onEvent({ payload: { text: 'Before edit. After edit.' }, type: 'message.complete' } as any)
 
-    expect(appended.map(msg => msg.text.trim()).filter(Boolean)).toEqual(['Before edit.', block, 'After edit.'])
+    expect(appended.map((msg) => msg.text.trim()).filter(Boolean)).toEqual(['Before edit.', block, 'After edit.'])
     expect(appended[1]?.tools?.[0]).toContain('Patch')
   })
 
@@ -1007,7 +1005,7 @@ describe('createGatewayEventHandler', () => {
       type: 'subagent.complete'
     } as any)
 
-    expect(getTurnState().subagents.find(s => s.id === 'sa-timeout')?.status).toBe('timeout')
+    expect(getTurnState().subagents.find((s) => s.id === 'sa-timeout')?.status).toBe('timeout')
 
     // Late start/spawn updates must not clobber terminal timeout/error states.
     onEvent({
@@ -1019,7 +1017,7 @@ describe('createGatewayEventHandler', () => {
       type: 'subagent.spawn_requested'
     } as any)
 
-    expect(getTurnState().subagents.find(s => s.id === 'sa-timeout')?.status).toBe('timeout')
+    expect(getTurnState().subagents.find((s) => s.id === 'sa-timeout')?.status).toBe('timeout')
 
     onEvent({
       payload: { goal: 'error child', subagent_id: 'sa-error', task_index: 1 },
@@ -1030,7 +1028,7 @@ describe('createGatewayEventHandler', () => {
       type: 'subagent.complete'
     } as any)
 
-    expect(getTurnState().subagents.find(s => s.id === 'sa-error')?.status).toBe('error')
+    expect(getTurnState().subagents.find((s) => s.id === 'sa-error')?.status).toBe('error')
   })
 
   it('normalizes unknown subagent.complete statuses to completed', () => {
@@ -1046,7 +1044,7 @@ describe('createGatewayEventHandler', () => {
       type: 'subagent.complete'
     } as any)
 
-    expect(getTurnState().subagents.find(s => s.id === 'sa-weird')?.status).toBe('completed')
+    expect(getTurnState().subagents.find((s) => s.id === 'sa-weird')?.status).toBe('completed')
   })
 
   it('nudges toward /agents on the first spawn_requested of a turn', () => {
@@ -1058,7 +1056,7 @@ describe('createGatewayEventHandler', () => {
       type: 'subagent.spawn_requested'
     } as any)
 
-    const hints = getTurnState().activity.filter(a => a.text.includes('/agents'))
+    const hints = getTurnState().activity.filter((a) => a.text.includes('/agents'))
     expect(hints).toHaveLength(1)
     expect(hints[0]).toMatchObject({ tone: 'info' })
   })
@@ -1074,7 +1072,7 @@ describe('createGatewayEventHandler', () => {
       type: 'subagent.start'
     } as any)
 
-    expect(getTurnState().activity.filter(a => a.text.includes('/agents'))).toHaveLength(1)
+    expect(getTurnState().activity.filter((a) => a.text.includes('/agents'))).toHaveLength(1)
   })
 
   it('nudges at most once per turn and resets on the next message.start', () => {
@@ -1090,7 +1088,7 @@ describe('createGatewayEventHandler', () => {
       payload: { goal: 'child b', subagent_id: 'sa-b', task_index: 1 },
       type: 'subagent.start'
     } as any)
-    expect(getTurnState().activity.filter(a => a.text.includes('/agents'))).toHaveLength(1)
+    expect(getTurnState().activity.filter((a) => a.text.includes('/agents'))).toHaveLength(1)
 
     // New turn clears activity AND the once-per-turn guard → nudges again.
     onEvent({ payload: {}, type: 'message.start' } as any)
@@ -1098,7 +1096,7 @@ describe('createGatewayEventHandler', () => {
       payload: { goal: 'child c', subagent_id: 'sa-c', task_index: 0 },
       type: 'subagent.start'
     } as any)
-    expect(getTurnState().activity.filter(a => a.text.includes('/agents'))).toHaveLength(1)
+    expect(getTurnState().activity.filter((a) => a.text.includes('/agents'))).toHaveLength(1)
   })
 
   it('does not nudge when the /agents overlay is already open', () => {
@@ -1113,7 +1111,7 @@ describe('createGatewayEventHandler', () => {
       type: 'subagent.start'
     } as any)
 
-    expect(getTurnState().activity.filter(a => a.text.includes('/agents'))).toHaveLength(0)
+    expect(getTurnState().activity.filter((a) => a.text.includes('/agents'))).toHaveLength(0)
   })
 
   it('nudges if the /agents overlay is closed mid-turn while delegation continues', () => {
@@ -1127,7 +1125,7 @@ describe('createGatewayEventHandler', () => {
       payload: { goal: 'child a', subagent_id: 'sa-a', task_index: 0 },
       type: 'subagent.start'
     } as any)
-    expect(getTurnState().activity.filter(a => a.text.includes('/agents'))).toHaveLength(0)
+    expect(getTurnState().activity.filter((a) => a.text.includes('/agents'))).toHaveLength(0)
 
     // User closes the dashboard mid-turn → the next delegation event nudges.
     patchOverlayState({ agents: false })
@@ -1135,7 +1133,7 @@ describe('createGatewayEventHandler', () => {
       payload: { goal: 'child b', subagent_id: 'sa-b', task_index: 1 },
       type: 'subagent.start'
     } as any)
-    expect(getTurnState().activity.filter(a => a.text.includes('/agents'))).toHaveLength(1)
+    expect(getTurnState().activity.filter((a) => a.text.includes('/agents'))).toHaveLength(1)
   })
 
   it('does not nudge when display.tui_agents_nudge is false', async () => {
@@ -1158,7 +1156,7 @@ describe('createGatewayEventHandler', () => {
       type: 'subagent.start'
     } as any)
 
-    expect(getTurnState().activity.filter(a => a.text.includes('/agents'))).toHaveLength(0)
+    expect(getTurnState().activity.filter((a) => a.text.includes('/agents'))).toHaveLength(0)
   })
 
   it('keeps a tool that was still running when the interrupt landed', () => {
@@ -1184,12 +1182,12 @@ describe('createGatewayEventHandler', () => {
         sys: ctx.system.sys
       })
 
-      const shelf = appended.find(msg => msg.tools?.length)
+      const shelf = appended.find((msg) => msg.tools?.length)
 
       expect(shelf?.tools?.[0]).toContain('Bash(sleep 30)')
       expect(shelf?.tools?.[0]).toContain('Interrupted · What should makima tui do instead?')
       // …and the note is not ALSO the reply, three lines below itself
-      expect(appended.filter(msg => /\S/.test(msg.text) && msg.text.includes('Interrupted ·'))).toHaveLength(0)
+      expect(appended.filter((msg) => /\S/.test(msg.text) && msg.text.includes('Interrupted ·'))).toHaveLength(0)
 
       vi.runAllTimers()
     } finally {
@@ -1263,7 +1261,7 @@ describe('createGatewayEventHandler', () => {
       // Stale post-interrupt todos must not have leaked through.
       // (This test does not assert that pre-interrupt todos are cleared —
       // current interrupt path leaves them visible until the next message.)
-      expect(getTurnState().todos.find(t => t.content === 'late ghost')).toBeUndefined()
+      expect(getTurnState().todos.find((t) => t.content === 'late ghost')).toBeUndefined()
 
       onEvent({ payload: {}, type: 'message.start' } as any)
       onEvent({ payload: { text: 'fresh' }, type: 'reasoning.delta' } as any)
@@ -1310,9 +1308,7 @@ describe('createGatewayEventHandler', () => {
     // Settle flips busy false (the single drain edge) and the backend
     // "Operation interrupted…" line is suppressed (not appended).
     expect(getUiState().busy).toBe(false)
-    expect(
-      appended.slice(before).some(m => typeof m.text === 'string' && m.text.includes('Operation interrupted'))
-    ).toBe(false)
+    expect(appended.slice(before).some((m) => typeof m.text === 'string' && m.text.includes('Operation interrupted'))).toBe(false)
   })
 
   it('persists an abandoned (timed-out) clarify into the transcript when the clarify tool completes', () => {
@@ -1327,7 +1323,7 @@ describe('createGatewayEventHandler', () => {
 
     onEvent({ payload: { duration_s: 300, name: 'clarify', tool_id: 'clar-1' }, type: 'tool.complete' } as any)
 
-    const record = appended.find(msg => msg.role === 'system' && msg.text.startsWith('ask How do you want to scope?'))
+    const record = appended.find((msg) => msg.role === 'system' && msg.text.startsWith('ask How do you want to scope?'))
     expect(record).toBeDefined()
     expect(record?.text).toContain('1. Scope A')
     expect(record?.text).toContain('2. Scope B')
@@ -1348,7 +1344,7 @@ describe('createGatewayEventHandler', () => {
     // A duplicate clarify tool.complete must not re-persist the same prompt.
     onEvent({ payload: { name: 'clarify', tool_id: 'clar-1' }, type: 'tool.complete' } as any)
 
-    const records = appended.filter(msg => msg.role === 'system' && msg.text.startsWith('ask Pick?'))
+    const records = appended.filter((msg) => msg.role === 'system' && msg.text.startsWith('ask Pick?'))
     expect(records).toHaveLength(1)
   })
 
@@ -1364,7 +1360,7 @@ describe('createGatewayEventHandler', () => {
 
     onEvent({ payload: { name: 'search', tool_id: 'tool-1' }, type: 'tool.complete' } as any)
 
-    expect(appended.some(msg => msg.role === 'system' && msg.text.startsWith('ask '))).toBe(false)
+    expect(appended.some((msg) => msg.role === 'system' && msg.text.startsWith('ask '))).toBe(false)
     expect(getOverlayState().clarify).not.toBeNull()
   })
 
@@ -1376,7 +1372,7 @@ describe('createGatewayEventHandler', () => {
     // tool.complete arrives, so there's nothing live to persist.
     onEvent({ payload: { duration_s: 4.2, name: 'clarify', tool_id: 'clar-1' }, type: 'tool.complete' } as any)
 
-    expect(appended.some(msg => msg.role === 'system' && msg.text.startsWith('ask '))).toBe(false)
+    expect(appended.some((msg) => msg.role === 'system' && msg.text.startsWith('ask '))).toBe(false)
   })
 
   // ── Credits notice (Strategy B) ──────────────────────────────────────
@@ -1705,7 +1701,7 @@ describe('createGatewayEventHandler', () => {
         type: 'billing.step_up.verification'
       } as any)
 
-      const printed = (ctx.system.sys as ReturnType<typeof vi.fn>).mock.calls.map(c => c[0]).join('\n')
+      const printed = (ctx.system.sys as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]).join('\n')
       expect(printed).toContain('https://portal.example/device?code=WXYZ')
       expect(printed).toContain('WXYZ-9999')
       expect(openExternalUrlMock).toHaveBeenCalledWith('https://portal.example/device?code=WXYZ')
@@ -1728,7 +1724,7 @@ describe('createGatewayEventHandler', () => {
     // FORCE_HYPERLINK. The helper must pin ALL detection inputs or these
     // tests fail on unchanged code when run from an OSC 8 terminal.
     const withEnv = (overrides: Record<string, string | undefined>, fn: () => void) => {
-      const prev = new Map(Object.keys(overrides).map(key => [key, process.env[key]]))
+      const prev = new Map(Object.keys(overrides).map((key) => [key, process.env[key]]))
 
       const apply = (key: string, value: string | undefined) => {
         if (value === undefined) {

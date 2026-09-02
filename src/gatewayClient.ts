@@ -21,14 +21,7 @@ import { readdirSync } from 'node:fs'
 import { resolve as pathResolve } from 'node:path'
 import { createInterface } from 'node:readline'
 
-import type {
-  CostSnapshot,
-  CronSnapshot,
-  GatewayEvent,
-  GoalSnapshot,
-  PatchHunk,
-  StructuredDiffPayload
-} from './gatewayTypes.js'
+import type { CostSnapshot, CronSnapshot, GatewayEvent, GoalSnapshot, PatchHunk, StructuredDiffPayload } from './gatewayTypes.js'
 import { SkillsMcpManager, type ImportSkillInput, type McpServerConfig } from './domain/skillsMcpManager.js'
 import { formatTotalCost, setLastCostSnapshot } from './lib/costSummary.js'
 import { extractTag } from './lib/messages.js'
@@ -59,7 +52,9 @@ const MAKIMA_TUI_VERSION = '1.4.0'
 function resolveAgentCmd(): string[] {
   const raw = process.env.MAKIMA_TUI_AGENT_SERVER_CMD?.trim()
 
-  if (!raw) {return ['clawcodex', 'agent-server']}
+  if (!raw) {
+    return ['clawcodex', 'agent-server']
+  }
 
   // JSON-array form (what the Python launcher now sets): survives argv
   // elements containing spaces — e.g. a Windows interpreter path under
@@ -69,7 +64,7 @@ function resolveAgentCmd(): string[] {
     try {
       const parsed: unknown = JSON.parse(raw)
 
-      if (Array.isArray(parsed) && parsed.length > 0 && parsed.every(x => typeof x === 'string')) {
+      if (Array.isArray(parsed) && parsed.length > 0 && parsed.every((x) => typeof x === 'string')) {
         return parsed
       }
     } catch {
@@ -81,7 +76,9 @@ function resolveAgentCmd(): string[] {
 }
 
 function safeJson(v: unknown): string {
-  if (typeof v === 'string') {return v}
+  if (typeof v === 'string') {
+    return v
+  }
 
   try {
     return JSON.stringify(v)
@@ -101,7 +98,9 @@ export function describeSuggestionRule(suggestion: any): string | null {
     .filter((r: any) => r && r.tool_name)
     .map((r: any) => (r.rule_content ? `${r.tool_name}(${r.rule_content})` : String(r.tool_name)))
 
-  if (labels.length === 0) {return null}
+  if (labels.length === 0) {
+    return null
+  }
 
   return labels.length > 3 ? `${labels.slice(0, 3).join(', ')}, …` : labels.join(', ')
 }
@@ -116,7 +115,9 @@ export function approvalCommandText(input: unknown): string {
     // pattern before path so a Grep/Glob box shows the search pattern (matching
     // the tool trail label), not the directory it searched.
     for (const key of ['command', 'file_path', 'url', 'pattern', 'path']) {
-      if (typeof o[key] === 'string' && o[key]) {return o[key] as string}
+      if (typeof o[key] === 'string' && o[key]) {
+        return o[key] as string
+      }
     }
   }
 
@@ -128,12 +129,18 @@ export function approvalCommandText(input: unknown): string {
  *  name. File paths are shown relative to the workspace so the label stays
  *  short; search tools show their pattern rather than the search directory. */
 function toolContext(input: any): string {
-  if (!input || typeof input !== 'object') {return ''}
+  if (!input || typeof input !== 'object') {
+    return ''
+  }
 
-  if (input.pattern != null) {return String(input.pattern)}
+  if (input.pattern != null) {
+    return String(input.pattern)
+  }
   const p = input.file_path ?? input.path ?? input.notebook_path
 
-  if (p != null) {return relativizePath(String(p))}
+  if (p != null) {
+    return relativizePath(String(p))
+  }
   const v = input.command ?? input.url ?? input.query ?? input.description ?? input.prompt
 
   return v == null ? '' : String(v)
@@ -143,7 +150,9 @@ function toolContext(input: any): string {
 function relativizePath(p: string): string {
   const ws = (process.env.MAKIMA_TUI_WORKSPACE || process.env.MAKIMA_TUI_CWD || process.cwd()).replace(/\/+$/, '')
 
-  if (ws && p.startsWith(ws + '/')) {return p.slice(ws.length + 1)}
+  if (ws && p.startsWith(ws + '/')) {
+    return p.slice(ws.length + 1)
+  }
   const parts = p.split('/')
 
   return parts[parts.length - 1] || p
@@ -215,7 +224,7 @@ const WEB_SEARCH_BLOCK_RE = /^(?:Links: \[|No links found\.$)/gm
 // search(es) in Xs" (whole seconds at >=1s, else ms). Without the envelope
 // (older backend) the duration is unknown and omitted.
 function webSearchSummary(result: string, webSearch?: WebSearchDisplay): string {
-  const searchCount = webSearch?.searchCount ?? (result.match(WEB_SEARCH_BLOCK_RE)?.length ?? 0)
+  const searchCount = webSearch?.searchCount ?? result.match(WEB_SEARCH_BLOCK_RE)?.length ?? 0
   const line = `Did ${searchCount} search${searchCount !== 1 ? 'es' : ''}`
   const s = webSearch?.durationSeconds
 
@@ -246,9 +255,7 @@ export function askUserSummary(display: AskUserDisplay): string {
 
   // An empty submit is reachable: the review step lets you submit with
   // questions left blank. Say so rather than rendering nothing at all.
-  return entries.length
-    ? entries.map(([question, answer]) => `· ${question} → ${answer}`).join('\n')
-    : 'No answers submitted'
+  return entries.length ? entries.map(([question, answer]) => `· ${question} → ${answer}`).join('\n') : 'No answers submitted'
 }
 
 /** Exact port of typescript/src/utils/format.ts formatFileSize. */
@@ -310,27 +317,41 @@ function imageSummary(image?: ImageDisplay): string {
  *  serialized. Applies to every tool that can emit them (Read, PDF page
  *  extraction, Bash image output), not just Read. */
 export function flattenToolResultContent(content: unknown): string {
-  if (typeof content === 'string') {return content}
+  if (typeof content === 'string') {
+    return content
+  }
 
-  if (!Array.isArray(content)) {return safeJson(content)}
+  if (!Array.isArray(content)) {
+    return safeJson(content)
+  }
 
   return content
-    .map(block => {
-      if (typeof block === 'string') {return block}
+    .map((block) => {
+      if (typeof block === 'string') {
+        return block
+      }
 
-      if (!block || typeof block !== 'object') {return safeJson(block)}
+      if (!block || typeof block !== 'object') {
+        return safeJson(block)
+      }
 
       const type = (block as { type?: unknown }).type
 
-      if (type === 'text') {return String((block as { text?: unknown }).text ?? '')}
+      if (type === 'text') {
+        return String((block as { text?: unknown }).text ?? '')
+      }
 
-      if (type === 'image') {return '[image]'}
+      if (type === 'image') {
+        return '[image]'
+      }
 
-      if (type === 'document') {return '[document]'}
+      if (type === 'document') {
+        return '[document]'
+      }
 
       return safeJson(block)
     })
-    .filter(part => part.length > 0)
+    .filter((part) => part.length > 0)
     .join('\n')
 }
 
@@ -356,7 +377,9 @@ function toolSpecificErrorSummary(name: string | undefined, result: string): str
 
   const tagged = extractTag(result, 'tool_use_error')
 
-  if (!tagged) {return undefined}
+  if (!tagged) {
+    return undefined
+  }
 
   switch (name) {
     case 'Read':
@@ -369,7 +392,9 @@ function toolSpecificErrorSummary(name: string | undefined, result: string): str
 
     case 'Edit':
       // "Show a less scary message for intended behavior" (FileEditTool/UI.tsx:138).
-      if (tagged.includes('File has not been read yet')) {return 'File must be read first'}
+      if (tagged.includes('File has not been read yet')) {
+        return 'File must be read first'
+      }
 
       return tagged.includes(FILE_NOT_FOUND_CWD_NOTE) ? 'File not found' : 'Error editing file'
 
@@ -423,10 +448,7 @@ function bashOutputSummary(result: string): string {
     return trimmed
   }
 
-  return [
-    ...lines.slice(0, BASH_RESULT_MAX_LINES),
-    `… +${lines.length - BASH_RESULT_MAX_LINES} lines (ctrl+o to expand)`
-  ].join('\n')
+  return [...lines.slice(0, BASH_RESULT_MAX_LINES), `… +${lines.length - BASH_RESULT_MAX_LINES} lines (ctrl+o to expand)`].join('\n')
 }
 
 /** The tool's own name plus its back-compat aliases (tasks_v2.py
@@ -655,13 +677,15 @@ export function formatToolResult(
   if (isError) {
     const summary = toolSpecificErrorSummary(name, result ?? '')
 
-    if (summary) {return summary}
+    if (summary) {
+      return summary
+    }
 
     // Port of FallbackToolUseErrorMessage.tsx:30-55 — unwrap the wire-format
     // error markup before display: the `<tool_use_error>` envelope, sandbox
     // violation blocks, and bare `<error>` tags are model-facing bytes, not
     // something the transcript should print.
-    const extracted = extractTag(result ?? '', 'tool_use_error') ?? (result ?? '')
+    const extracted = extractTag(result ?? '', 'tool_use_error') ?? result ?? ''
 
     const trimmed = extracted
       .replace(/<sandbox_violations>[\s\S]*?<\/sandbox_violations>/g, '')
@@ -685,10 +709,9 @@ export function formatToolResult(
     if (lines.length > ERROR_RESULT_MAX_LINES) {
       const plusLines = lines.length - ERROR_RESULT_MAX_LINES
 
-      return [
-        ...lines.slice(0, ERROR_RESULT_MAX_LINES),
-        `… +${plusLines} ${plusLines === 1 ? 'line' : 'lines'} (ctrl+o to see all)`
-      ].join('\n')
+      return [...lines.slice(0, ERROR_RESULT_MAX_LINES), `… +${plusLines} ${plusLines === 1 ? 'line' : 'lines'} (ctrl+o to see all)`].join(
+        '\n'
+      )
     }
 
     return msg
@@ -707,7 +730,9 @@ export function formatToolResult(
     return askUserSummary(askUser)
   }
 
-  if (!result) {return result}
+  if (!result) {
+    return result
+  }
 
   // Backstop for a surface that never collected answers — an agent-server
   // predating the ask_user round-trip, or the MCP/SDK path — where the tool
@@ -727,7 +752,7 @@ export function formatToolResult(
   }
 
   if (name === 'Read' && /^\s*\d+[\t→ ]/.test(result)) {
-    const n = result.split('\n').filter(l => l.length > 0).length
+    const n = result.split('\n').filter((l) => l.length > 0).length
 
     return `Read ${n} line${n === 1 ? '' : 's'}`
   }
@@ -737,7 +762,7 @@ export function formatToolResult(
       return `Found 0 ${name === 'Glob' ? 'files' : 'lines'}`
     }
 
-    const n = result.split('\n').filter(l => l.length > 0).length
+    const n = result.split('\n').filter((l) => l.length > 0).length
     const noun = name === 'Glob' ? (n === 1 ? 'file' : 'files') : n === 1 ? 'line' : 'lines'
 
     return `Found ${n} ${noun}${n > 0 ? ' (ctrl+o to expand)' : ''}`
@@ -776,19 +801,14 @@ export const SLASHES: ReadonlyArray<{ desc: string; hint?: string; name: string 
   { desc: 'Show available commands', name: '/help' },
   { desc: 'Clear the conversation', name: '/clear' },
   { desc: 'Switch the model', name: '/model' },
-  { desc: 'Set the output style', hint: '[<name>]', name: '/output-style' },
   { desc: 'Change the startup logo color scheme', name: '/logo' },
   { desc: 'Choose what makima tui is allowed to do', name: '/permissions' },
   { desc: 'Compact the conversation to save context', name: '/compact' },
   { desc: 'Show context-window usage', name: '/context' },
-  { desc: 'Show the total cost and duration of the current session', name: '/cost' },
-  { desc: 'Toggle Bash-output token compression (RTK-style)', hint: '[on|off|status]', name: '/eco' },
   // Local-registry command (slash/commands/session.ts) — listed here so it
   // reaches the completion menu; per the shadowing note above it carries no
   // hint (the local argumentHint is authoritative).
   { desc: 'Toggle the end-of-turn recap + suggested next prompt', name: '/recap' },
-  { desc: 'Undo recent turns', hint: '[<turns>]', name: '/rewind' },
-  { desc: 'Toggle extended thinking', hint: '[on|off|toggle]', name: '/thinking' },
   {
     desc: 'Set reasoning effort (or "ultracode" workflow mode)',
     // The real ladder is VALID_EFFORT_VALUES (agent_server _do_set_effort).
@@ -798,29 +818,11 @@ export const SLASHES: ReadonlyArray<{ desc: string; hint?: string; name: string 
     hint: '[low|medium|high|xhigh|max|auto|ultracode]',
     name: '/effort'
   },
-  { desc: 'Switch the provider', hint: '[<provider>]', name: '/provider' },
   { desc: 'Manage API-key providers and ChatGPT/Codex sign-in', name: '/providers' },
-  {
-    desc: 'Configure the advisor reviewer model (consulted mid-task by the worker)',
-    hint: '[<provider>:<model> [--client] [--effort <level>] | --effort <level> | --no-client | off|unset]',
-    name: '/advisor'
-  },
-  {
-    desc: 'Give a text-only model vision by fusing it with a multimodal one',
-    hint: '[list | create <name> <base> <vision> | delete|enable|disable <name>]',
-    name: '/fusion'
-  },
-  {
-    desc: 'Set the vision model the vision_analyze tool asks about images',
-    hint: '[<provider>:<model> | on | off]',
-    name: '/vision'
-  },
-  { desc: 'List running and recent dynamic workflows', name: '/workflows' },
   { desc: 'Browse, switch, or resume saved sessions', hint: '[new | <id or title>]', name: '/sessions' },
   { desc: 'Alias for /sessions', hint: '[new | <id or title>]', name: '/session' },
   { desc: 'Alias for /sessions', hint: '[new | <id or title>]', name: '/switch' },
   { desc: 'Alias for /sessions', hint: '[new | <id or title>]', name: '/resume' },
-  { desc: 'Search / manage the knowledge base', hint: '[status|list|clear|enable|disable]', name: '/knowledge' },
   {
     desc: 'Edit memory files, or manage the bounded memory store',
     hint: '[status|pending|approve <id|all>|reject <id|all>]',
@@ -844,13 +846,6 @@ export const SLASHES: ReadonlyArray<{ desc: string; hint?: string; name: string 
     hint: '[<condition> | status | clear | pause | resume]',
     name: '/goal'
   },
-  { desc: 'Add or manage extra criteria on the active goal', hint: '[<text> | remove <n> | clear]', name: '/subgoal' },
-  {
-    desc: 'Run a prompt repeatedly on a schedule (Esc while waiting stops a self-paced loop)',
-    hint: '[interval] [prompt]',
-    name: '/loop'
-  },
-  { desc: 'Generate session insights', name: '/insights' },
   { desc: 'List or start background agents', name: '/bg' },
   { desc: 'Rename this session', hint: '<name>', name: '/rename' },
   { desc: 'Exit makima tui', name: '/exit' }
@@ -923,7 +918,7 @@ export class GatewayClient extends EventEmitter {
     // Resolves once the backend's system/init has set the session id, so
     // session.create (awaited by the app before it enables the composer) can
     // return a real session_id even if it races the init message.
-    this.readyPromise = new Promise<void>(resolve => {
+    this.readyPromise = new Promise<void>((resolve) => {
       this.readyResolve = resolve
     })
   }
@@ -955,10 +950,12 @@ export class GatewayClient extends EventEmitter {
     }
 
     const rl = createInterface({ input: this.proc.stdout! })
-    rl.on('line', raw => {
+    rl.on('line', (raw) => {
       const line = raw.trim()
 
-      if (!line) {return}
+      if (!line) {
+        return
+      }
 
       try {
         this.dispatch(JSON.parse(line))
@@ -968,25 +965,29 @@ export class GatewayClient extends EventEmitter {
     })
 
     const erl = createInterface({ input: this.proc.stderr! })
-    erl.on('line', line => {
+    erl.on('line', (line) => {
       this.pushLog(line)
       this.publish({ payload: { line }, type: 'gateway.stderr' })
     })
 
-    this.proc.on('error', err => {
+    this.proc.on('error', (err) => {
       this.pushLog(`[proc error] ${String(err)}`)
       this.handleExit(null, String(err))
     })
-    this.proc.on('exit', code => this.handleExit(code))
+    this.proc.on('exit', (code) => this.handleExit(code))
   }
 
   drain(): void {
     this.subscribed = true
 
-    for (const ev of this.buffered) {this.emit('event', ev)}
+    for (const ev of this.buffered) {
+      this.emit('event', ev)
+    }
     this.buffered = []
 
-    if (this.pendingExit !== undefined) {this.emit('exit', this.pendingExit)}
+    if (this.pendingExit !== undefined) {
+      this.emit('exit', this.pendingExit)
+    }
   }
 
   getLogTail(limit = 20): string {
@@ -1024,25 +1025,31 @@ export class GatewayClient extends EventEmitter {
         return this.readyPromise
           .then(() => this.fetchWorkflowCommands())
           .catch(() => [] as WorkflowCommand[])
-          .then(wf => {
-            const pairs = SLASHES.map(s => [s.name, s.desc] as [string, string])
+          .then((wf) => {
+            const pairs = SLASHES.map((s) => [s.name, s.desc] as [string, string])
             const canon: Record<string, string> = {}
             const hints: Record<string, string> = {}
 
             for (const s of SLASHES) {
               canon[s.name] = s.name
 
-              if (s.hint) {hints[s.name] = s.hint}
+              if (s.hint) {
+                hints[s.name] = s.hint
+              }
             }
 
             for (const w of wf) {
               const name = `/${w.name}`
 
-              if (canon[name]) {continue}
+              if (canon[name]) {
+                continue
+              }
               canon[name] = name
               pairs.push([name, w.description ?? 'Run a dynamic workflow'])
 
-              if (w.argument_hint) {hints[name] = w.argument_hint}
+              if (w.argument_hint) {
+                hints[name] = w.argument_hint
+              }
             }
 
             // skill_count is served lazily from the skills cache (warmed by any
@@ -1056,12 +1063,12 @@ export class GatewayClient extends EventEmitter {
 
         return this.fetchWorkflowCommands()
           .catch(() => [] as WorkflowCommand[])
-          .then(wf => {
+          .then((wf) => {
             const entries = [
               ...SLASHES,
               ...wf
-                .filter(w => !SLASHES.some(s => s.name === `/${w.name}`))
-                .map(w => ({
+                .filter((w) => !SLASHES.some((s) => s.name === `/${w.name}`))
+                .map((w) => ({
                   desc: w.description ?? 'Run a dynamic workflow',
                   hint: w.argument_hint,
                   name: `/${w.name}`
@@ -1069,8 +1076,8 @@ export class GatewayClient extends EventEmitter {
             ]
 
             const items = entries
-              .filter(s => s.name.toLowerCase().startsWith(text))
-              .map(s => ({ display: s.name, hint: s.hint, meta: s.desc, text: s.name }))
+              .filter((s) => s.name.toLowerCase().startsWith(text))
+              .map((s) => ({ display: s.name, hint: s.hint, meta: s.desc, text: s.name }))
 
             return { items, replace_from: 1 } as T
           })
@@ -1083,12 +1090,12 @@ export class GatewayClient extends EventEmitter {
       case 'config.get': {
         // Settings slashes read config; only 'full' maps to clawcodex settings.
         if (String(p.key ?? '') === 'full') {
-          return this.controlQuery('get_settings', {}).then(s => (s ?? {}) as T)
+          return this.controlQuery('get_settings', {}).then((s) => (s ?? {}) as T)
         }
 
         if (String(p.key ?? '') === 'recap') {
           // /recap status — served off the get_settings rider.
-          return this.controlQuery('get_settings', {}).then(s => {
+          return this.controlQuery('get_settings', {}).then((s) => {
             const enabled = (s as { recap?: boolean } | null)?.recap !== false
 
             return { value: enabled ? 'on' : 'off' } as T
@@ -1110,23 +1117,24 @@ export class GatewayClient extends EventEmitter {
           // selectability); reflect its FULL verdict — `/permissions` needs the
           // applied mode and the rejection text, not just a boolean, so a
           // refused set can neither flip the badge nor report success.
-          return this.controlQuery('set_permission_mode', { mode: value, persist: Boolean(p.persist) })
-            .then(r => {
-              const res = (r ?? {}) as { error?: string; mode?: string; ok?: boolean; persisted?: boolean }
+          return this.controlQuery('set_permission_mode', { mode: value, persist: Boolean(p.persist) }).then((r) => {
+            const res = (r ?? {}) as { error?: string; mode?: string; ok?: boolean; persisted?: boolean }
 
-              return {
-                error: res.error,
-                mode: res.mode,
-                ok: res.ok !== false,
-                persisted: res.persisted
-              } as T
-            })
+            return {
+              error: res.error,
+              mode: res.mode,
+              ok: res.ok !== false,
+              persisted: res.persisted
+            } as T
+          })
         }
 
-        if (key === 'model') {return this.setModel(String(value ?? '')) as Promise<T>}
+        if (key === 'model') {
+          return this.setModel(String(value ?? '')) as Promise<T>
+        }
 
         if (key === 'logoColor') {
-          return this.controlQuery('set_logo_color', { name: value }).then(r => {
+          return this.controlQuery('set_logo_color', { name: value }).then((r) => {
             const ok = (r as any)?.ok === true
 
             return (ok ? { ok: true, value: String(value ?? '') } : { ok: false }) as T
@@ -1136,16 +1144,20 @@ export class GatewayClient extends EventEmitter {
         if (key === 'recap') {
           // Round-trip so /recap reports the EFFECTIVE post-write state (a
           // project/local settings override can beat the global write).
-          return this.controlQuery('set_recap', { value }).then(r => {
+          return this.controlQuery('set_recap', { value }).then((r) => {
             const res = (r ?? {}) as { error?: string; note?: string; ok?: boolean; value?: string }
 
             return { error: res.error, note: res.note, ok: res.ok !== false, value: res.value } as T
           })
         }
 
-        if (key === 'effort' || key === 'reasoning') {this.sendControl('set_effort', { effort: value })}
-        else if (key === 'provider') {this.sendControl('set_provider', { provider: value })}
-        else if (key === 'thinking') {this.sendControl('set_thinking', { action: value })}
+        if (key === 'effort' || key === 'reasoning') {
+          this.sendControl('set_effort', { effort: value })
+        } else if (key === 'provider') {
+          this.sendControl('set_provider', { provider: value })
+        } else if (key === 'thinking') {
+          this.sendControl('set_thinking', { action: value })
+        }
 
         return Promise.resolve({ ok: true } as T)
       }
@@ -1155,7 +1167,7 @@ export class GatewayClient extends EventEmitter {
         // mode (get_next_permission_mode; bypass only when available) from
         // the live mode, so the client can't step into bypassPermissions
         // unconditionally or desync a cursor after /mode.
-        return this.controlQuery('cycle_permission_mode', {}).then(r => (r ?? {}) as T)
+        return this.controlQuery('cycle_permission_mode', {}).then((r) => (r ?? {}) as T)
 
       case 'session.activate':
 
@@ -1170,7 +1182,7 @@ export class GatewayClient extends EventEmitter {
         // /clear's server half: reset the backend conversation (and its turn
         // odometer) so a "cleared" transcript isn't silently re-fed the old
         // context next prompt. The reply's stats rider refreshes the line.
-        return this.controlQuery('clear', {}).then(r => {
+        return this.controlQuery('clear', {}).then((r) => {
           this.publishSessionStats(r)
 
           return { ok: (r as any)?.ok !== false } as T
@@ -1206,9 +1218,7 @@ export class GatewayClient extends EventEmitter {
           // `?? 'clawcodex'` default when the errored reply carries no
           // provider) and reproduce the original one-row symptom. Surface it.
           if (r != null) {
-            throw new Error(
-              typeof r.error === 'string' && r.error ? r.error : 'could not list providers'
-            )
+            throw new Error(typeof r.error === 'string' && r.error ? r.error : 'could not list providers')
           }
 
           // Only a null reply reaches here: a backend too old to know the
@@ -1261,16 +1271,22 @@ export class GatewayClient extends EventEmitter {
           api_key: String(p.api_key ?? ''),
           slug: String(p.slug ?? '')
         }).then((r: any) => {
-          if (r == null) {throw new Error('save key: no response from backend')}
+          if (r == null) {
+            throw new Error('save key: no response from backend')
+          }
 
-          if (r.ok === false) {throw new Error(typeof r.error === 'string' && r.error ? r.error : 'failed to save key')}
+          if (r.ok === false) {
+            throw new Error(typeof r.error === 'string' && r.error ? r.error : 'failed to save key')
+          }
 
           return { provider: r.provider } as T
         })
 
       case 'model.disconnect':
         return this.controlQuery('disconnect_provider', { slug: String(p.slug ?? '') }).then((r: any) => {
-          if (r == null) {throw new Error('disconnect: no response from backend')}
+          if (r == null) {
+            throw new Error('disconnect: no response from backend')
+          }
 
           // A refusal (the active provider) and a partial disconnect (a key
           // still exported in the shell) both carry `error`; surface either
@@ -1304,46 +1320,42 @@ export class GatewayClient extends EventEmitter {
 
       // ── --worktree exit flow (long deadline: removal can take minutes) ───
       case 'worktree.exit':
-        return this.controlQuery(
-          'worktree_exit',
-          { action: String(p.action ?? '') },
-          WORKTREE_RPC_TIMEOUT_MS
-        ).then(r => (r ?? { error: 'no response from backend', ok: false }) as T)
+        return this.controlQuery('worktree_exit', { action: String(p.action ?? '') }, WORKTREE_RPC_TIMEOUT_MS).then(
+          (r) => (r ?? { error: 'no response from backend', ok: false }) as T
+        )
 
       case 'worktree.status':
         return this.controlQuery('worktree_status', {}, WORKTREE_RPC_TIMEOUT_MS).then(
-          r => (r ?? { error: 'no response from backend', ok: false }) as T
+          (r) => (r ?? { error: 'no response from backend', ok: false }) as T
         )
       // ── skills hub + /skills subcommands ─────────────────────────────────
       case 'skills.manage': {
         const action = String(p.action ?? 'list')
-        const query = String(p.query ?? '').trim().toLowerCase()
+        const query = String(p.query ?? '')
+          .trim()
+          .toLowerCase()
 
         // Community install/browse are Nous-portal features with no clawcodex
         // backend; reject so the hub/command surfaces a real error, not a fake
         // success.
         if (action === 'install' || action === 'browse') {
-          return Promise.reject(
-            new Error(`/skills ${action}: not supported here — the harness owns skills (ctx.skills)`)
-          )
+          return Promise.reject(new Error(`/skills ${action}: not supported here — the harness owns skills (ctx.skills)`))
         }
 
-        return this.fetchSkills().then(skills => {
+        return this.fetchSkills().then((skills) => {
           if (action === 'inspect') {
-            const found = skills.find(s => s.name.toLowerCase() === query)
+            const found = skills.find((s) => s.name.toLowerCase() === query)
 
             return (
-              found
-                ? { info: { category: found.category, description: found.description, name: found.name, path: found.path } }
-                : {}
+              found ? { info: { category: found.category, description: found.description, name: found.name, path: found.path } } : {}
             ) as T
           }
 
           if (action === 'search') {
             const results = skills
-              .filter(s => s.name.toLowerCase().includes(query) || (s.description ?? '').toLowerCase().includes(query))
+              .filter((s) => s.name.toLowerCase().includes(query) || (s.description ?? '').toLowerCase().includes(query))
               .slice(0, 30)
-              .map(s => ({ description: s.description, name: s.name }))
+              .map((s) => ({ description: s.description, name: s.name }))
 
             return { results } as T
           }
@@ -1368,9 +1380,7 @@ export class GatewayClient extends EventEmitter {
         // client TTL cache and fetches fresh.
         this.skillsFetchedAt = 0
 
-        return this.fetchSkills().then(
-          skills => ({ output: `Re-scanned skills: ${this.skillsTotal || skills.length} available.` }) as T
-        )
+        return this.fetchSkills().then((skills) => ({ output: `Re-scanned skills: ${this.skillsTotal || skills.length} available.` }) as T)
 
       // ── local Skills & MCP configuration manager ─────────────────────────
       // These RPCs intentionally do not make a direct MCP connection. They
@@ -1394,7 +1404,7 @@ export class GatewayClient extends EventEmitter {
       case 'skills.manager.scan_import':
         return Promise.resolve({ items: this.skillsMcp.scanImportDirectory(String(p.directory ?? '')) } as T)
       case 'skills.manager.import': {
-        const items = Array.isArray(p.items) ? p.items as ImportSkillInput[] : []
+        const items = Array.isArray(p.items) ? (p.items as ImportSkillInput[]) : []
         if (!items.length) return Promise.reject(new Error('no skills selected for import'))
         this.skillsFetchedAt = 0
         return Promise.resolve({ results: this.skillsMcp.importSkills(items) } as T)
@@ -1412,12 +1422,12 @@ export class GatewayClient extends EventEmitter {
       // ── /memory picker (backend enumerates; the TUI owns the editor) ─────
       case 'memory.targets':
         return this.controlQuery('memory_targets', {}).then(
-          r => (r ?? { error: 'no response from backend', ok: false, targets: [] }) as T
+          (r) => (r ?? { error: 'no response from backend', ok: false, targets: [] }) as T
         )
 
       case 'memory.edited':
         // Post-$EDITOR cache bust so the next turn re-reads memory files.
-        return this.controlQuery('memory_edited', {}).then(r => (r ?? { ok: false }) as T)
+        return this.controlQuery('memory_edited', {}).then((r) => (r ?? { ok: false }) as T)
 
       // ── slash commands → clawcodex control_requests ──────────────────────
       case 'command.dispatch':
@@ -1575,14 +1585,12 @@ export class GatewayClient extends EventEmitter {
           'attach_image',
           { path: String(p.path ?? ''), placeholder: p.placeholder === true },
           IMAGE_RPC_TIMEOUT_MS
-        ).then(r => (r ?? {}) as T)
+        ).then((r) => (r ?? {}) as T)
 
       case 'image.clipboard':
-        return this.controlQuery(
-          'clipboard_image',
-          { placeholder: p.placeholder === true },
-          IMAGE_RPC_TIMEOUT_MS
-        ).then(r => (r ?? {}) as T)
+        return this.controlQuery('clipboard_image', { placeholder: p.placeholder === true }, IMAGE_RPC_TIMEOUT_MS).then(
+          (r) => (r ?? {}) as T
+        )
 
       // The macOS Cmd+V route, and the one users actually reach first. Apple
       // Terminal and iTerm handle Cmd+V themselves and deliver the clipboard as
@@ -1592,11 +1600,7 @@ export class GatewayClient extends EventEmitter {
       // calls onClipboardPaste → this RPC. Unwired, it resolved `{}` and Cmd+V
       // did nothing at all, silently (the call passes quiet=true).
       case 'clipboard.paste':
-        return this.controlQuery(
-          'clipboard_image',
-          { placeholder: p.placeholder === true },
-          IMAGE_RPC_TIMEOUT_MS
-        ).then(r => {
+        return this.controlQuery('clipboard_image', { placeholder: p.placeholder === true }, IMAGE_RPC_TIMEOUT_MS).then((r) => {
           const res = (r ?? {}) as {
             attached?: boolean
             error?: string
@@ -1619,7 +1623,7 @@ export class GatewayClient extends EventEmitter {
           'detect_file_drop',
           { text: String(p.text ?? ''), placeholder: p.placeholder === true },
           IMAGE_RPC_TIMEOUT_MS
-        ).then(r => (r ?? {}) as T)
+        ).then((r) => (r ?? {}) as T)
 
       default:
         // Unhandled RPC (Phase 2): resolve empty so the app degrades gracefully.
@@ -1632,7 +1636,9 @@ export class GatewayClient extends EventEmitter {
   private fetchWorkflowCommands(): Promise<WorkflowCommand[]> {
     const now = Date.now()
 
-    if (now - this.wfFetchedAt < WORKFLOW_CMDS_TTL_MS) {return Promise.resolve(this.wfCommands)}
+    if (now - this.wfFetchedAt < WORKFLOW_CMDS_TTL_MS) {
+      return Promise.resolve(this.wfCommands)
+    }
     this.wfFetchedAt = now
 
     return this.controlQuery('list_workflow_commands', {}).then((r: any) => {
@@ -1649,7 +1655,9 @@ export class GatewayClient extends EventEmitter {
   private fetchSkills(): Promise<BackendSkill[]> {
     const now = Date.now()
 
-    if (now - this.skillsFetchedAt < SKILLS_TTL_MS) {return Promise.resolve(this.skills)}
+    if (now - this.skillsFetchedAt < SKILLS_TTL_MS) {
+      return Promise.resolve(this.skills)
+    }
     this.skillsFetchedAt = now
 
     return this.controlQuery('list_skills', {}).then((r: any) => {
@@ -1723,9 +1731,7 @@ export class GatewayClient extends EventEmitter {
             }
 
             if (sr.ok === false) {
-              throw new Error(
-                typeof sr.error === 'string' && sr.error ? sr.error : `could not switch to provider '${provider}'`
-              )
+              throw new Error(typeof sr.error === 'string' && sr.error ? sr.error : `could not switch to provider '${provider}'`)
             }
 
             // The switch has already COMMITTED backend-side: set_provider
@@ -1735,42 +1741,42 @@ export class GatewayClient extends EventEmitter {
             // happened" while the session quietly sits on a different
             // provider AND a different model. Roll back to where we came
             // from (the mismatch reply names it) and say what actually stuck.
-            return this.applyModel(model, provider, false)
-              // The retry lands on the NEW provider, so its reply names it.
-              // Fall back to the one we just switched to for older backends
-              // that echo no provider: set_provider returning ok is proof of
-              // where the session now is, and this is the path that MOVES it.
-              .then(res => ({ ...res, provider: res.provider ?? provider }))
-              .catch((e: unknown) => {
-                const why = e instanceof Error ? e.message : String(e)
-                const previous = typeof r.provider === 'string' ? r.provider : ''
+            return (
+              this.applyModel(model, provider, false)
+                // The retry lands on the NEW provider, so its reply names it.
+                // Fall back to the one we just switched to for older backends
+                // that echo no provider: set_provider returning ok is proof of
+                // where the session now is, and this is the path that MOVES it.
+                .then((res) => ({ ...res, provider: res.provider ?? provider }))
+                .catch((e: unknown) => {
+                  const why = e instanceof Error ? e.message : String(e)
+                  const previous = typeof r.provider === 'string' ? r.provider : ''
 
-                // A silent backend is NOT a known failure — it may have applied
-                // the model. Rolling back would then throw away a switch that
-                // worked, so report the uncertainty instead of acting on it.
-                if ((e as { indeterminate?: boolean })?.indeterminate) {
-                  throw new Error(
-                    `switched to '${provider}' but the model selection got no response — ` +
-                      `the session may be on '${provider}'`
-                  )
-                }
+                  // A silent backend is NOT a known failure — it may have applied
+                  // the model. Rolling back would then throw away a switch that
+                  // worked, so report the uncertainty instead of acting on it.
+                  if ((e as { indeterminate?: boolean })?.indeterminate) {
+                    throw new Error(
+                      `switched to '${provider}' but the model selection got no response — ` + `the session may be on '${provider}'`
+                    )
+                  }
 
-                if (!previous) {
-                  throw new Error(`switched to '${provider}' but could not select '${model}': ${why}`)
-                }
+                  if (!previous) {
+                    throw new Error(`switched to '${provider}' but could not select '${model}': ${why}`)
+                  }
 
-                return this.controlQuery('set_provider', { provider: previous }).then((back: any) => {
-                  throw new Error(
-                    back != null && back.ok !== false
-                      ? // set_provider resets the model to that provider's
-                        // configured default and persists it, so the provider is
-                        // restored but the previously-selected model is not.
-                        `could not select '${model}' on '${provider}': ${why} — rolled back to ` +
-                          `'${previous}' (its default model)`
-                      : `could not select '${model}': ${why} — session is now on '${provider}'`
-                  )
+                  return this.controlQuery('set_provider', { provider: previous }).then((back: any) => {
+                    throw new Error(
+                      back != null && back.ok !== false
+                        ? // set_provider resets the model to that provider's
+                          // configured default and persists it, so the provider is
+                          // restored but the previously-selected model is not.
+                          `could not select '${model}' on '${provider}': ${why} — rolled back to ` + `'${previous}' (its default model)`
+                        : `could not select '${model}': ${why} — session is now on '${provider}'`
+                    )
+                  })
                 })
-              })
+            )
           })
         }
 
@@ -1790,14 +1796,10 @@ export class GatewayClient extends EventEmitter {
   }
 
   // ── event plumbing ───────────────────────────────────────────────────────
-  private controlQuery(
-    subtype: string,
-    params: Record<string, unknown>,
-    timeoutMs: number = RPC_TIMEOUT_MS
-  ): Promise<unknown> {
+  private controlQuery(subtype: string, params: Record<string, unknown>, timeoutMs: number = RPC_TIMEOUT_MS): Promise<unknown> {
     const requestId = `q${++this.reqId}`
 
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       this.pending.set(requestId, { reject: () => resolve(null), resolve })
       this.send({ request: { subtype, ...params }, request_id: requestId, type: 'control_request' })
       setTimeout(() => {
@@ -1849,7 +1851,9 @@ export class GatewayClient extends EventEmitter {
       case 'advisor': {
         const r = (await this.controlQuery('advisor', { arg: arg ?? '' })) as any
 
-        if (!r || Object.keys(r).length === 0) {return out('advisor: backend not ready')}
+        if (!r || Object.keys(r).length === 0) {
+          return out('advisor: backend not ready')
+        }
 
         return out(String(r.text ?? r.error ?? 'advisor: no response'))
       }
@@ -1860,7 +1864,9 @@ export class GatewayClient extends EventEmitter {
         // prints the reply, exactly like /advisor above.
         const r = (await this.controlQuery('fusion', { arg: arg ?? '' })) as any
 
-        if (!r || Object.keys(r).length === 0) {return out('fusion: backend not ready')}
+        if (!r || Object.keys(r).length === 0) {
+          return out('fusion: backend not ready')
+        }
 
         return out(String(r.text ?? r.error ?? 'fusion: no response'))
       }
@@ -1870,7 +1876,9 @@ export class GatewayClient extends EventEmitter {
         // relays the arg and prints the reply, exactly like /fusion above.
         const r = (await this.controlQuery('vision', { arg: arg ?? '' })) as any
 
-        if (!r || Object.keys(r).length === 0) {return out('vision: backend not ready')}
+        if (!r || Object.keys(r).length === 0) {
+          return out('vision: backend not ready')
+        }
 
         return out(String(r.text ?? r.error ?? 'vision: no response'))
       }
@@ -1880,7 +1888,9 @@ export class GatewayClient extends EventEmitter {
         // here (ops.ts opens the overlay directly).
         const r = (await this.controlQuery('memory_manage', { arg: arg ?? '' })) as any
 
-        if (!r || Object.keys(r).length === 0) {return out('memory: backend not ready')}
+        if (!r || Object.keys(r).length === 0) {
+          return out('memory: backend not ready')
+        }
 
         return out(String(r.text ?? r.error ?? 'memory: no response'))
       }
@@ -1940,9 +1950,13 @@ export class GatewayClient extends EventEmitter {
       case 'eco': {
         const r = (await this.controlQuery('eco', { arg: arg ?? '' })) as any
 
-        if (!r || Object.keys(r).length === 0) {return out('eco: backend not ready')}
+        if (!r || Object.keys(r).length === 0) {
+          return out('eco: backend not ready')
+        }
 
-        if (r.ok === false) {return out(`eco: ${r.error ?? 'failed'}`)}
+        if (r.ok === false) {
+          return out(`eco: ${r.error ?? 'failed'}`)
+        }
 
         return out(String(r.text ?? `Eco mode ${r.enabled ? 'on' : 'off'}.`))
       }
@@ -1950,7 +1964,9 @@ export class GatewayClient extends EventEmitter {
       case 'effort': {
         const r = (await this.controlQuery('set_effort', { effort: arg ?? null })) as any
 
-        if (r && r.ok === false) {return out(`effort: ${r.error ?? 'invalid value'}`)}
+        if (r && r.ok === false) {
+          return out(`effort: ${r.error ?? 'invalid value'}`)
+        }
 
         if (r?.effort === 'ultracode') {
           return out('Ultracode on: workflow auto-orchestration for this session (reset with /effort high).')
@@ -2062,10 +2078,7 @@ export class GatewayClient extends EventEmitter {
       case 'knowledge': {
         const r = (await this.controlQuery('knowledge', { action: arg || 'status' })) as any
 
-        const bits = [
-          r?.enabled != null ? `enabled=${r.enabled}` : '',
-          r?.semantic != null ? `semantic=${r.semantic}` : ''
-        ].filter(Boolean)
+        const bits = [r?.enabled != null ? `enabled=${r.enabled}` : '', r?.semantic != null ? `semantic=${r.semantic}` : ''].filter(Boolean)
 
         return out(`Knowledge ${bits.join(' ') || safeJson(r ?? {})}`)
       }
@@ -2113,7 +2126,9 @@ export class GatewayClient extends EventEmitter {
         // other subcommand (status/clear/pause/resume) is plain exec text.
         const r = (await this.controlQuery('goal', { arg: arg ?? '' })) as any
 
-        if (!r || Object.keys(r).length === 0) {return out('goal: backend not ready')}
+        if (!r || Object.keys(r).length === 0) {
+          return out('goal: backend not ready')
+        }
 
         this.publishGoalState(r)
 
@@ -2127,7 +2142,9 @@ export class GatewayClient extends EventEmitter {
       case 'subgoal': {
         const r = (await this.controlQuery('subgoal', { arg: arg ?? '' })) as any
 
-        if (!r || Object.keys(r).length === 0) {return out('subgoal: backend not ready')}
+        if (!r || Object.keys(r).length === 0) {
+          return out('subgoal: backend not ready')
+        }
 
         this.publishGoalState(r)
 
@@ -2157,7 +2174,10 @@ export class GatewayClient extends EventEmitter {
 
         return out(
           ss.length
-            ? `Sessions:\n${ss.slice(0, 10).map((s: any) => `${s.session_id} — ${s.preview ?? ''}`).join('\n')}\nUse /resume <id>`
+            ? `Sessions:\n${ss
+                .slice(0, 10)
+                .map((s: any) => `${s.session_id} — ${s.preview ?? ''}`)
+                .join('\n')}\nUse /resume <id>`
             : 'No saved sessions.'
         )
       }
@@ -2169,7 +2189,9 @@ export class GatewayClient extends EventEmitter {
       case 'workflows': {
         const r = (await this.controlQuery('workflows', {})) as any
 
-        if (r && r.ok === false) {return out(`workflows: ${r.error ?? 'unavailable'}`)}
+        if (r && r.ok === false) {
+          return out(`workflows: ${r.error ?? 'unavailable'}`)
+        }
 
         return out(String(r?.text ?? 'No workflow runs.'))
       }
@@ -2213,9 +2235,9 @@ export class GatewayClient extends EventEmitter {
       const absDir = pathResolve(cwd, dirPart || '.')
 
       return readdirSync(absDir, { withFileTypes: true })
-        .filter(e => !e.name.startsWith('.') && e.name.toLowerCase().startsWith(base))
+        .filter((e) => !e.name.startsWith('.') && e.name.toLowerCase().startsWith(base))
         .slice(0, 50)
-        .map(e => {
+        .map((e) => {
           const isDir = e.isDirectory()
           const rel = dirPart + e.name + (isDir ? '/' : '')
 
@@ -2230,16 +2252,24 @@ export class GatewayClient extends EventEmitter {
   // the value itself — self-describing type/filePath/structuredPatch — so it
   // works even when the tool_use bookkeeping is empty (mid-turn attach).
   private structuredDiff(value: any): StructuredDiffPayload | undefined {
-    if (!value || typeof value !== 'object') {return undefined}
+    if (!value || typeof value !== 'object') {
+      return undefined
+    }
     const kind = value.type
 
-    if (kind !== 'create' && kind !== 'update') {return undefined}
+    if (kind !== 'create' && kind !== 'update') {
+      return undefined
+    }
 
-    if (typeof value.filePath !== 'string' || !Array.isArray(value.structuredPatch)) {return undefined}
+    if (typeof value.filePath !== 'string' || !Array.isArray(value.structuredPatch)) {
+      return undefined
+    }
     const hunks: PatchHunk[] = []
 
     for (const h of value.structuredPatch) {
-      if (!h || typeof h !== 'object' || !Array.isArray(h.lines)) {return undefined}
+      if (!h || typeof h !== 'object' || !Array.isArray(h.lines)) {
+        return undefined
+      }
       hunks.push({
         lines: h.lines.map(String),
         newLines: Number(h.newLines ?? 0),
@@ -2262,7 +2292,9 @@ export class GatewayClient extends EventEmitter {
   // structured output to searchCount/durationSeconds). Shape-detected like
   // structuredDiff so it renders without tool_use bookkeeping.
   private webSearchDisplay(value: any): undefined | WebSearchDisplay {
-    if (!value || typeof value !== 'object' || value.type !== 'web_search') {return undefined}
+    if (!value || typeof value !== 'object' || value.type !== 'web_search') {
+      return undefined
+    }
     const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined)
 
     return { durationSeconds: num(value.durationSeconds), searchCount: num(value.searchCount) }
@@ -2271,7 +2303,9 @@ export class GatewayClient extends EventEmitter {
   // AskUserQuestion answers on the same envelope. Shape-detected like the
   // others so a mid-turn attach renders without tool_use bookkeeping.
   private askUserDisplay(value: any): AskUserDisplay | undefined {
-    if (!value || typeof value !== 'object' || value.type !== 'ask_user_question') {return undefined}
+    if (!value || typeof value !== 'object' || value.type !== 'ask_user_question') {
+      return undefined
+    }
 
     if (value.declined) {
       return { declined: true }
@@ -2290,7 +2324,9 @@ export class GatewayClient extends EventEmitter {
   }
 
   private imageDisplay(value: any): ImageDisplay | undefined {
-    if (!value || typeof value !== 'object' || value.type !== 'image') {return undefined}
+    if (!value || typeof value !== 'object' || value.type !== 'image') {
+      return undefined
+    }
     const size = value.originalSize
 
     return {
@@ -2309,7 +2345,7 @@ export class GatewayClient extends EventEmitter {
       if (name === 'Write') {
         const body = String(input?.content ?? '')
           .split('\n')
-          .map(l => '+' + l)
+          .map((l) => '+' + l)
           .join('\n')
 
         return body ? `+++ ${file}\n${body}` : undefined
@@ -2318,12 +2354,12 @@ export class GatewayClient extends EventEmitter {
       if (name === 'Edit') {
         const oldB = String(input?.old_string ?? '')
           .split('\n')
-          .map(l => '-' + l)
+          .map((l) => '-' + l)
           .join('\n')
 
         const newB = String(input?.new_string ?? '')
           .split('\n')
-          .map(l => '+' + l)
+          .map((l) => '+' + l)
           .join('\n')
 
         return `--- ${file}\n+++ ${file}\n${oldB}\n${newB}`
@@ -2398,9 +2434,7 @@ export class GatewayClient extends EventEmitter {
           // rendered text stand on its own.
           const distinct = typeof msg.error === 'string' && msg.error ? msg.error : undefined
           const stopped =
-            typeof msg.subtype === 'string' && msg.subtype.startsWith('error_')
-              ? `run stopped early (${msg.subtype})`
-              : undefined
+            typeof msg.subtype === 'string' && msg.subtype.startsWith('error_') ? `run stopped early (${msg.subtype})` : undefined
           this.publish({
             payload: { message: distinct ?? stopped ?? String(msg.result ?? 'error') },
             type: 'error'
@@ -2529,8 +2563,7 @@ export class GatewayClient extends EventEmitter {
                   // error drives the ✗ mark (red bullet + red result rows);
                   // without it a real failure renders as a green success.
                   error: isError ? resultText : undefined,
-                  inline_diff:
-                    isError || structured || !stored ? undefined : this.editDiff(stored.name, stored.input),
+                  inline_diff: isError || structured || !stored ? undefined : this.editDiff(stored.name, stored.input),
                   name: stored?.name,
                   result_raw: expandable ? rawToolResult(resultText, fullText) : undefined,
                   result_text: resultText,
@@ -2648,9 +2681,7 @@ export class GatewayClient extends EventEmitter {
           const activeForm = String(args.activeForm ?? current.activeForm ?? '').trim()
 
           const status =
-            args.status === 'pending' || args.status === 'in_progress' || args.status === 'completed'
-              ? args.status
-              : current.status
+            args.status === 'pending' || args.status === 'in_progress' || args.status === 'completed' ? args.status : current.status
 
           this.taskTodos.set(id, {
             ...(activeForm && { activeForm }),
@@ -2685,7 +2716,9 @@ export class GatewayClient extends EventEmitter {
         for (const line of result.split('\n')) {
           const match = line.match(taskListLine)
 
-          if (!match) {continue}
+          if (!match) {
+            continue
+          }
           const [, id, status, content] = match
           const previous = this.taskTodos.get(id!)
           listed.set(id!, {
@@ -2793,11 +2826,16 @@ export class GatewayClient extends EventEmitter {
 
     const err = new Error(reason || `agent-server exited${code === null ? '' : ` (${code})`}`)
 
-    for (const p of this.pending.values()) {p.reject(err)}
+    for (const p of this.pending.values()) {
+      p.reject(err)
+    }
     this.pending.clear()
 
-    if (this.subscribed) {this.emit('exit', code)}
-    else {this.pendingExit = code}
+    if (this.subscribed) {
+      this.emit('exit', code)
+    } else {
+      this.pendingExit = code
+    }
   }
 
   private publish(ev: GatewayEvent): void {
@@ -2806,8 +2844,11 @@ export class GatewayClient extends EventEmitter {
       this.readyTimer = null
     }
 
-    if (this.subscribed) {this.emit('event', ev)}
-    else {this.buffered.push(ev)}
+    if (this.subscribed) {
+      this.emit('event', ev)
+    } else {
+      this.buffered.push(ev)
+    }
   }
 
   /** /goal indicator refresh from any carrier with a `goal` snapshot field
@@ -2851,7 +2892,9 @@ export class GatewayClient extends EventEmitter {
   private pushLog(line: string): void {
     this.logs.push(line)
 
-    if (this.logs.length > MAX_LOG_LINES) {this.logs.shift()}
+    if (this.logs.length > MAX_LOG_LINES) {
+      this.logs.shift()
+    }
   }
 
   private resolvePending(msg: any): void {
@@ -2859,11 +2902,16 @@ export class GatewayClient extends EventEmitter {
     const id = r?.request_id
     const p = id ? this.pending.get(id) : undefined
 
-    if (!p) {return}
+    if (!p) {
+      return
+    }
     this.pending.delete(id)
 
-    if (r.subtype === 'error') {p.reject(new Error(String(r.error ?? 'error')))}
-    else {p.resolve(r.response)}
+    if (r.subtype === 'error') {
+      p.reject(new Error(String(r.error ?? 'error')))
+    } else {
+      p.resolve(r.response)
+    }
   }
 
   private send(obj: unknown): void {
@@ -2879,9 +2927,7 @@ export class GatewayClient extends EventEmitter {
   }
 
   private toSessionInfo(init: any): SessionInfo {
-    const toolNames: string[] = Array.isArray(init.tools)
-      ? init.tools.map((t: any) => t?.name).filter(Boolean)
-      : []
+    const toolNames: string[] = Array.isArray(init.tools) ? init.tools.map((t: any) => t?.name).filter(Boolean) : []
 
     // A fused session reports `model` as the BASE model id (what serves the
     // turn, and what the backend's cost/context-window lookups key off) and

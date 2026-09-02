@@ -37,18 +37,11 @@ const statusFromBusy = () => (getUiState().busy ? 'running…' : 'ready')
 
 const applySkin = (s: GatewaySkin) =>
   patchUiState({
-    theme: fromSkin(
-      s.colors ?? {},
-      s.branding ?? {},
-      s.banner_logo ?? '',
-      s.banner_hero ?? '',
-      s.tool_prefix ?? '',
-      s.help_header ?? ''
-    )
+    theme: fromSkin(s.colors ?? {}, s.branding ?? {}, s.banner_logo ?? '', s.banner_hero ?? '', s.tool_prefix ?? '', s.help_header ?? '')
   })
 
 const dropBgTask = (taskId: string) =>
-  patchUiState(state => {
+  patchUiState((state) => {
     const next = new Set(state.bgTasks)
     next.delete(taskId)
 
@@ -64,15 +57,7 @@ const pushThinking = pushUnique(6)
 const pushNote = pushUnique(6)
 const pushTool = pushUnique(8)
 
-const KNOWN_SUBAGENT_STATUSES = new Set<SubagentStatus>([
-  'completed',
-  'error',
-  'failed',
-  'interrupted',
-  'queued',
-  'running',
-  'timeout'
-])
+const KNOWN_SUBAGENT_STATUSES = new Set<SubagentStatus>(['completed', 'error', 'failed', 'interrupted', 'queued', 'running', 'timeout'])
 
 const normalizeSubagentStatus = (status: unknown, fallback: SubagentStatus): SubagentStatus => {
   if (typeof status !== 'string') {
@@ -95,11 +80,7 @@ const normalizeSubagentStatus = (status: unknown, fallback: SubagentStatus): Sub
 // so that is the fallback; without it the line read `tokens: 0 in / 0 out`
 // for the whole session. `usage` is only ever a fallback because on a
 // snapshot-carrying backend it describes the last call, not the session.
-const foldSessionStats = (
-  snap: CostSnapshot | undefined,
-  usage: Usage | undefined,
-  turns: number | undefined
-): void => {
+const foldSessionStats = (snap: CostSnapshot | undefined, usage: Usage | undefined, turns: number | undefined): void => {
   const hasSnap = !!snap && Object.keys(snap).length > 0
   const hasUsage = !!usage && ((usage.input ?? 0) > 0 || (usage.output ?? 0) > 0)
 
@@ -107,7 +88,7 @@ const foldSessionStats = (
     return
   }
 
-  patchUiState(state => {
+  patchUiState((state) => {
     const turnsNow = turns ?? state.sessionStats.turns
 
     if (hasSnap) {
@@ -185,7 +166,7 @@ export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev:
       }, 0)
 
       const top = topLevelSubagents(subagents)
-        .map(s => s.goal)
+        .map((s) => s.goal)
         .filter(Boolean)
         .slice(0, 2)
 
@@ -244,7 +225,7 @@ export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev:
     }
 
     agentsNudgeConfigFetched = true
-    getFullConfigOnce().then(cfg => {
+    getFullConfigOnce().then((cfg) => {
       // Only an explicit `false` disables it; absent/unknown keeps default on.
       if (cfg?.config?.display?.tui_agents_nudge === false) {
         agentsNudgeEnabled = false
@@ -284,7 +265,7 @@ export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev:
 
     lastDelegationFetchAt = now
     rpc<DelegationStatusResponse>('delegation.status', {})
-      .then(r => applyDelegationStatus(r))
+      .then((r) => applyDelegationStatus(r))
       .catch(() => {})
   }
 
@@ -330,7 +311,7 @@ export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev:
       let sid = getUiState().sid
 
       for (let i = 0; !sid && i < 40; i += 1) {
-        await new Promise(resolve => setTimeout(resolve, 100))
+        await new Promise((resolve) => setTimeout(resolve, 100))
         sid = getUiState().sid
       }
 
@@ -379,7 +360,7 @@ export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev:
     ensureAgentsNudgeConfig()
 
     rpc<CommandsCatalogResponse>('commands.catalog', {})
-      .then(r => {
+      .then((r) => {
         if (!r?.pairs) {
           return
         }
@@ -431,7 +412,7 @@ export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev:
     // unrecoverable after disconnection" gap.  Default off so existing
     // users aren't surprised.  (Shares the memoized full-config read.)
     getFullConfigOnce()
-      .then(cfg => {
+      .then((cfg) => {
         if (!cfg?.config?.display?.tui_auto_resume_recent) {
           patchUiState({ status: 'forging session…' })
           newSession()
@@ -440,7 +421,7 @@ export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev:
           return
         }
 
-        return rpc<SessionMostRecentResponse>('session.most_recent', {}).then(r => {
+        return rpc<SessionMostRecentResponse>('session.most_recent', {}).then((r) => {
           const target = r?.session_id
 
           if (target) {
@@ -485,7 +466,7 @@ export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev:
       case 'session.info': {
         const info = ev.payload
 
-        patchUiState(state => ({
+        patchUiState((state) => ({
           ...state,
           info,
           ...(info.permission_mode && { permissionMode: info.permission_mode }),
@@ -493,7 +474,7 @@ export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev:
           usage: info.usage ? { ...state.usage, ...info.usage } : state.usage
         }))
 
-        setHistoryItems(prev => prev.map(m => (m.kind === 'intro' ? { ...m, info } : m)))
+        setHistoryItems((prev) => prev.map((m) => (m.kind === 'intro' ? { ...m, info } : m)))
 
         return
       }
@@ -570,10 +551,7 @@ export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev:
 
         if (turnController.lastStatusNote !== p.text) {
           turnController.lastStatusNote = p.text
-          turnController.pushActivity(
-            p.text,
-            p.kind === 'error' ? 'error' : p.kind === 'warn' || p.kind === 'approval' ? 'warn' : 'info'
-          )
+          turnController.pushActivity(p.text, p.kind === 'error' ? 'error' : p.kind === 'warn' || p.kind === 'approval' ? 'warn' : 'info')
         }
 
         restoreStatusAfter(4000)
@@ -723,7 +701,7 @@ export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev:
 
         const tailLines = (stderrTail ?? '')
           .split('\n')
-          .map(l => l.trim())
+          .map((l) => l.trim())
           .filter(Boolean)
           .slice(-STDERR_LINES_MAX)
 
@@ -800,8 +778,7 @@ export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev:
 
         const structuredDiff = inlineDiffsEnabled ? ev.payload.structured_diff : undefined
 
-        const inlineDiffText =
-          ev.payload.inline_diff && inlineDiffsEnabled ? stripAnsi(String(ev.payload.inline_diff)).trim() : ''
+        const inlineDiffText = ev.payload.inline_diff && inlineDiffsEnabled ? stripAnsi(String(ev.payload.inline_diff)).trim() : ''
 
         const resultText = ev.payload.result_text ? stripAnsi(String(ev.payload.result_text)) : undefined
         const rawText = ev.payload.result_raw ? stripAnsi(String(ev.payload.result_raw)) : undefined
@@ -958,7 +935,7 @@ export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev:
       case 'subagent.spawn_requested':
         // Child built but not yet running (waiting on ThreadPoolExecutor slot).
         // Preserve completed state if a later event races in before this one.
-        turnController.upsertSubagent(ev.payload, c => (isTerminalStatus(c.status) ? {} : { status: 'queued' }))
+        turnController.upsertSubagent(ev.payload, (c) => (isTerminalStatus(c.status) ? {} : { status: 'queued' }))
 
         // First sign of delegation this turn → nudge toward /agents.
         maybeNudgeAgents()
@@ -974,7 +951,7 @@ export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev:
         return
 
       case 'subagent.start':
-        turnController.upsertSubagent(ev.payload, c => (isTerminalStatus(c.status) ? {} : { status: 'running' }))
+        turnController.upsertSubagent(ev.payload, (c) => (isTerminalStatus(c.status) ? {} : { status: 'running' }))
 
         // `subagent.start` is the first delegation event the TUI reliably
         // receives (the delegate callback drops `spawn_requested` in the
@@ -994,7 +971,7 @@ export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev:
         // we missed or that already flushed via message.complete.
         turnController.upsertSubagent(
           ev.payload,
-          c => ({
+          (c) => ({
             status: keepTerminalElseRunning(c.status),
             thinking: pushThinking(c.thinking, text)
           }),
@@ -1005,14 +982,11 @@ export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev:
       }
 
       case 'subagent.tool': {
-        const line = formatToolCall(
-          ev.payload.tool_name ?? 'delegate_task',
-          ev.payload.tool_preview ?? ev.payload.text ?? ''
-        )
+        const line = formatToolCall(ev.payload.tool_name ?? 'delegate_task', ev.payload.tool_preview ?? ev.payload.text ?? '')
 
         turnController.upsertSubagent(
           ev.payload,
-          c => ({
+          (c) => ({
             status: keepTerminalElseRunning(c.status),
             tools: pushTool(c.tools, line)
           }),
@@ -1031,7 +1005,7 @@ export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev:
 
         turnController.upsertSubagent(
           ev.payload,
-          c => ({
+          (c) => ({
             notes: pushNote(c.notes, text),
             status: keepTerminalElseRunning(c.status)
           }),
@@ -1044,7 +1018,7 @@ export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev:
       case 'subagent.complete':
         turnController.upsertSubagent(
           ev.payload,
-          c => ({
+          (c) => ({
             durationSeconds: ev.payload.duration_seconds ?? c.durationSeconds,
             status: normalizeSubagentStatus(ev.payload.status, 'completed'),
             summary: ev.payload.summary || ev.payload.text || c.summary
@@ -1074,7 +1048,7 @@ export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev:
           // OSC 8 support (Apple Terminal), where Cmd+click can't work and
           // the native gesture is undiscoverable. Plain assistant text only:
           // tool-trail rows can carry URLs that aren't rendered as links.
-          const tip = linkTipFor(msgs.filter(m => m.role === 'assistant' && !m.kind).map(m => m.text))
+          const tip = linkTipFor(msgs.filter((m) => m.role === 'assistant' && !m.kind).map((m) => m.text))
 
           if (tip) {
             sys(tip)
@@ -1091,7 +1065,7 @@ export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev:
         setStatus('ready')
 
         if (ev.payload?.usage) {
-          patchUiState(state => ({ ...state, usage: { ...state.usage, ...ev.payload!.usage } }))
+          patchUiState((state) => ({ ...state, usage: { ...state.usage, ...ev.payload!.usage } }))
         }
 
         // Session totals rider — /cost's baseline and the exit summary's

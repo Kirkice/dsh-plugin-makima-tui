@@ -8,7 +8,7 @@ import { ProvidersHub } from '../components/providersHub.js'
 import { stripAnsi } from '../lib/text.js'
 import { DEFAULT_THEME } from '../theme.js'
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 const ENTER = '\r'
 const ESC = '\u001b'
 
@@ -18,8 +18,8 @@ const ESU = '\u001b[?2026l'
 const lastFrame = (output: string): string => {
   const frames = output
     .split(BSU)
-    .map(chunk => chunk.split(ESU)[0] ?? '')
-    .filter(frame => stripAnsi(frame).trim() !== '')
+    .map((chunk) => chunk.split(ESU)[0] ?? '')
+    .filter((frame) => stripAnsi(frame).trim() !== '')
 
   return stripAnsi(frames.at(-1) ?? '')
 }
@@ -89,16 +89,13 @@ function mount() {
     }
   }
 
-  const app = renderSync(
-    React.createElement(ProvidersHub, { gw: gw as never, onClose, t: DEFAULT_THEME }),
-    {
-      exitOnCtrlC: false,
-      patchConsole: false,
-      stderr: stderr as unknown as NodeJS.WriteStream,
-      stdin: stdin as unknown as NodeJS.ReadStream,
-      stdout: stdout as unknown as NodeJS.WriteStream
-    }
-  )
+  const app = renderSync(React.createElement(ProvidersHub, { gw: gw as never, onClose, t: DEFAULT_THEME }), {
+    exitOnCtrlC: false,
+    patchConsole: false,
+    stderr: stderr as unknown as NodeJS.WriteStream,
+    stdin: stdin as unknown as NodeJS.ReadStream,
+    stdout: stdout as unknown as NodeJS.WriteStream
+  })
 
   return {
     frame: () => lastFrame(output),
@@ -140,7 +137,7 @@ describe('ProvidersHub', () => {
 
     await hub.press('s')
 
-    const save = hub.requests.find(request => request.method === 'providers.saveOpenAiCompatible')
+    const save = hub.requests.find((request) => request.method === 'providers.saveOpenAiCompatible')
     expect(save?.params).toMatchObject({
       api: 'openai-completions',
       api_key: '',
@@ -164,7 +161,7 @@ describe('ProvidersHub', () => {
     await hub.press('demo-1')
     await hub.press('s')
 
-    const save = hub.requests.find(request => request.method === 'providers.saveOpenAiCompatible')
+    const save = hub.requests.find((request) => request.method === 'providers.saveOpenAiCompatible')
     expect(save?.params).toMatchObject({ image_models: ['demo-1'], models: ['demo-1'] })
     hub.unmount()
   })
@@ -178,7 +175,7 @@ describe('ProvidersHub', () => {
     expect(hub.frame()).toContain('Remove provider?')
 
     await hub.press(ENTER)
-    expect(hub.requests.some(request => request.method === 'providers.remove')).toBe(false)
+    expect(hub.requests.some((request) => request.method === 'providers.remove')).toBe(false)
 
     await hub.press('x')
     await hub.press('\u001b[C')

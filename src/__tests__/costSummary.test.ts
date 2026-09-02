@@ -6,14 +6,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { CostSnapshot } from '../gatewayTypes.js'
-import {
-  formatCost,
-  formatDuration,
-  formatNumber,
-  formatTotalCost,
-  getLastCostSnapshot,
-  setLastCostSnapshot
-} from '../lib/costSummary.js'
+import { formatCost, formatDuration, formatNumber, formatTotalCost, getLastCostSnapshot, setLastCostSnapshot } from '../lib/costSummary.js'
 
 describe('formatCost', () => {
   it('uses 4 decimals at or below fifty cents (original boundary is > 0.5)', () => {

@@ -20,7 +20,7 @@ describe('toTranscriptMessages', () => {
     ]
 
     // the shelf is its own block, exactly as the live path builds it
-    expect(toTranscriptMessages(rows).map(msg => [msg.role, msg.text])).toEqual([
+    expect(toTranscriptMessages(rows).map((msg) => [msg.role, msg.text])).toEqual([
       ['user', 'first prompt'],
       ['system', ''],
       ['assistant', 'first answer'],
@@ -44,7 +44,7 @@ describe('MessageLine', () => {
     Object.assign(stdout, { columns: 80, isTTY: false, rows: 24 })
     Object.assign(stdin, { isTTY: false })
     Object.assign(stderr, { isTTY: false })
-    stdout.on('data', chunk => {
+    stdout.on('data', (chunk) => {
       output += chunk.toString()
     })
 
@@ -61,9 +61,9 @@ describe('MessageLine', () => {
       }),
       {
         patchConsole: false,
-        stderr: stderr as NodeJS.WriteStream,
-        stdin: stdin as NodeJS.ReadStream,
-        stdout: stdout as NodeJS.WriteStream
+        stderr: stderr as unknown as NodeJS.WriteStream,
+        stdin: stdin as unknown as NodeJS.ReadStream,
+        stdout: stdout as unknown as NodeJS.WriteStream
       }
     )
 
@@ -72,7 +72,7 @@ describe('MessageLine', () => {
 
     const renderedLine = stripAnsi(output)
       .split('\n')
-      .find(line => line.includes('Okay'))
+      .find((line) => line.includes('Okay'))
 
     // The transcript pointer is the fixed `❯` (roles.ts, original CC
     // figures.pointer) — the compound brand prompt 'Ψ >' only widens the
@@ -84,8 +84,8 @@ describe('MessageLine', () => {
   it('vertically aligns the user pointer with the bordered message content row', () => {
     const raw = stripAnsi(renderRaw({ role: 'user', text: '你好' }))
     const lines = raw.split('\n')
-    const pointerRow = lines.findIndex(line => line.includes('❯'))
-    const contentRow = lines.findIndex(line => line.includes('你好'))
+    const pointerRow = lines.findIndex((line) => line.includes('❯'))
+    const contentRow = lines.findIndex((line) => line.includes('你好'))
 
     expect(pointerRow).toBeGreaterThanOrEqual(0)
     expect(contentRow).toBe(pointerRow)
@@ -102,19 +102,16 @@ describe('MessageLine', () => {
     Object.assign(stdout, { columns: 80, isTTY: false, rows: 24 })
     Object.assign(stdin, { isTTY: false })
     Object.assign(stderr, { isTTY: false })
-    stdout.on('data', chunk => {
+    stdout.on('data', (chunk) => {
       output += chunk.toString()
     })
 
-    const instance = renderSync(
-      React.createElement(MessageLine, { cols: 80, msg: msg as never, t: DEFAULT_THEME }),
-      {
-        patchConsole: false,
-        stderr: stderr as NodeJS.WriteStream,
-        stdin: stdin as NodeJS.ReadStream,
-        stdout: stdout as NodeJS.WriteStream
-      }
-    )
+    const instance = renderSync(React.createElement(MessageLine, { cols: 80, msg: msg as never, t: DEFAULT_THEME }), {
+      patchConsole: false,
+      stderr: stderr as unknown as NodeJS.WriteStream,
+      stdin: stdin as unknown as NodeJS.ReadStream,
+      stdout: stdout as unknown as NodeJS.WriteStream
+    })
 
     instance.unmount()
     instance.cleanup()

@@ -82,7 +82,7 @@ describe('ColorDiff layout', () => {
   it('renders the original gutter: right-aligned line number, marker, padded background rows', async () => {
     await ensureHighlighter()
     const rows = new ColorDiff(HUNK, null, '/ws/src/posts.ts', null).render('dark', 60, false)!
-    const plain = rows.map(row => stripAnsi(row))
+    const plain = rows.map((row) => stripAnsi(row))
 
     // ` NNN ` gutter + marker + content; context rows unpadded, changed rows
     // padded to the wrap width (60 − 3 digits − 3 = 54 content columns).
@@ -134,7 +134,7 @@ describe('ColorDiff layout', () => {
     }
 
     const rows = new ColorDiff(wide, null, '/ws/a.txt', null).render('dark', 40, false)!
-    const plain = rows.map(row => stripAnsi(row))
+    const plain = rows.map((row) => stripAnsi(row))
 
     expect(plain.length).toBeGreaterThan(1)
     expect(plain[0]!.startsWith(' 7 +')).toBe(true)
@@ -172,7 +172,7 @@ describe('GatewayClient structured diff mapping', () => {
     }
   })
 
-  const last = (t: string) => [...events].reverse().find(e => e.type === t)
+  const last = (t: string) => [...events].reverse().find((e) => e.type === t)
 
   const completeTool = async (id: string, name: string, input: unknown, resultMsg: Record<string, unknown>) => {
     proc.line({ message: { content: [{ id, input, name, type: 'tool_use' }] }, type: 'assistant' })
@@ -388,7 +388,7 @@ describe('DiffView rendering', () => {
     Object.assign(stdout, { columns: 80, isTTY: false, rows: 24 })
     Object.assign(stdin, { isTTY: false })
     Object.assign(stderr, { isTTY: false })
-    stdout.on('data', chunk => {
+    stdout.on('data', (chunk) => {
       output += chunk.toString()
     })
 

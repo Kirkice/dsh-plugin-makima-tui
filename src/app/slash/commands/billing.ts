@@ -37,10 +37,7 @@ const renderBillingError = (
       return
 
     case 'no_payment_method':
-      sys(
-        '💳 No saved card for terminal charges yet. Set one up on the portal ' +
-          "(one-time credit buys don't save a reusable card)."
-      )
+      sys('💳 No saved card for terminal charges yet. Set one up on the portal ' + "(one-time credit buys don't save a reusable card).")
 
       break
 
@@ -51,11 +48,7 @@ const renderBillingError = (
     case 'monthly_cap_exceeded': {
       // Surface the remaining headroom the server attaches (parity with the CLI).
       const remaining = env.payload?.remainingUsd
-      sys(
-        remaining != null
-          ? `🔴 Monthly spend cap reached — $${remaining} headroom left.`
-          : '🔴 Monthly spend cap reached.'
-      )
+      sys(remaining != null ? `🔴 Monthly spend cap reached — $${remaining} headroom left.` : '🔴 Monthly spend cap reached.')
 
       break
     }
@@ -91,7 +84,7 @@ const armStepUp = (sys: Sys, ctx: SlashRunCtx): void => {
         ctx.gateway
           .rpc<BillingMutationResponse>('billing.step_up', { session_id: ctx.sid ?? undefined })
           .then(
-            ctx.guarded<BillingMutationResponse>(r => {
+            ctx.guarded<BillingMutationResponse>((r) => {
               if (r.ok && r.granted) {
                 // Step-up only grants the billing:manage TOKEN scope — the ORG
                 // kill-switch (cli_billing_enabled) is a separate gate. Re-fetch
@@ -101,7 +94,7 @@ const armStepUp = (sys: Sys, ctx: SlashRunCtx): void => {
                 ctx.gateway
                   .rpc<BillingStateResponse>('billing.state', {})
                   .then(
-                    ctx.guarded<BillingStateResponse>(s => {
+                    ctx.guarded<BillingStateResponse>((s) => {
                       if (s.cli_billing_enabled) {
                         sys('Run /billing again to continue.')
                       } else {
@@ -149,7 +142,7 @@ const pollCharge = (sys: Sys, ctx: SlashRunCtx, chargeId: string, portalUrl?: st
     ctx.gateway
       .rpc<BillingChargeStatusResponse>('billing.charge_status', { charge_id: chargeId })
       .then(
-        ctx.guarded<BillingChargeStatusResponse>(r => {
+        ctx.guarded<BillingChargeStatusResponse>((r) => {
           if (!r.ok) {
             // 429/503 while polling = retry-after, NOT a failure. Back off + continue.
             if (r.error === 'rate_limited') {
@@ -178,10 +171,7 @@ const pollCharge = (sys: Sys, ctx: SlashRunCtx, chargeId: string, portalUrl?: st
 
           // pending → keep polling until the 5-min cap, then call it a timeout.
           if (Date.now() - start >= POLL_CAP_MS) {
-            sys(
-              '🟡 Still processing after 5 minutes — this is a timeout, not a failure. ' +
-                'Check /billing or the portal shortly.'
-            )
+            sys('🟡 Still processing after 5 minutes — this is a timeout, not a failure. ' + 'Check /billing or the portal shortly.')
 
             if (portalUrl) {
               sys(`Portal: ${portalUrl}`)
@@ -264,7 +254,7 @@ const buildOverlayCtx = (ctx: SlashRunCtx, sys: Sys, s: BillingStateResponse): B
         ...(threshold != null ? { threshold } : {}),
         ...(topUp != null ? { top_up_amount: topUp } : {})
       })
-      .then(r => {
+      .then((r) => {
         if (r && r.ok) {
           return true
         }
@@ -275,7 +265,7 @@ const buildOverlayCtx = (ctx: SlashRunCtx, sys: Sys, s: BillingStateResponse): B
 
         return false
       })
-      .catch(e => {
+      .catch((e) => {
         ctx.guardedErr(e)
 
         return false
@@ -285,7 +275,7 @@ const buildOverlayCtx = (ctx: SlashRunCtx, sys: Sys, s: BillingStateResponse): B
     ctx.gateway
       .rpc<BillingChargeResponse>('billing.charge', { amount_usd: amount })
       .then(
-        ctx.guarded<BillingChargeResponse>(r => {
+        ctx.guarded<BillingChargeResponse>((r) => {
           if (r.ok && r.charge_id) {
             pollCharge(sys, ctx, r.charge_id, s.portal_url)
           } else {
@@ -315,7 +305,7 @@ export const billingCommands: SlashCommand[] = [
       ctx.gateway
         .rpc<BillingStateResponse>('billing.state', {})
         .then(
-          ctx.guarded<BillingStateResponse>(s => {
+          ctx.guarded<BillingStateResponse>((s) => {
             if (!s.logged_in) {
               sys('💳 Not logged into Nous Portal — run /portal to log in, then /billing.')
 

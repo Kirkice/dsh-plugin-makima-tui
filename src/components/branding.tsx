@@ -19,7 +19,7 @@ function InlineLoader({ label, t }: { label: string; t: Theme }) {
   const frame = spinner.frames[tick % spinner.frames.length] ?? '⠋'
 
   useEffect(() => {
-    const id = setInterval(() => setTick(n => n + 1), Math.max(LOADER_TICK_MS, spinner.interval))
+    const id = setInterval(() => setTick((n) => n + 1), Math.max(LOADER_TICK_MS, spinner.interval))
 
     return () => clearInterval(id)
   }, [spinner.interval])
@@ -49,16 +49,166 @@ export function ArtLines({ lines }: { lines: [string, string][] }) {
 const MAKIMA_PIXEL_ART: readonly (readonly (string | null)[])[] = [
   [null, null, null, '#b94d58', '#bc4f5a', '#d05966', '#d15966', '#d15966', '#d05966', '#bc4f5a', '#b94d58', null, null, null],
   [null, null, '#d25864', '#ce5964', '#d15966', '#d25a67', '#d15a67', '#d15a67', '#d25a67', '#d15966', '#ce5964', '#d25864', null, null],
-  [null, '#c1515a', '#cf5865', '#d15966', '#d25b67', '#d05966', '#d15b67', '#d15b67', '#d05966', '#d25b67', '#d15966', '#cf5865', '#c1515a', null],
-  [null, '#c45862', '#d05863', '#d05964', '#d15663', '#d15966', '#d15a67', '#d15a67', '#d15966', '#d15663', '#d05964', '#d05863', '#c45862', null],
-  [null, '#d15965', '#d05965', '#d05966', '#d85f6a', '#a13e4a', '#d25b68', '#d25b68', '#a13e4a', '#d85f6a', '#d05966', '#d05965', '#d15965', null],
-  ['#ae4350', '#d15a66', '#a53f4c', '#cf5865', '#ca4d5d', '#a33e4b', '#d25a67', '#d25a67', '#a33e4b', '#ca4d5d', '#cf5865', '#a53f4c', '#d15a66', '#ae4350'],
-  ['#b74957', '#b14552', '#a33d4a', '#ae4654', '#ab3b48', '#e0afa3', '#bf4c59', '#bf4c59', '#e0afa3', '#ab3b48', '#ae4654', '#a33d4a', '#b14552', '#b74957'],
-  ['#b64856', '#ba4d58', '#8f554e', '#fcebdd', '#fcebdd', '#fcecde', '#fdebde', '#fdebde', '#fcecde', '#fcebdd', '#fcebdd', '#8f554e', '#ba4d58', '#b64856'],
-  ['#b64956', '#b44b56', '#4e2a15', '#45210e', '#42200e', '#975d52', '#fceadc', '#fceadc', '#975d52', '#42200e', '#45210e', '#4e2a15', '#b44b56', '#b64956'],
-  ['#b74b58', '#b54b56', '#814d43', '#fefbfc', '#f8c819', '#fdf7f0', '#fdeadd', '#fdeadd', '#fdf7f0', '#f8c819', '#fefbfc', '#814d43', '#b54b56', '#b74b58'],
-  ['#b54b56', '#b14953', '#b74b58', '#fceade', '#fde9d7', '#fceadd', '#fceadc', '#fceadc', '#fceadd', '#fde9d7', '#fceade', '#b74b58', '#b14953', '#b54b56'],
-  [null, '#a7424f', '#a4424e', '#fbeadd', '#fbebdd', '#fdebdd', '#af6f6a', '#af6f6a', '#fdebdd', '#fbebdd', '#fbeadd', '#a4424e', '#a7424f', null],
+  [
+    null,
+    '#c1515a',
+    '#cf5865',
+    '#d15966',
+    '#d25b67',
+    '#d05966',
+    '#d15b67',
+    '#d15b67',
+    '#d05966',
+    '#d25b67',
+    '#d15966',
+    '#cf5865',
+    '#c1515a',
+    null
+  ],
+  [
+    null,
+    '#c45862',
+    '#d05863',
+    '#d05964',
+    '#d15663',
+    '#d15966',
+    '#d15a67',
+    '#d15a67',
+    '#d15966',
+    '#d15663',
+    '#d05964',
+    '#d05863',
+    '#c45862',
+    null
+  ],
+  [
+    null,
+    '#d15965',
+    '#d05965',
+    '#d05966',
+    '#d85f6a',
+    '#a13e4a',
+    '#d25b68',
+    '#d25b68',
+    '#a13e4a',
+    '#d85f6a',
+    '#d05966',
+    '#d05965',
+    '#d15965',
+    null
+  ],
+  [
+    '#ae4350',
+    '#d15a66',
+    '#a53f4c',
+    '#cf5865',
+    '#ca4d5d',
+    '#a33e4b',
+    '#d25a67',
+    '#d25a67',
+    '#a33e4b',
+    '#ca4d5d',
+    '#cf5865',
+    '#a53f4c',
+    '#d15a66',
+    '#ae4350'
+  ],
+  [
+    '#b74957',
+    '#b14552',
+    '#a33d4a',
+    '#ae4654',
+    '#ab3b48',
+    '#e0afa3',
+    '#bf4c59',
+    '#bf4c59',
+    '#e0afa3',
+    '#ab3b48',
+    '#ae4654',
+    '#a33d4a',
+    '#b14552',
+    '#b74957'
+  ],
+  [
+    '#b64856',
+    '#ba4d58',
+    '#8f554e',
+    '#fcebdd',
+    '#fcebdd',
+    '#fcecde',
+    '#fdebde',
+    '#fdebde',
+    '#fcecde',
+    '#fcebdd',
+    '#fcebdd',
+    '#8f554e',
+    '#ba4d58',
+    '#b64856'
+  ],
+  [
+    '#b64956',
+    '#b44b56',
+    '#4e2a15',
+    '#45210e',
+    '#42200e',
+    '#975d52',
+    '#fceadc',
+    '#fceadc',
+    '#975d52',
+    '#42200e',
+    '#45210e',
+    '#4e2a15',
+    '#b44b56',
+    '#b64956'
+  ],
+  [
+    '#b74b58',
+    '#b54b56',
+    '#814d43',
+    '#fefbfc',
+    '#f8c819',
+    '#fdf7f0',
+    '#fdeadd',
+    '#fdeadd',
+    '#fdf7f0',
+    '#f8c819',
+    '#fefbfc',
+    '#814d43',
+    '#b54b56',
+    '#b74b58'
+  ],
+  [
+    '#b54b56',
+    '#b14953',
+    '#b74b58',
+    '#fceade',
+    '#fde9d7',
+    '#fceadd',
+    '#fceadc',
+    '#fceadc',
+    '#fceadd',
+    '#fde9d7',
+    '#fceade',
+    '#b74b58',
+    '#b14953',
+    '#b54b56'
+  ],
+  [
+    null,
+    '#a7424f',
+    '#a4424e',
+    '#fbeadd',
+    '#fbebdd',
+    '#fdebdd',
+    '#af6f6a',
+    '#af6f6a',
+    '#fdebdd',
+    '#fbebdd',
+    '#fbeadd',
+    '#a4424e',
+    '#a7424f',
+    null
+  ],
   [null, '#a7414d', null, '#834e66', '#f8ded4', '#f9e4d9', '#ecc7ba', '#ecc7ba', '#f9e4d9', '#f8ded4', '#834e66', null, '#a7414d', null],
   [null, '#b34858', null, null, '#bcbab4', '#f6f2e8', '#f7f3eb', '#f7f3eb', '#f6f2e8', '#bcbab4', null, null, '#b34858', null],
   [null, '#9b4d62', null, '#969394', '#f8f3ea', '#bbb9b2', '#3e393b', '#3e393b', '#bbb9b2', '#f8f3ea', '#969394', null, '#9b4d62', null]
@@ -72,7 +222,9 @@ function MakimaPixelLogo() {
       {MAKIMA_PIXEL_ART.map((row, y) => (
         <Box flexDirection="row" height={1} key={y}>
           {row.map((color, x) => (
-            <Text backgroundColor={color ?? undefined} key={x}>{'  '}</Text>
+            <Text backgroundColor={color ?? undefined} key={x}>
+              {'  '}
+            </Text>
           ))}
         </Box>
       ))}
@@ -319,7 +471,7 @@ function clipTailToWidth(s: string, maxWidth: number): string {
     return ''
   }
 
-  const clusters = [...GRAPHEMES.segment(s)].map(g => g.segment)
+  const clusters = [...GRAPHEMES.segment(s)].map((g) => g.segment)
   let out = ''
   let width = 0
 
@@ -519,7 +671,7 @@ export function SessionPanel({ info, logoPalette, maxWidth, sid, t }: SessionPan
   // so it matches the classic CLI banner (`sum(s.connected)` in
   // clawcodex_cli/banner.py) and the "connected" label on the collapse toggle.
   const mcpServers = info.mcp_servers ?? []
-  const mcpConnected = mcpServers.filter(s => s.connected).length
+  const mcpConnected = mcpServers.filter((s) => s.connected).length
 
   const toolsBody = () => {
     const shown = toolEntries.slice(0, TOOLSETS_MAX)
@@ -541,7 +693,7 @@ export function SessionPanel({ info, logoPalette, maxWidth, sid, t }: SessionPan
   // ── Collapsible MCP section ──
   const mcpBody = () => (
     <>
-      {(info.mcp_servers ?? []).map(s => (
+      {(info.mcp_servers ?? []).map((s) => (
         <Text key={s.name} wrap="truncate">
           <Text color={t.color.muted}>{`  ${s.name} `}</Text>
           <Text color={t.color.muted}>{`[${s.transport}]`}</Text>
@@ -569,30 +721,30 @@ export function SessionPanel({ info, logoPalette, maxWidth, sid, t }: SessionPan
   // on wide terminals with a compact command-center: useful runtime facts first,
   // then a small operating guide — never decorative filler.
   const permissionState = permsLabel || 'Default'
-  const permissionTone = info.permission_mode === 'bypassPermissions' || info.permission_mode === 'dontAsk'
-    ? t.color.error
-    : t.color.accent
+  const permissionTone = info.permission_mode === 'bypassPermissions' || info.permission_mode === 'dontAsk' ? t.color.error : t.color.accent
   const modelMode = [
     info.reasoning_effort ? `${info.reasoning_effort} reasoning` : 'standard reasoning',
     info.fast ? 'fast lane' : '',
     info.nano ? 'nano' : ''
-  ].filter(Boolean).join(' · ')
+  ]
+    .filter(Boolean)
+    .join(' · ')
   const contextPercent = info.usage?.context_percent
-  const contextLabel = contextPercent === undefined
-    ? 'fresh context'
-    : `${contextPercent}% context used`
-  const connectionLabel = mcpServers.length > 0
-    ? `${mcpConnected}/${mcpServers.length} MCP connected`
-    : 'local runtime'
+  const contextLabel = contextPercent === undefined ? 'fresh context' : `${contextPercent}% context used`
+  const connectionLabel = mcpServers.length > 0 ? `${mcpConnected}/${mcpServers.length} MCP connected` : 'local runtime'
 
   const overview = (
     <Box flexDirection="column" marginBottom={1}>
       <Box flexDirection="row" justifyContent="space-between" width="100%">
         <Text wrap="truncate-end">
-          <Text bold color={t.color.primary}>SESSION READY</Text>
+          <Text bold color={t.color.primary}>
+            SESSION READY
+          </Text>
           <Text color={t.color.muted}> · workspace initialized</Text>
         </Text>
-        <Text color={t.color.ok} wrap="truncate-end">● ONLINE</Text>
+        <Text color={t.color.ok} wrap="truncate-end">
+          ● ONLINE
+        </Text>
       </Box>
       <Text color={t.color.muted} wrap="truncate-end">
         {modelLine} <Text color={t.color.frame}>│</Text> {modelMode}
@@ -612,9 +764,13 @@ export function SessionPanel({ info, logoPalette, maxWidth, sid, t }: SessionPan
         <Box flexDirection="column" flexGrow={1} flexShrink={1} width="50%">
           <Text color={t.color.muted}>RUNTIME</Text>
           <Text wrap="truncate-end">
-            <Text bold color={t.color.accent}>{toolsTotal}</Text>
-            <Text color={t.color.muted}> tools  ·  </Text>
-            <Text bold color={t.color.accent}>{skillsTotal}</Text>
+            <Text bold color={t.color.accent}>
+              {toolsTotal}
+            </Text>
+            <Text color={t.color.muted}> tools · </Text>
+            <Text bold color={t.color.accent}>
+              {skillsTotal}
+            </Text>
             <Text color={t.color.muted}> skills</Text>
           </Text>
           <Text color={t.color.muted} wrap="truncate-end">
@@ -644,11 +800,13 @@ export function SessionPanel({ info, logoPalette, maxWidth, sid, t }: SessionPan
       />
 
       <Text wrap="truncate-end">
-        <Text bold color={t.color.accent}>COMMAND DECK  </Text>
+        <Text bold color={t.color.accent}>
+          COMMAND DECK{' '}
+        </Text>
         <Text color={t.color.command}>/model</Text>
-        <Text color={t.color.muted}> tune model   </Text>
+        <Text color={t.color.muted}> tune model </Text>
         <Text color={t.color.command}>/permissions</Text>
-        <Text color={t.color.muted}> access   </Text>
+        <Text color={t.color.muted}> access </Text>
         <Text color={t.color.command}>/sessions</Text>
         <Text color={t.color.muted}> switch</Text>
       </Text>
@@ -677,7 +835,7 @@ export function SessionPanel({ info, logoPalette, maxWidth, sid, t }: SessionPan
       key: 'tools',
       node: (
         <>
-          <CollapseToggle onToggle={() => setToolsOpen(v => !v)} open={toolsOpen} t={t} title="Available Tools" />
+          <CollapseToggle onToggle={() => setToolsOpen((v) => !v)} open={toolsOpen} t={t} title="Available Tools" />
           {toolsOpen && toolsBody()}
         </>
       )
@@ -688,11 +846,9 @@ export function SessionPanel({ info, logoPalette, maxWidth, sid, t }: SessionPan
         <>
           <CollapseToggle
             count={skillsTotal}
-            onToggle={() => setSkillsOpen(v => !v)}
+            onToggle={() => setSkillsOpen((v) => !v)}
             open={skillsOpen}
-            suffix={
-              skillsCatCount > 0 ? `in ${skillsCatCount} categor${skillsCatCount === 1 ? 'y' : 'ies'}` : undefined
-            }
+            suffix={skillsCatCount > 0 ? `in ${skillsCatCount} categor${skillsCatCount === 1 ? 'y' : 'ies'}` : undefined}
             t={t}
             title="Available Skills"
           />
@@ -707,7 +863,7 @@ export function SessionPanel({ info, logoPalette, maxWidth, sid, t }: SessionPan
             node: (
               <>
                 <CollapseToggle
-                  onToggle={() => setSystemOpen(v => !v)}
+                  onToggle={() => setSystemOpen((v) => !v)}
                   open={systemOpen}
                   suffix={`— ${sysPromptLen.toLocaleString()} chars`}
                   t={t}
@@ -727,7 +883,7 @@ export function SessionPanel({ info, logoPalette, maxWidth, sid, t }: SessionPan
               <>
                 <CollapseToggle
                   count={mcpConnected}
-                  onToggle={() => setMcpOpen(v => !v)}
+                  onToggle={() => setMcpOpen((v) => !v)}
                   open={mcpOpen}
                   suffix="connected"
                   t={t}
@@ -757,7 +913,15 @@ export function SessionPanel({ info, logoPalette, maxWidth, sid, t }: SessionPan
         {welcome}
       </Text>
 
-      <Box borderBottom borderColor={t.color.border} borderLeft={false} borderRight={false} borderStyle="single" borderTop={false} marginY={1} />
+      <Box
+        borderBottom
+        borderColor={t.color.border}
+        borderLeft={false}
+        borderRight={false}
+        borderStyle="single"
+        borderTop={false}
+        marginY={1}
+      />
 
       <Text wrap="truncate-end">
         <Text color={t.color.muted}>{MODEL_LABEL}</Text>
@@ -780,13 +944,7 @@ export function SessionPanel({ info, logoPalette, maxWidth, sid, t }: SessionPan
       {permsLabel && (
         <Text wrap="truncate-end">
           <Text color={t.color.muted}>{PERMS_LABEL}</Text>
-          <Text
-            color={
-              info.permission_mode === 'bypassPermissions' || info.permission_mode === 'dontAsk'
-                ? t.color.error
-                : t.color.accent
-            }
-          >
+          <Text color={info.permission_mode === 'bypassPermissions' || info.permission_mode === 'dontAsk' ? t.color.error : t.color.accent}>
             {permsLabel}
           </Text>
           <Text color={t.color.muted}>{PERMS_HINT}</Text>
@@ -814,9 +972,7 @@ export function SessionPanel({ info, logoPalette, maxWidth, sid, t }: SessionPan
     <Box
       borderColor={t.color.border}
       borderStyle="round"
-      borderText={
-        borderTitle ? { align: 'start', content: borderTitle, offset: TITLE_OFFSET, position: 'top' } : undefined
-      }
+      borderText={borderTitle ? { align: 'start', content: borderTitle, offset: TITLE_OFFSET, position: 'top' } : undefined}
       marginBottom={1}
       paddingX={1}
       paddingY={1}
@@ -838,7 +994,11 @@ export function SessionPanel({ info, logoPalette, maxWidth, sid, t }: SessionPan
       // terminal, while the container claimed 198.
       width={cols}
     >
-      {wide && <Box flexDirection="column" width={leftW}>{identity}</Box>}
+      {wide && (
+        <Box flexDirection="column" width={leftW}>
+          {identity}
+        </Box>
+      )}
 
       {/* Column rule. A left-only border stretches to the taller column, so the
           rule always spans the full content height without being measured. */}
@@ -860,7 +1020,11 @@ export function SessionPanel({ info, logoPalette, maxWidth, sid, t }: SessionPan
       <Box flexDirection="column" flexGrow={1} flexShrink={1} width={w}>
         {/* Narrow layout drops the column split; keep the identity block above
             the feed so nothing is lost. */}
-        {!wide && <Box flexDirection="column" marginBottom={1}>{identity}</Box>}
+        {!wide && (
+          <Box flexDirection="column" marginBottom={1}>
+            {identity}
+          </Box>
+        )}
 
         {overview}
 

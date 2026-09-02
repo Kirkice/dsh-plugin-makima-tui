@@ -120,9 +120,7 @@ describe('/permissions TUI-local command', () => {
 
     cmd.run('full', ctx, '/permissions full')
 
-    await vi.waitFor(() =>
-      expect(sys).toHaveBeenCalledWith('Full Access is not available in this session')
-    )
+    await vi.waitFor(() => expect(sys).toHaveBeenCalledWith('Full Access is not available in this session'))
     // A rejected set must not flip the composer indicator.
     expect(getUiState().permissionMode).toBe('default')
   })

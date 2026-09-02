@@ -11,14 +11,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 //
 // `detectLightMode` takes env as an explicit arg, so it's safe to import
 // statically — but we stay consistent and dynamic-import it too.
-const RELEVANT_ENV = [
-  'MAKIMA_TUI_LIGHT',
-  'MAKIMA_TUI_THEME',
-  'MAKIMA_TUI_BACKGROUND',
-  'COLORFGBG',
-  'COLORTERM',
-  'TERM_PROGRAM'
-] as const
+const RELEVANT_ENV = ['MAKIMA_TUI_LIGHT', 'MAKIMA_TUI_THEME', 'MAKIMA_TUI_BACKGROUND', 'COLORFGBG', 'COLORTERM', 'TERM_PROGRAM'] as const
 
 async function importThemeWithEnv(env: Partial<Record<(typeof RELEVANT_ENV)[number], string>> = {}) {
   for (const key of RELEVANT_ENV) {
@@ -269,9 +262,7 @@ describe('fromSkin', () => {
   it('keeps the user-message band through skins, with user_message_bg override', async () => {
     const { DEFAULT_THEME, fromSkin } = await importThemeWithCleanEnv()
 
-    expect(fromSkin({ banner_title: '#FF0000' }, {}).color.userMessageBackground).toBe(
-      DEFAULT_THEME.color.userMessageBackground
-    )
+    expect(fromSkin({ banner_title: '#FF0000' }, {}).color.userMessageBackground).toBe(DEFAULT_THEME.color.userMessageBackground)
     expect(fromSkin({ user_message_bg: '#222233' }, {}).color.userMessageBackground).toBe('#222233')
   })
 

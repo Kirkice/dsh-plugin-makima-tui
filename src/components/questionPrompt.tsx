@@ -86,7 +86,7 @@ export function serializeMultiSelect(values: string[], text: string): string {
   const typed = text.trim()
 
   return values
-    .filter(v => v !== OTHER)
+    .filter((v) => v !== OTHER)
     .concat(typed ? [typed] : [])
     .join(', ')
 }
@@ -271,16 +271,7 @@ export function navChipLabels(headers: string[], current: number, columns: numbe
  *  so the rule spans the padded PromptZone exactly, without this component
  *  having to know the container's padding to subtract it from `cols`. */
 function Rule({ t }: { t: Theme }) {
-  return (
-    <Box
-      borderBottom={false}
-      borderColor={t.color.muted}
-      borderLeft={false}
-      borderRight={false}
-      borderStyle="single"
-      borderTop
-    />
-  )
+  return <Box borderBottom={false} borderColor={t.color.muted} borderLeft={false} borderRight={false} borderStyle="single" borderTop />
 }
 
 interface QuestionPromptProps {
@@ -299,11 +290,11 @@ export function QuestionPrompt({ cols = 80, onAnswer, questions: raw, t }: Quest
   // string. Sanitizing at render only would leave the raw label in `answers`.
   const questions = useMemo(
     () =>
-      raw.map(q => ({
+      raw.map((q) => ({
         ...q,
         header: safe(q.header),
         question: safe(q.question),
-        options: (q.options ?? []).map(o => ({
+        options: (q.options ?? []).map((o) => ({
           ...o,
           description: safe(o.description),
           label: safe(o.label)
@@ -366,7 +357,7 @@ export function QuestionPrompt({ cols = 80, onAnswer, questions: raw, t }: Quest
     const key = question.question
     const current = picked[key] ?? []
     // Append on add so the array preserves toggle order.
-    const next = current.includes(label) ? current.filter(v => v !== label) : [...current, label]
+    const next = current.includes(label) ? current.filter((v) => v !== label) : [...current, label]
     const nextPicked = { ...picked, [key]: next }
 
     setPicked(nextPicked)
@@ -388,11 +379,7 @@ export function QuestionPrompt({ cols = 80, onAnswer, questions: raw, t }: Quest
     if (question.multiSelect) {
       const current = picked[key] ?? []
 
-      const next = value.trim()
-        ? current.includes(OTHER)
-          ? current
-          : [...current, OTHER]
-        : current.filter(v => v !== OTHER)
+      const next = value.trim() ? (current.includes(OTHER) ? current : [...current, OTHER]) : current.filter((v) => v !== OTHER)
 
       const nextPicked = { ...picked, [key]: next }
 
@@ -471,7 +458,7 @@ export function QuestionPrompt({ cols = 80, onAnswer, questions: raw, t }: Quest
           break
 
         case 'move':
-          setSel(s => s + action.delta)
+          setSel((s) => s + action.delta)
 
           break
         case 'pick': {
@@ -556,9 +543,7 @@ export function QuestionPrompt({ cols = 80, onAnswer, questions: raw, t }: Quest
         <Text bold>Review your answers</Text>
 
         <Box flexDirection="column" marginTop={1}>
-          {allAnswered ? null : (
-            <Text color={t.color.warn}>⚠ You have not answered all questions</Text>
-          )}
+          {allAnswered ? null : <Text color={t.color.warn}>⚠ You have not answered all questions</Text>}
           {entries.map(([q, a]) => (
             <Box flexDirection="column" key={q} marginLeft={1}>
               <Text>● {safe(q)}</Text>
@@ -626,9 +611,7 @@ export function QuestionPrompt({ cols = 80, onAnswer, questions: raw, t }: Quest
                 <Text color={t.color.muted} dimColor>
                   {i + 1}.{' '}
                 </Text>
-                {question.multiSelect ? (
-                  <Text color={isOn ? t.color.ok : undefined}>[{isOn ? '✔' : ' '}] </Text>
-                ) : null}
+                {question.multiSelect ? <Text color={isOn ? t.color.ok : undefined}>[{isOn ? '✔' : ' '}] </Text> : null}
                 <Text bold={at} color={isOn ? t.color.ok : at ? t.color.permission : undefined}>
                   {opt.label}
                 </Text>
@@ -662,9 +645,7 @@ export function QuestionPrompt({ cols = 80, onAnswer, questions: raw, t }: Quest
             {other + 1}.{' '}
           </Text>
           {question.multiSelect ? (
-            <Text color={chosen.includes(OTHER) ? t.color.ok : undefined}>
-              [{chosen.includes(OTHER) ? '✔' : ' '}]{' '}
-            </Text>
+            <Text color={chosen.includes(OTHER) ? t.color.ok : undefined}>[{chosen.includes(OTHER) ? '✔' : ' '}] </Text>
           ) : null}
           {typing ? (
             <TextInput

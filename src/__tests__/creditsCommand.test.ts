@@ -15,7 +15,7 @@ import { openExternalUrl } from '../lib/openExternalUrl.js'
 
 const openExternalUrlMock = vi.mocked(openExternalUrl)
 
-const creditsCommand = creditsCommands.find(cmd => cmd.name === 'credits')!
+const creditsCommand = creditsCommands.find((cmd) => cmd.name === 'credits')!
 
 const buildView = (overrides: Partial<CreditsViewResponse> = {}): CreditsViewResponse => ({
   balance_lines: ['Grant: $9.50 left', 'Top-up: $25.00'],
@@ -79,7 +79,7 @@ describe('/credits slash command', () => {
     expect(rpc).toHaveBeenCalledWith('credits.view', { session_id: 'sid-abc' })
 
     // (a) sys received the balance text including the topup_url
-    const printed = sys.mock.calls.map(call => call[0]).join('\n')
+    const printed = sys.mock.calls.map((call) => call[0]).join('\n')
     expect(printed).toContain('💳 Nous credits')
     expect(printed).toContain('Grant: $9.50 left')
     expect(printed).toContain('Signed in as ada@example.com')
@@ -118,7 +118,7 @@ describe('/credits slash command', () => {
 
     await run()
 
-    const printed = sys.mock.calls.map(call => call[0]).join('\n')
+    const printed = sys.mock.calls.map((call) => call[0]).join('\n')
     expect(printed).toContain('💳 Nous credits')
     expect(getOverlayState().confirm).toBeNull()
   })

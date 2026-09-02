@@ -8,7 +8,7 @@ import { AUDIO_DIRECTIVE_RE, horizontalRule, INLINE_RE, Md, MEDIA_LINE_RE, strip
 import { stripAnsi } from '../lib/text.js'
 import { DEFAULT_THEME } from '../theme.js'
 
-const matches = (text: string) => [...text.matchAll(INLINE_RE)].map(m => m[0])
+const matches = (text: string) => [...text.matchAll(INLINE_RE)].map((m) => m[0])
 const BEL = String.fromCharCode(7)
 const ESC = String.fromCharCode(27)
 const CSI_RE = new RegExp(`${ESC}\\[[0-?]*[ -/]*[@-~]`, 'g')
@@ -23,15 +23,15 @@ const renderPlain = (node: React.ReactNode) => {
   Object.assign(stdout, { columns: 80, isTTY: false, rows: 24 })
   Object.assign(stdin, { isTTY: false })
   Object.assign(stderr, { isTTY: false })
-  stdout.on('data', chunk => {
+  stdout.on('data', (chunk) => {
     output += chunk.toString()
   })
 
   const instance = renderSync(node, {
     patchConsole: false,
-    stderr: stderr as NodeJS.WriteStream,
-    stdin: stdin as NodeJS.ReadStream,
-    stdout: stdout as NodeJS.WriteStream
+    stderr: stderr as unknown as NodeJS.WriteStream,
+    stdin: stdin as unknown as NodeJS.ReadStream,
+    stdout: stdout as unknown as NodeJS.WriteStream
   })
 
   instance.unmount()
@@ -40,7 +40,7 @@ const renderPlain = (node: React.ReactNode) => {
   return output
     .replace(OSC_RE, '')
     .split('\n')
-    .map(line => stripAnsi(line).replace(CSI_RE, '').trimEnd())
+    .map((line) => stripAnsi(line).replace(CSI_RE, '').trimEnd())
 }
 
 // Like renderPlain, but returns the raw output stream with escape
@@ -54,15 +54,15 @@ const renderRaw = (node: React.ReactNode) => {
   Object.assign(stdout, { columns: 120, isTTY: false, rows: 24 })
   Object.assign(stdin, { isTTY: false })
   Object.assign(stderr, { isTTY: false })
-  stdout.on('data', chunk => {
+  stdout.on('data', (chunk) => {
     output += chunk.toString()
   })
 
   const instance = renderSync(node, {
     patchConsole: false,
-    stderr: stderr as NodeJS.WriteStream,
-    stdin: stdin as NodeJS.ReadStream,
-    stdout: stdout as NodeJS.WriteStream
+    stderr: stderr as unknown as NodeJS.WriteStream,
+    stdin: stdin as unknown as NodeJS.ReadStream,
+    stdout: stdout as unknown as NodeJS.WriteStream
   })
 
   instance.unmount()
@@ -235,9 +235,7 @@ describe('Markdown horizontal rules', () => {
 
 describe('Md wrapping', () => {
   it('trims spaces from word-wrap continuation lines', () => {
-    const lines = renderPlain(
-      React.createElement(Box, { width: 5 }, React.createElement(Md, { t: DEFAULT_THEME, text: 'Let me' }))
-    )
+    const lines = renderPlain(React.createElement(Box, { width: 5 }, React.createElement(Md, { t: DEFAULT_THEME, text: 'Let me' })))
 
     expect(lines).toContain('Let')
     expect(lines).toContain('me')
@@ -259,11 +257,9 @@ describe('Md wrapping', () => {
   })
 
   it('preserves original inline-code edge spaces', () => {
-    const lines = renderPlain(
-      React.createElement(Box, { width: 24 }, React.createElement(Md, { t: DEFAULT_THEME, text: '` hi ` ok' }))
-    )
+    const lines = renderPlain(React.createElement(Box, { width: 24 }, React.createElement(Md, { t: DEFAULT_THEME, text: '` hi ` ok' })))
 
-    expect(lines.some(line => line.startsWith(' hi  ok'))).toBe(true)
+    expect(lines.some((line) => line.startsWith(' hi  ok'))).toBe(true)
   })
 
   it('renders Python dunder identifiers literally outside code fences', () => {
@@ -315,14 +311,14 @@ describe('Md fenced-code layout', () => {
       )
     )
 
-    const top = lines.find(line => line.includes('╭'))
-    const bottom = lines.find(line => line.includes('╰'))
+    const top = lines.find((line) => line.includes('╭'))
+    const bottom = lines.find((line) => line.includes('╰'))
 
     expect(top).toBeDefined()
     expect(bottom).toBeDefined()
     expect(stringWidth(top!)).toBeLessThan(parentWidth)
     expect(stringWidth(bottom!)).toBe(stringWidth(top!))
-    expect(lines.every(line => stringWidth(line) <= parentWidth)).toBe(true)
+    expect(lines.every((line) => stringWidth(line) <= parentWidth)).toBe(true)
     expect(lines).toContain('  │ Name   │ Status │')
     expect(lines).toContain('After')
   })
@@ -342,11 +338,11 @@ describe('Md fenced-code layout', () => {
       )
     )
 
-    const frame = lines.filter(line => /[╭│╰]/.test(line))
+    const frame = lines.filter((line) => /[╭│╰]/.test(line))
 
     expect(frame.length).toBe(4)
-    expect(frame.every(line => stringWidth(line) < parentWidth)).toBe(true)
-    expect(frame.every(line => stringWidth(line) === stringWidth(frame[0]!))).toBe(true)
+    expect(frame.every((line) => stringWidth(line) < parentWidth)).toBe(true)
+    expect(frame.every((line) => stringWidth(line) === stringWidth(frame[0]!))).toBe(true)
     expect(frame[0]).toMatch(/^ ╭─+╮$/)
     expect(frame.at(-1)).toMatch(/^ ╰─+╯$/)
   })
@@ -384,9 +380,9 @@ describe('Md tables', () => {
       )
     )
 
-    expect(lines.filter(line => line.includes('│')).length).toBeGreaterThan(2)
-    expect(lines.some(line => line.trimStart().startsWith('┌'))).toBe(true)
-    expect(lines.some(line => line.trimStart().startsWith('└'))).toBe(true)
+    expect(lines.filter((line) => line.includes('│')).length).toBeGreaterThan(2)
+    expect(lines.some((line) => line.trimStart().startsWith('┌'))).toBe(true)
+    expect(lines.some((line) => line.trimStart().startsWith('└'))).toBe(true)
   })
 })
 
@@ -560,11 +556,7 @@ describe('Md link labels', () => {
     const flood = ')'.repeat(50_000)
 
     const lines = renderPlain(
-      React.createElement(
-        Box,
-        { width: 80 },
-        React.createElement(Md, { t: DEFAULT_THEME, text: `see https://a.com/x${flood} end` })
-      )
+      React.createElement(Box, { width: 80 }, React.createElement(Md, { t: DEFAULT_THEME, text: `see https://a.com/x${flood} end` }))
     )
 
     // The link target stops at the URL; the flood renders as plain text
@@ -595,7 +587,7 @@ describe('renderTable CJK width alignment', () => {
     // (deduped to skip the divider, which renders independently).
     const lines = renderPlain(
       React.createElement(Box, null, React.createElement(Md, { compact: true, t: DEFAULT_THEME, text: md }))
-    ).filter(line => line.trim().length > 0)
+    ).filter((line) => line.trim().length > 0)
 
     // Heuristic: a "data row" line either contains 'Config' (header)
     // or one of the body labels; a divider is all box-drawing.  Use
@@ -607,10 +599,10 @@ describe('renderTable CJK width alignment', () => {
       return idx < 0 ? -1 : stringWidth(line.slice(0, idx))
     }
 
-    const headerCol2 = lines.map(l => colStarts(l, 'Config')).find(v => v >= 0)
-    const denseCol2 = lines.map(l => colStarts(l, 'dense')).find(v => v >= 0)
-    const chatCol2 = lines.map(l => colStarts(l, 'chat')).find(v => v >= 0)
-    const qwenCol2 = lines.map(l => colStarts(l, 'qwen')).find(v => v >= 0)
+    const headerCol2 = lines.map((l) => colStarts(l, 'Config')).find((v) => v >= 0)
+    const denseCol2 = lines.map((l) => colStarts(l, 'dense')).find((v) => v >= 0)
+    const chatCol2 = lines.map((l) => colStarts(l, 'chat')).find((v) => v >= 0)
+    const qwenCol2 = lines.map((l) => colStarts(l, 'qwen')).find((v) => v >= 0)
 
     expect(headerCol2).toBeDefined()
     expect(denseCol2).toBe(headerCol2)

@@ -1,12 +1,4 @@
-import {
-  type ScrollBoxHandle,
-  useApp,
-  useHasSelection,
-  useSelection,
-  useStdout,
-  useTerminalTitle,
-  withInkSuspended
-} from '@makima-tui/ink'
+import { type ScrollBoxHandle, useApp, useHasSelection, useSelection, useStdout, useTerminalTitle, withInkSuspended } from '@makima-tui/ink'
 import { useStore } from '@nanostores/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -39,12 +31,7 @@ import { asRpcResult, rpcErrorMessage } from '../lib/rpc.js'
 import { terminalParityHints } from '../lib/terminalParity.js'
 import { buildToolTrailLine, formatAbandonedClarify, sameToolTrailGroup, toolTrailLabel } from '../lib/text.js'
 import { estimatedMsgHeight, messageHeightKey } from '../lib/virtualHeights.js'
-import {
-  getWorktreeSession,
-  planWorktreeExit,
-  setWorktreeExitNote,
-  type WorktreeStatusResponse
-} from '../lib/worktree.js'
+import { getWorktreeSession, planWorktreeExit, setWorktreeExitNote, type WorktreeStatusResponse } from '../lib/worktree.js'
 import type { Msg, PanelSection, SlashCatalog } from '../types.js'
 
 import { createGatewayEventHandler } from './createGatewayEventHandler.js'
@@ -205,16 +192,16 @@ export function useMainApp(gw: GatewayClient) {
   const ui = useStore($uiState)
   const overlay = useStore($overlayState)
 
-  const turnLiveTailActive = useTurnSelector(state =>
+  const turnLiveTailActive = useTurnSelector((state) =>
     Boolean(
       state.streaming ||
-      state.streamPendingTools.length ||
-      state.streamSegments.length ||
-      state.reasoning.trim() ||
-      state.reasoningActive ||
-      state.tools.length ||
-      state.subagents.length ||
-      state.todos.length
+        state.streamPendingTools.length ||
+        state.streamSegments.length ||
+        state.reasoning.trim() ||
+        state.reasoningActive ||
+        state.tools.length ||
+        state.subagents.length ||
+        state.todos.length
     )
   )
 
@@ -289,22 +276,22 @@ export function useMainApp(gw: GatewayClient) {
 
   const composer = useComposerState({
     gw,
-    onClipboardPaste: quiet => clipboardPasteRef.current(quiet),
+    onClipboardPaste: (quiet) => clipboardPasteRef.current(quiet),
     // Success renders as an `[Image #N]` chip in the composer (see
     // insertImageRef), so this fires only for failures — an undecodable
     // image, or a box with no xclip/wl-clipboard.
-    onImageAttached: info => {
+    onImageAttached: (info) => {
       sys(attachedImageNotice(info))
     },
     submitRef
   })
 
   const { actions: composerActions, refs: composerRefs, state: composerState } = composer
-  const empty = !historyItems.some(msg => msg.kind !== 'intro')
+  const empty = !historyItems.some((msg) => msg.kind !== 'intro')
 
   useEffect(() => {
     void terminalParityHints()
-      .then(hints => {
+      .then((hints) => {
         for (const hint of hints) {
           if (terminalHintsShownRef.current.has(hint.key)) {
             continue
@@ -341,8 +328,7 @@ export function useMainApp(gw: GatewayClient) {
     () =>
       historyItems.map((msg, index) => {
         const detailScope = messageId(msg)
-        const signaturePart = (key: string) =>
-          Object.hasOwn(ui.detailExpanded, key) ? (ui.detailExpanded[key] ? '1' : '0') : '-'
+        const signaturePart = (key: string) => (Object.hasOwn(ui.detailExpanded, key) ? (ui.detailExpanded[key] ? '1' : '0') : '-')
         const detailSignature = `${signaturePart(`${detailScope}:thinking`)}:${(msg.tools ?? [])
           .map((_, toolIndex) => signaturePart(`${detailScope}:tool:${toolIndex}`))
           .join(',')}`
@@ -404,10 +390,7 @@ export function useMainApp(gw: GatewayClient) {
   // appLayout.tsx render side and the height estimate below must agree (see
   // domain/blockLayout.ts::showsInterTurnSeparator). Short-circuited to -1
   // when color renders (the band replaces the separator).
-  const firstUserIdx = useMemo(
-    () => (TRANSCRIPT_COLOR ? -1 : virtualRows.findIndex(r => r.msg.role === 'user')),
-    [virtualRows]
-  )
+  const firstUserIdx = useMemo(() => (TRANSCRIPT_COLOR ? -1 : virtualRows.findIndex((r) => r.msg.role === 'user')), [virtualRows])
 
   const estimateRowHeight = useCallback(
     (index: number) => {
@@ -423,15 +406,13 @@ export function useMainApp(gw: GatewayClient) {
       }
 
       const thinkingKey = `${row.detailScope}:thinking`
-      const thinkingExpanded = Object.hasOwn(ui.detailExpanded, thinkingKey)
-        ? ui.detailExpanded[thinkingKey]!
-        : thinkingDetailsExpanded
+      const thinkingExpanded = Object.hasOwn(ui.detailExpanded, thinkingKey) ? ui.detailExpanded[thinkingKey]! : thinkingDetailsExpanded
 
       return estimatedMsgHeight(row.msg, cols, {
         compact: ui.compact,
         details: detailsVisible,
         leadGap: hasLeadGap(
-          prevRenderedMsg(i => virtualRows[i]?.msg, index, {
+          prevRenderedMsg((i) => virtualRows[i]?.msg, index, {
             commandOverride: ui.detailsModeCommandOverride,
             detailsMode: ui.detailsMode,
             sections: ui.sections
@@ -497,7 +478,7 @@ export function useMainApp(gw: GatewayClient) {
       scroll.getScrollTop() + scroll.getPendingDelta(),
       scroll.getViewportHeight(),
       virtualRows.length
-    ).flatMap(index => {
+    ).flatMap((index) => {
       const row = virtualRows[index]
 
       return row ? [row.msg] : []
@@ -506,15 +487,9 @@ export function useMainApp(gw: GatewayClient) {
     return collectDetailTargets(visibleMessages, messageId, getUiState().detailExpanded)
   }, [messageId, virtualHistory.offsets, virtualRows])
 
-  const scrollWithSelection = useCallback(
-    (delta: number) => scrollWithSelectionBy(delta, { scrollRef, selection }),
-    [selection]
-  )
+  const scrollWithSelection = useCallback((delta: number) => scrollWithSelectionBy(delta, { scrollRef, selection }), [selection])
 
-  const appendMessage = useCallback(
-    (msg: Msg) => setHistoryItems(prev => capHistory(appendTranscriptMessage(prev, msg))),
-    []
-  )
+  const appendMessage = useCallback((msg: Msg) => setHistoryItems((prev) => capHistory(appendTranscriptMessage(prev, msg))), [])
 
   const sys = useCallback((text: string) => appendMessage({ role: 'system', text }), [appendMessage])
 
@@ -524,8 +499,7 @@ export function useMainApp(gw: GatewayClient) {
   )
 
   const panel = useCallback(
-    (title: string, sections: PanelSection[]) =>
-      appendMessage({ kind: 'panel', panelData: { sections, title }, role: 'system', text: '' }),
+    (title: string, sections: PanelSection[]) => appendMessage({ kind: 'panel', panelData: { sections, title }, role: 'system', text: '' }),
     [appendMessage]
   )
 
@@ -542,15 +516,12 @@ export function useMainApp(gw: GatewayClient) {
 
   const maybeGoodVibes = useCallback((text: string) => {
     if (GOOD_VIBES_RE.test(text)) {
-      setGoodVibesTick(v => v + 1)
+      setGoodVibesTick((v) => v + 1)
     }
   }, [])
 
   const rpc: GatewayRpc = useCallback(
-    async <T extends Record<string, any> = Record<string, any>>(
-      method: string,
-      params: Record<string, unknown> = {}
-    ) => {
+    async <T extends Record<string, any> = Record<string, any>>(method: string, params: Record<string, unknown> = {}) => {
       try {
         const result = asRpcResult<T>(await gw.request<T>(method, params))
 
@@ -622,7 +593,7 @@ export function useMainApp(gw: GatewayClient) {
     const keptNote = `Worktree kept at ${wt.path} (branch ${wt.branch})`
 
     const perform = (action: 'keep' | 'remove') => {
-      patchOverlayState(prev =>
+      patchOverlayState((prev) =>
         prev.worktreeExit
           ? {
               ...prev,
@@ -631,7 +602,7 @@ export function useMainApp(gw: GatewayClient) {
           : prev
       )
       gw.request<Record<string, any>>('worktree.exit', { action })
-        .then(r => {
+        .then((r) => {
           if (r && r.ok !== false) {
             finish(typeof r.message === 'string' && r.message ? r.message : null)
           } else {
@@ -653,7 +624,7 @@ export function useMainApp(gw: GatewayClient) {
     }
 
     gw.request<WorktreeStatusResponse>('worktree.status', {})
-      .then(status => {
+      .then((status) => {
         if (!status || status.ok === false || status.active === false) {
           // Backend can't service the flow (dead, init_error, no session on
           // its side) — keep the worktree, tell the user where it lives.
@@ -720,7 +691,7 @@ export function useMainApp(gw: GatewayClient) {
 
   useEffect(() => {
     if (ui.busy) {
-      setTurnStartedAt(prev => prev ?? Date.now())
+      setTurnStartedAt((prev) => prev ?? Date.now())
     } else if (turnStartedAt != null) {
       // Only stamp the idle marker when a turn was actually live — busy is
       // also false on mount and we don't want a phantom "done" timestamp
@@ -743,7 +714,7 @@ export function useMainApp(gw: GatewayClient) {
 
     const refresh = () => {
       gw.request<SessionActiveListResponse>('session.active_list', { current_session_id: getUiState().sid })
-        .then(raw => {
+        .then((raw) => {
           const result = asRpcResult<SessionActiveListResponse>(raw)
 
           if (!stopped && result?.sessions) {
@@ -754,7 +725,7 @@ export function useMainApp(gw: GatewayClient) {
             // round-trip is needed.
             const currentSid = getUiState().sid
 
-            const sessionTitle = result.sessions.find(s => s.current || s.id === currentSid)?.title?.trim() ?? ''
+            const sessionTitle = result.sessions.find((s) => s.current || s.id === currentSid)?.title?.trim() ?? ''
 
             // Only patch when something actually changed. patchUiState always
             // produces a new state object, which notifies every $uiState
@@ -783,18 +754,11 @@ export function useMainApp(gw: GatewayClient) {
   // Format: `<marker> <session name> · <model> · <cwd>` — name/cwd omitted when absent.
   const model = ui.info?.model?.replace(/^.*\//, '') ?? ''
 
-  const marker =
-    overlay.approval || overlay.sudo || overlay.secret || overlay.clarify || overlay.questions
-      ? '⚠'
-      : ui.busy
-        ? '⏳'
-        : '✓'
+  const marker = overlay.approval || overlay.sudo || overlay.secret || overlay.clarify || overlay.questions ? '⚠' : ui.busy ? '⏳' : '✓'
 
   const tabCwd = ui.info?.cwd
 
-  useTerminalTitle(
-    model ? composeTabTitle(marker, ui.sessionTitle, model, tabCwd ? shortCwd(tabCwd, 24) : '') : 'makima tui'
-  )
+  useTerminalTitle(model ? composeTabTitle(marker, ui.sessionTitle, model, tabCwd ? shortCwd(tabCwd, 24) : '') : 'makima tui')
 
   useEffect(() => {
     if (!ui.sid || !stdout) {
@@ -839,10 +803,10 @@ export function useMainApp(gw: GatewayClient) {
 
       const label = toolTrailLabel('clarify')
 
-      turnController.turnTools = turnController.turnTools.filter(line => !sameToolTrailGroup(label, line))
+      turnController.turnTools = turnController.turnTools.filter((line) => !sameToolTrailGroup(label, line))
       patchTurnState({ turnTrail: turnController.turnTools })
 
-      rpc<ClarifyRespondResponse>('clarify.respond', { answer, request_id: clarify.requestId }).then(r => {
+      rpc<ClarifyRespondResponse>('clarify.respond', { answer, request_id: clarify.requestId }).then((r) => {
         if (!r) {
           return
         }
@@ -879,7 +843,7 @@ export function useMainApp(gw: GatewayClient) {
         // Inserts an `[Image #N]` chip below, so the chip is authoritative.
         placeholder: true,
         session_id: getUiState().sid
-      }).then(r => {
+      }).then((r) => {
         if (!r) {
           return
         }
@@ -933,12 +897,7 @@ export function useMainApp(gw: GatewayClient) {
   // and error paths never emit message.complete, so anything enqueued while
   // `!sleep` / a failed turn was running would stay stuck forever.
   useEffect(() => {
-    if (
-      !ui.sid ||
-      ui.busy ||
-      composerRefs.queueEditRef.current !== null ||
-      composerRefs.queueRef.current.length === 0
-    ) {
+    if (!ui.sid || ui.busy || composerRefs.queueEditRef.current !== null || composerRefs.queueRef.current.length === 0) {
       return
     }
 
@@ -1133,7 +1092,7 @@ export function useMainApp(gw: GatewayClient) {
   const respondWith = useCallback(
     (method: string, params: Record<string, unknown>, done: () => void) =>
       rpc(method, params)
-        .then(r => r && done())
+        .then((r) => r && done())
         .catch((error: unknown) => {
           const message = error instanceof Error ? error.message : String(error)
           sys(`error: ${message}`)
@@ -1166,8 +1125,7 @@ export function useMainApp(gw: GatewayClient) {
         if (choice === 'deny') {
           patchTurnState({ outcome: 'plan rejected — still planning' })
         } else {
-          const optimistic =
-            choice === 'accept-edits' ? 'acceptEdits' : choice === 'bypass' ? 'bypassPermissions' : 'default'
+          const optimistic = choice === 'accept-edits' ? 'acceptEdits' : choice === 'bypass' ? 'bypassPermissions' : 'default'
 
           patchUiState({ permissionMode: optimistic })
           patchTurnState({ outcome: 'plan approved' })
@@ -1283,7 +1241,7 @@ export function useMainApp(gw: GatewayClient) {
         modelArg,
         newLiveSession: session.newLiveSession,
         onModelSwitched: (value, result) =>
-          patchUiState(state => ({
+          patchUiState((state) => ({
             ...state,
             info: infoAfterModelSwitch(state.info, value, result.provider)
           })),
@@ -1295,55 +1253,48 @@ export function useMainApp(gw: GatewayClient) {
     [dispatchSubmission, maybeWarn, rpc, session.newLiveSession, sys]
   )
 
-  const hasReasoning = useTurnSelector(state => Boolean(state.reasoning.trim()))
+  const hasReasoning = useTurnSelector((state) => Boolean(state.reasoning.trim()))
 
   // Per-section overrides win over the global mode — when every section is
   // resolved to hidden, the only thing ToolTrail will surface is the
   // floating-alert backstop (errors/warnings).  Mirror that so we don't
   // render an empty wrapper Box above the streaming area in quiet mode.
-  const anyPanelVisible = SECTION_NAMES.some(
-    s => sectionMode(s, ui.detailsMode, ui.sections, ui.detailsModeCommandOverride) !== 'hidden'
-  )
+  const anyPanelVisible = SECTION_NAMES.some((s) => sectionMode(s, ui.detailsMode, ui.sections, ui.detailsModeCommandOverride) !== 'hidden')
 
-  const thinkingPanelVisible =
-    sectionMode('thinking', ui.detailsMode, ui.sections, ui.detailsModeCommandOverride) !== 'hidden'
+  const thinkingPanelVisible = sectionMode('thinking', ui.detailsMode, ui.sections, ui.detailsModeCommandOverride) !== 'hidden'
 
-  const toolsPanelVisible =
-    sectionMode('tools', ui.detailsMode, ui.sections, ui.detailsModeCommandOverride) !== 'hidden'
+  const toolsPanelVisible = sectionMode('tools', ui.detailsMode, ui.sections, ui.detailsModeCommandOverride) !== 'hidden'
 
-  const activityPanelVisible =
-    sectionMode('activity', ui.detailsMode, ui.sections, ui.detailsModeCommandOverride) !== 'hidden'
+  const activityPanelVisible = sectionMode('activity', ui.detailsMode, ui.sections, ui.detailsModeCommandOverride) !== 'hidden'
 
-  const showProgressArea = useTurnSelector(state =>
+  const showProgressArea = useTurnSelector((state) =>
     anyPanelVisible
       ? Boolean(
           ui.busy ||
-          state.outcome ||
-          state.streamPendingTools.length ||
-          state.streamSegments.some(segment => {
-            const hasThinking = Boolean(segment.thinking?.trim())
-            const hasTrailTools = Boolean(segment.tools?.length)
+            state.outcome ||
+            state.streamPendingTools.length ||
+            state.streamSegments.some((segment) => {
+              const hasThinking = Boolean(segment.thinking?.trim())
+              const hasTrailTools = Boolean(segment.tools?.length)
 
-            if (segment.kind === 'trail' && !segment.text) {
+              if (segment.kind === 'trail' && !segment.text) {
+                return (thinkingPanelVisible && hasThinking) || ((toolsPanelVisible || activityPanelVisible) && hasTrailTools)
+              }
+
               return (
-                (thinkingPanelVisible && hasThinking) || ((toolsPanelVisible || activityPanelVisible) && hasTrailTools)
+                Boolean(segment.text?.trim()) ||
+                (thinkingPanelVisible && hasThinking) ||
+                ((toolsPanelVisible || activityPanelVisible) && hasTrailTools)
               )
-            }
-
-            return (
-              Boolean(segment.text?.trim()) ||
-              (thinkingPanelVisible && hasThinking) ||
-              ((toolsPanelVisible || activityPanelVisible) && hasTrailTools)
-            )
-          }) ||
-          state.subagents.length ||
-          state.tools.length ||
-          state.todos.length ||
-          state.turnTrail.length ||
-          (thinkingPanelVisible && hasReasoning) ||
-          state.activity.length
+            }) ||
+            state.subagents.length ||
+            state.tools.length ||
+            state.todos.length ||
+            state.turnTrail.length ||
+            (thinkingPanelVisible && hasReasoning) ||
+            state.activity.length
         )
-      : state.activity.some(item => item.tone !== 'info')
+      : state.activity.some((item) => item.tone !== 'info')
   )
 
   const appActions = useMemo(
@@ -1438,11 +1389,7 @@ export function useMainApp(gw: GatewayClient) {
       turnStartedAt: ui.sid ? turnStartedAt : null,
       // CLI parity: the classic prompt_toolkit status bar shows a red dot
       // on REC (cli.py:_get_voice_status_fragments line 2344).
-      voiceLabel: voiceRecording
-        ? '● REC'
-        : voiceProcessing
-          ? '◉ STT'
-          : `voice ${voiceEnabled ? 'on' : 'off'}${voiceTts ? ' [tts]' : ''}`
+      voiceLabel: voiceRecording ? '● REC' : voiceProcessing ? '◉ STT' : `voice ${voiceEnabled ? 'on' : 'off'}${voiceTts ? ' [tts]' : ''}`
     }),
     [
       cwd,

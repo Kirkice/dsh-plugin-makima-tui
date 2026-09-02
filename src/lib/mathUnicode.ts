@@ -712,8 +712,8 @@ export function texToUnicode(input: string): string {
   // while letting the React layer do the actual visual emphasis.
   // Argument is parsed with balanced braces so nested `{...}` from
   // superscripts / fractions inside the box survive.
-  s = replaceBracedCommand(s, '\\boxed', body => `${BOX_OPEN}${body.trim()}${BOX_CLOSE}`)
-  s = replaceBracedCommand(s, '\\fbox', body => `${BOX_OPEN}${body.trim()}${BOX_CLOSE}`)
+  s = replaceBracedCommand(s, '\\boxed', (body) => `${BOX_OPEN}${body.trim()}${BOX_CLOSE}`)
+  s = replaceBracedCommand(s, '\\fbox', (body) => `${BOX_OPEN}${body.trim()}${BOX_CLOSE}`)
 
   // `\xrightarrow{label}` / `\xleftarrow{label}` collapse to an arrow with
   // the label inline. LaTeX renders the label above the arrow; in monospace
@@ -767,8 +767,8 @@ export function texToUnicode(input: string): string {
   // Punctuation pass first — these can be followed by letters (`\{p`
   // is "open-brace then p"), so the letter pass's `(?![A-Za-z])` rule
   // would wrongly block them.
-  s = s.replace(SYMBOL_PUNCT_RE, m => SYMBOLS[m] ?? m)
-  s = s.replace(SYMBOL_LETTER_RE, m => SYMBOLS[m] ?? m)
+  s = s.replace(SYMBOL_PUNCT_RE, (m) => SYMBOLS[m] ?? m)
+  s = s.replace(SYMBOL_LETTER_RE, (m) => SYMBOLS[m] ?? m)
 
   // Bare `^c` / `_c` handles ONLY alphanumerics and `+`/`-`/`=`. Parens
   // are intentionally excluded because the braced-fallback above can

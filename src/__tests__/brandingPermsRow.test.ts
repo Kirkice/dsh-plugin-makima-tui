@@ -22,7 +22,7 @@ import type { SessionInfo } from '../types.js'
  * note; assigning `columns` to the stream leaves the component on its `?? 100`
  * fallback and silently tests one layout at every width).
  */
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const originalColumns = Object.getOwnPropertyDescriptor(process.stdout, 'columns')
 
@@ -57,19 +57,16 @@ async function render(permission_mode: string | undefined, cols = 100): Promise<
 
   let captured = ''
 
-  stdout.on('data', chunk => {
+  stdout.on('data', (chunk) => {
     captured += chunk.toString()
   })
 
-  const instance = renderSync(
-    React.createElement(SessionPanel, { info: info(permission_mode), sid: 'a1b2c3d4', t: DEFAULT_THEME }),
-    {
-      patchConsole: false,
-      stderr: stderr as NodeJS.WriteStream,
-      stdin: stdin as NodeJS.ReadStream,
-      stdout: stdout as NodeJS.WriteStream
-    }
-  )
+  const instance = renderSync(React.createElement(SessionPanel, { info: info(permission_mode), sid: 'a1b2c3d4', t: DEFAULT_THEME }), {
+    patchConsole: false,
+    stderr: stderr as unknown as NodeJS.WriteStream,
+    stdin: stdin as unknown as NodeJS.ReadStream,
+    stdout: stdout as unknown as NodeJS.WriteStream
+  })
 
   try {
     await delay(30)

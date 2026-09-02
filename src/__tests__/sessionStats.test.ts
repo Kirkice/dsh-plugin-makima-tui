@@ -78,8 +78,11 @@ describe('buildSessionStatsLine', () => {
   })
 
   afterEach(() => {
-    if (HOME === undefined) {delete process.env.HOME}
-    else {process.env.HOME = HOME}
+    if (HOME === undefined) {
+      delete process.env.HOME
+    } else {
+      process.env.HOME = HOME
+    }
   })
 
   const stats = { costUsd: 0.0048, inputTokens: 33189, outputTokens: 622, turns: 1 }
@@ -96,8 +99,7 @@ describe('buildSessionStatsLine', () => {
 
   it('renders the full toolbar line when it fits (REPL toolbar parity)', () => {
     expect(build(200)).toBe(
-      'deepseek · deepseek-v4-flash · /Users/test/workspace/clawcodex · ' +
-        'turns: 1 · tokens: 33189 in / 622 out · cost $0.0048'
+      'deepseek · deepseek-v4-flash · /Users/test/workspace/clawcodex · ' + 'turns: 1 · tokens: 33189 in / 622 out · cost $0.0048'
     )
   })
 
@@ -127,9 +129,7 @@ describe('buildSessionStatsLine', () => {
   })
 
   it('omits empty segments instead of doubling separators', () => {
-    expect(build(200, { cwd: '', provider: '' })).toBe(
-      'deepseek-v4-flash · turns: 1 · tokens: 33189 in / 622 out · cost $0.0048'
-    )
+    expect(build(200, { cwd: '', provider: '' })).toBe('deepseek-v4-flash · turns: 1 · tokens: 33189 in / 622 out · cost $0.0048')
   })
 })
 
@@ -195,7 +195,7 @@ describe('message.complete → ui.sessionStats', () => {
     })
   })
 
-  it('folds a price-free backend\'s usage odometer when there is no snapshot', () => {
+  it("folds a price-free backend's usage odometer when there is no snapshot", () => {
     const onEvent = createGatewayEventHandler(buildCtx())
 
     // The dsh harness has no price table, so it publishes token totals here
@@ -267,7 +267,7 @@ describe('SessionStatsLine', () => {
     Object.assign(stdout, { columns: 120, isTTY: false, rows: 20 })
     Object.assign(stdin, { isTTY: false })
     Object.assign(stderr, { isTTY: false })
-    stdout.on('data', chunk => {
+    stdout.on('data', (chunk) => {
       output += chunk.toString()
     })
 

@@ -24,8 +24,7 @@ const config: OpenAiCodexOAuthConfig = {
   tokenEndpoint: 'https://auth.example.test/token'
 }
 
-const jwt = (claims: Record<string, unknown>) =>
-  `header.${Buffer.from(JSON.stringify(claims)).toString('base64url')}.signature`
+const jwt = (claims: Record<string, unknown>) => `header.${Buffer.from(JSON.stringify(claims)).toString('base64url')}.signature`
 
 describe('OpenAI Codex OAuth host credential lifecycle', () => {
   it('creates a PKCE S256 pair with URL-safe values', async () => {
@@ -53,22 +52,29 @@ describe('OpenAI Codex OAuth host credential lifecycle', () => {
 
   it('extracts the ChatGPT account ID from standard and namespaced claims', () => {
     expect(accountIdFromTokens({ access_token: jwt({ chatgpt_account_id: 'account-root' }) })).toBe('account-root')
-    expect(accountIdFromTokens({
-      access_token: jwt({
-        'https://api.openai.com/auth': { chatgpt_account_id: 'account-namespaced' }
+    expect(
+      accountIdFromTokens({
+        access_token: jwt({
+          'https://api.openai.com/auth': { chatgpt_account_id: 'account-namespaced' }
+        })
       })
-    })).toBe('account-namespaced')
+    ).toBe('account-namespaced')
     expect(accountIdFromTokens({ access_token: jwt({ organizations: [{ id: 'org-fallback' }] }) })).toBe('org-fallback')
   })
 
   it('persists a rotated refresh token and returns the refreshed access token', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'makima-codex-auth-'))
     const store = new OpenAiCodexCredentialStore(join(dir, 'credential.json'))
-    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({
-      access_token: 'new-access',
-      expires_in: 3_600,
-      refresh_token: 'new-refresh'
-    }), { status: 200 }))
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          access_token: 'new-access',
+          expires_in: 3_600,
+          refresh_token: 'new-refresh'
+        }),
+        { status: 200 }
+      )
+    )
 
     try {
       await store.save({
@@ -90,10 +96,15 @@ describe('OpenAI Codex OAuth host credential lifecycle', () => {
   it('clears a revoked refresh token instead of retaining a stale login', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'makima-codex-auth-'))
     const store = new OpenAiCodexCredentialStore(join(dir, 'credential.json'))
-    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({
-      error: 'invalid_grant',
-      error_description: 'refresh token revoked'
-    }), { status: 400 }))
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: 'invalid_grant',
+          error_description: 'refresh token revoked'
+        }),
+        { status: 400 }
+      )
+    )
 
     try {
       await store.save({

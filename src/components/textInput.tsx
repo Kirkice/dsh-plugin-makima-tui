@@ -25,8 +25,7 @@ type InkExt = typeof Ink & {
 
 const ink = Ink as unknown as InkExt
 
-const { Box, Text, useStdin, useInput, useStdout, stringWidth, useCursorAdvance, useDeclaredCursor, useTerminalFocus } =
-  ink
+const { Box, Text, useStdin, useInput, useStdout, stringWidth, useCursorAdvance, useDeclaredCursor, useTerminalFocus } = ink
 
 const ESC = '\x1b'
 const INV = `${ESC}[7m`
@@ -280,13 +279,7 @@ const ASCII_PRINTABLE_RE = /^[\x20-\x7e]+$/
  * length 1 but are still produced by IME compositions and must not be
  * fast-echoed.
  */
-export function canFastAppendShape(
-  current: string,
-  cursor: number,
-  text: string,
-  columns: number,
-  currentLineWidth: number
-): boolean {
+export function canFastAppendShape(current: string, cursor: number, text: string, columns: number, currentLineWidth: number): boolean {
   if (cursor !== current.length) {
     return false
   }
@@ -467,9 +460,8 @@ function useFwdDelete(active: boolean) {
 
 type PasteResult = { cursor: number; value: string } | null
 
-const isPasteResultPromise = (
-  value: PasteResult | Promise<PasteResult> | null | undefined
-): value is Promise<PasteResult> => !!value && typeof (value as PromiseLike<PasteResult>).then === 'function'
+const isPasteResultPromise = (value: PasteResult | Promise<PasteResult> | null | undefined): value is Promise<PasteResult> =>
+  !!value && typeof (value as PromiseLike<PasteResult>).then === 'function'
 
 export function TextInput({
   argumentHint,
@@ -518,8 +510,7 @@ export function TextInput({
   const display = mask ? raw.replace(/[^\n]/g, mask[0] ?? '*') : raw
 
   const selected = useMemo(
-    () =>
-      sel && sel.start !== sel.end ? { end: Math.max(sel.start, sel.end), start: Math.min(sel.start, sel.end) } : null,
+    () => (sel && sel.start !== sel.end ? { end: Math.max(sel.start, sel.end), start: Math.min(sel.start, sel.end) } : null),
     [sel]
   )
 
@@ -692,23 +683,14 @@ export function TextInput({
     }, FRAME_BATCH_MS)
   }
 
-  const canFastEchoBase = () =>
-    supportsFastEchoTerminal() && focus && termFocus && !selected && !mask && !!stdout?.isTTY
+  const canFastEchoBase = () => supportsFastEchoTerminal() && focus && termFocus && !selected && !mask && !!stdout?.isTTY
 
   const canFastAppend = (current: string, cursor: number, text: string) =>
     canFastEchoBase() && canFastAppendShape(current, cursor, text, columns, lineWidthRef.current)
 
-  const canFastBackspace = (current: string, cursor: number) =>
-    canFastEchoBase() && canFastBackspaceShape(current, cursor, columns)
+  const canFastBackspace = (current: string, cursor: number) => canFastEchoBase() && canFastBackspaceShape(current, cursor, columns)
 
-  const commit = (
-    next: string,
-    nextCur: number,
-    track = true,
-    syncParent = true,
-    syncLocal = true,
-    nextLineWidth?: number
-  ) => {
+  const commit = (next: string, nextCur: number, track = true, syncParent = true, syncLocal = true, nextLineWidth?: number) => {
     const prev = vRef.current
     const c = snapPos(next, nextCur)
     editVersionRef.current += 1
@@ -737,8 +719,7 @@ export function TextInput({
 
     curRef.current = c
     vRef.current = next
-    lineWidthRef.current =
-      nextLineWidth ?? stringWidth(next.includes('\n') ? next.slice(next.lastIndexOf('\n') + 1) : next)
+    lineWidthRef.current = nextLineWidth ?? stringWidth(next.includes('\n') ? next.slice(next.lastIndexOf('\n') + 1) : next)
 
     if (next !== prev) {
       if (syncParent) {
@@ -771,7 +752,7 @@ export function TextInput({
       const fallbackText = e.text
 
       void h
-        .then(result => {
+        .then((result) => {
           if (result && editVersionRef.current === startVersion) {
             commit(result.value, result.cursor)
           } else if (result && fallbackText && PRINTABLE.test(fallbackText)) {
@@ -858,9 +839,7 @@ export function TextInput({
   const selRange = () => {
     const range = selRef.current
 
-    return range && range.start !== range.end
-      ? { end: Math.max(range.start, range.end), start: Math.min(range.start, range.end) }
-      : null
+    return range && range.start !== range.end ? { end: Math.max(range.start, range.end), start: Math.min(range.start, range.end) } : null
   }
 
   const ins = (v: string, c: number, s: string) => v.slice(0, c) + s + v.slice(c)
@@ -925,8 +904,7 @@ export function TextInput({
     }
   }
 
-  const offsetAt = (e: { localCol?: number; localRow?: number }) =>
-    offsetFromPosition(display, e.localRow ?? 0, e.localCol ?? 0, columns)
+  const offsetAt = (e: { localCol?: number; localRow?: number }) => offsetFromPosition(display, e.localRow ?? 0, e.localCol ?? 0, columns)
 
   const isMultiClickAt = (offset: number) => {
     const now = Date.now()
@@ -959,12 +937,7 @@ export function TextInput({
         return
       }
 
-      if (
-        eventRaw === '\x1bv' ||
-        eventRaw === '\x1bV' ||
-        eventRaw === '\x16' ||
-        (isMac && isActionMod(k) && inp.toLowerCase() === 'v')
-      ) {
+      if (eventRaw === '\x1bv' || eventRaw === '\x1bV' || eventRaw === '\x16' || (isMac && isActionMod(k) && inp.toLowerCase() === 'v')) {
         flushKeyBurst()
 
         if (cbPaste.current) {
@@ -972,7 +945,7 @@ export function TextInput({
         }
 
         if (isMac) {
-          void readClipboardText().then(text => {
+          void readClipboardText().then((text) => {
             if (text) {
               pastePlainText(text)
             }
@@ -1049,8 +1022,7 @@ export function TextInput({
       const range = selRange()
       const delFwd = k.delete || fwdDel.current
 
-      const isPrintableInput =
-        (event.keypress.isPasted || inp.length > 0) && PRINTABLE.test(inp.replace(BRACKET_PASTE, ''))
+      const isPrintableInput = (event.keypress.isPasted || inp.length > 0) && PRINTABLE.test(inp.replace(BRACKET_PASTE, ''))
 
       if (!isPrintableInput) {
         flushKeyBurst()
@@ -1353,9 +1325,7 @@ interface TextInputProps {
   /** Allow multi-line editing: `\` + Enter inserts a newline instead of submitting. */
   multiline?: boolean
   onChange: (v: string) => void
-  onPaste?: (
-    e: PasteEvent
-  ) => { cursor: number; value: string } | Promise<{ cursor: number; value: string } | null> | null
+  onPaste?: (e: PasteEvent) => { cursor: number; value: string } | Promise<{ cursor: number; value: string } | null> | null
   onSubmit?: (v: string) => void
   placeholder?: string
   value: string
@@ -1375,10 +1345,7 @@ export type RightClickDecision = { action: 'copy'; text: string } | { action: 'p
  * Callers pass the already-normalized range from `selRange()` (start <= end,
  * or null when collapsed), so this helper does not need to re-normalize.
  */
-export function decideRightClickAction(
-  value: string,
-  range: { end: number; start: number } | null
-): RightClickDecision {
+export function decideRightClickAction(value: string, range: { end: number; start: number } | null): RightClickDecision {
   if (range && range.end > range.start) {
     const text = value.slice(range.start, range.end)
 

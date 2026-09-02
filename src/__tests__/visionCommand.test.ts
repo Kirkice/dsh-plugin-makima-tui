@@ -48,14 +48,20 @@ describe('/vision', () => {
 
   afterEach(() => {
     gw.kill()
-    if (prevWs === undefined) {delete process.env.MAKIMA_TUI_WORKSPACE}
-    else {process.env.MAKIMA_TUI_WORKSPACE = prevWs}
+    if (prevWs === undefined) {
+      delete process.env.MAKIMA_TUI_WORKSPACE
+    } else {
+      process.env.MAKIMA_TUI_WORKSPACE = prevWs
+    }
   })
 
   const stdinFrames = (): any[] => {
     const raw = (proc.stdin as any).read()?.toString() ?? ''
 
-    return raw.split('\n').filter(Boolean).map((l: string) => JSON.parse(l))
+    return raw
+      .split('\n')
+      .filter(Boolean)
+      .map((l: string) => JSON.parse(l))
   }
 
   const replyToControl = async (subtype: string, response: unknown) => {
@@ -63,7 +69,7 @@ describe('/vision', () => {
 
     await vi.waitFor(() => {
       seen.push(...stdinFrames())
-      req = seen.find(f => f.type === 'control_request' && f.request?.subtype === subtype)
+      req = seen.find((f) => f.type === 'control_request' && f.request?.subtype === subtype)
       expect(req).toBeTruthy()
     })
     proc.line({ response: { request_id: req.request_id, response }, type: 'control_response' })
@@ -83,11 +89,11 @@ describe('/vision', () => {
 
     await vi.waitFor(() => {
       seen.push(...stdinFrames())
-      const req = seen.find(f => f.type === 'control_request' && f.request?.subtype === 'vision')
+      const req = seen.find((f) => f.type === 'control_request' && f.request?.subtype === 'vision')
 
       expect(req?.request?.arg).toBe('off')
     })
-    const req = seen.find(f => f.type === 'control_request' && f.request?.subtype === 'vision')
+    const req = seen.find((f) => f.type === 'control_request' && f.request?.subtype === 'vision')
 
     proc.line({ response: { request_id: req.request_id, response: { ok: true, text: 'Vision disabled.' } }, type: 'control_response' })
     await p
@@ -109,6 +115,6 @@ describe('/vision', () => {
     await replyToControl('list_workflow_commands', { commands: [] })
     const r = await p
 
-    expect(r.items.map(item => item.text)).not.toContain('/vision')
+    expect(r.items.map((item) => item.text)).not.toContain('/vision')
   })
 })

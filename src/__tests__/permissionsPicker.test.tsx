@@ -9,7 +9,7 @@ import { PERMISSION_LEVELS } from '../lib/permissionLevels.js'
 import { stripAnsi } from '../lib/text.js'
 import { DEFAULT_THEME } from '../theme.js'
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 /** Mount the picker with a writable stdin so keys can actually be driven —
  *  the digit/arrow/Enter/Esc branches ARE this component's behavior, and a
@@ -29,16 +29,13 @@ function mount(current: string) {
   const onClose = vi.fn()
   const onSelect = vi.fn()
 
-  const app = renderSync(
-    React.createElement(PermissionsPicker, { current, onClose, onSelect, t: DEFAULT_THEME }),
-    {
-      exitOnCtrlC: false,
-      patchConsole: false,
-      stderr: stderr as NodeJS.WriteStream,
-      stdin: stdin as NodeJS.ReadStream,
-      stdout: stdout as NodeJS.WriteStream
-    }
-  )
+  const app = renderSync(React.createElement(PermissionsPicker, { current, onClose, onSelect, t: DEFAULT_THEME }), {
+    exitOnCtrlC: false,
+    patchConsole: false,
+    stderr: stderr as unknown as NodeJS.WriteStream,
+    stdin: stdin as unknown as NodeJS.ReadStream,
+    stdout: stdout as unknown as NodeJS.WriteStream
+  })
 
   return {
     onClose,

@@ -9,9 +9,9 @@ const SRC = join(import.meta.dirname, '..')
 
 describe('askUserSummary', () => {
   it('renders one "· question → answer" row per answer', () => {
-    expect(
-      askUserSummary({ answers: { 'Which posts?': 'The two un-sourced posts', 'How deep?': 'Facts only' } })
-    ).toBe('· Which posts? → The two un-sourced posts\n· How deep? → Facts only')
+    expect(askUserSummary({ answers: { 'Which posts?': 'The two un-sourced posts', 'How deep?': 'Facts only' } })).toBe(
+      '· Which posts? → The two un-sourced posts\n· How deep? → Facts only'
+    )
   })
 
   it('renders the declined line', () => {
@@ -36,9 +36,7 @@ describe('formatToolResult for AskUserQuestion', () => {
   })
 
   it('collapses the legacy pending blob to one line', () => {
-    expect(formatToolResult('AskUserQuestion', pending)).toBe(
-      'Waiting on 2 questions (no interactive surface)'
-    )
+    expect(formatToolResult('AskUserQuestion', pending)).toBe('Waiting on 2 questions (no interactive surface)')
   })
 
   it('singularizes one question', () => {
@@ -59,9 +57,11 @@ describe('formatToolResult for AskUserQuestion', () => {
 
   it('prefers the structured envelope over the model-facing prose', () => {
     const prose = 'User has answered your questions: "Which posts?"="Two". You can now continue.'
-    expect(formatToolResult('AskUserQuestion', prose, false, undefined, undefined, {
-      answers: { 'Which posts?': 'Two' }
-    })).toBe('· Which posts? → Two')
+    expect(
+      formatToolResult('AskUserQuestion', prose, false, undefined, undefined, {
+        answers: { 'Which posts?': 'Two' }
+      })
+    ).toBe('· Which posts? → Two')
   })
 
   it('leaves errors to the error path', () => {
@@ -96,9 +96,7 @@ describe('overlay registry wiring', () => {
   })
 
   it('maps the gateway event onto the overlay slot', () => {
-    expect(read('app/createGatewayEventHandler.ts')).toMatch(
-      /case 'question\.request':[\s\S]{0,300}patchOverlayState/
-    )
+    expect(read('app/createGatewayEventHandler.ts')).toMatch(/case 'question\.request':[\s\S]{0,300}patchOverlayState/)
   })
 
   it('replies over the control channel', () => {

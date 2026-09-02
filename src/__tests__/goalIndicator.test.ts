@@ -24,7 +24,7 @@ const renderToString = (element: React.ReactElement): string => {
   Object.assign(stdout, { columns: 100, isTTY: false, rows: 30 })
   Object.assign(stdin, { isTTY: false })
   Object.assign(stderr, { isTTY: false })
-  stdout.on('data', chunk => {
+  stdout.on('data', (chunk) => {
     output += chunk.toString()
   })
 
@@ -171,7 +171,7 @@ describe('GoalIndicator', () => {
     Object.assign(stdout, { columns: 100, isTTY: false, rows: 30 })
     Object.assign(stdin, { isTTY: false })
     Object.assign(stderr, { isTTY: false })
-    stdout.on('data', chunk => {
+    stdout.on('data', (chunk) => {
       output += chunk.toString()
     })
 

@@ -48,10 +48,12 @@ describe('appendToolShelfMessage', () => {
   })
 
   it('adds tools to the nearest contextual thinking shelf', () => {
-    const merged = appendToolShelfMessage(
-      [{ kind: 'trail', role: 'system', text: '', thinking: 'plan', tools: ['one ✓'] }],
-      { kind: 'trail', role: 'system', text: '', tools: ['two ✓'] }
-    )
+    const merged = appendToolShelfMessage([{ kind: 'trail', role: 'system', text: '', thinking: 'plan', tools: ['one ✓'] }], {
+      kind: 'trail',
+      role: 'system',
+      text: '',
+      tools: ['two ✓']
+    })
 
     expect(merged).toEqual([{ kind: 'trail', role: 'system', text: '', thinking: 'plan', tools: ['one ✓', 'two ✓'] }])
   })

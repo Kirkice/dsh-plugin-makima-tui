@@ -337,22 +337,21 @@ export async function configureTerminalKeybindings(
 
     const targets = targetBindings(platform)
 
-    const conflicts = targets.filter(target =>
-      keybindings.some(existing => isKeybinding(existing) && bindingsConflict(existing, target))
+    const conflicts = targets.filter((target) =>
+      keybindings.some((existing) => isKeybinding(existing) && bindingsConflict(existing, target))
     )
 
     if (conflicts.length) {
       return {
         success: false,
-        message:
-          `Existing terminal keybindings would conflict in ${keybindingsFile}: ` + conflicts.map(c => c.key).join(', ')
+        message: `Existing terminal keybindings would conflict in ${keybindingsFile}: ` + conflicts.map((c) => c.key).join(', ')
       }
     }
 
     let added = 0
 
     for (const target of targets.slice().reverse()) {
-      const exists = keybindings.some(existing => isKeybinding(existing) && sameBinding(existing, target))
+      const exists = keybindings.some((existing) => isKeybinding(existing) && sameBinding(existing, target))
 
       if (!exists) {
         keybindings.unshift(target)
@@ -435,9 +434,7 @@ export async function shouldPromptForTerminalSetup(options?: {
       return true
     }
 
-    return targetBindings(platform).some(
-      target => !parsed.some(existing => isKeybinding(existing) && sameBinding(existing, target))
-    )
+    return targetBindings(platform).some((target) => !parsed.some((existing) => isKeybinding(existing) && sameBinding(existing, target)))
   } catch {
     return true
   }

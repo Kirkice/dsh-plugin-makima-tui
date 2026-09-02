@@ -131,19 +131,13 @@ export function looksLikeDroppedPath(text: string): boolean {
  * Pasted source must remain editable in the composer by default. Collapsing is
  * opt-in for users who explicitly configure either threshold above zero.
  */
-export function shouldCollapsePaste(
-  text: string,
-  { chars, lines }: { chars: number; lines: number }
-): boolean {
+export function shouldCollapsePaste(text: string, { chars, lines }: { chars: number; lines: number }): boolean {
   const lineCount = text.split('\n').length
   return (lines > 0 && lineCount >= lines) || (chars > 0 && text.length >= chars)
 }
 
 /** What a Ctrl+V/Cmd+V hotkey paste resolved to. */
-export type HotkeyPasteDecision =
-  | { image: ImageAttachResponse; kind: 'image' }
-  | { kind: 'none' }
-  | { kind: 'text'; text: string }
+export type HotkeyPasteDecision = { image: ImageAttachResponse; kind: 'image' } | { kind: 'none' } | { kind: 'text'; text: string }
 
 /**
  * Decide what a hotkey paste should do, given the clipboard text and a way to
@@ -183,29 +177,13 @@ export async function resolveHotkeyPaste({
   return { kind: 'none' }
 }
 
-export function useComposerState({
-  gw,
-  onClipboardPaste,
-  onImageAttached,
-  submitRef
-}: UseComposerStateOptions): UseComposerStateResult {
+export function useComposerState({ gw, onClipboardPaste, onImageAttached, submitRef }: UseComposerStateOptions): UseComposerStateResult {
   const [input, setInput] = useState('')
   const [pasteSnips, setPasteSnips] = useState<PasteSnippet[]>([])
   const isBlocked = useStore($isBlocked)
   const { querier } = useStdin() as { querier: Parameters<typeof readOsc52Clipboard>[0] }
 
-  const {
-    queueRef,
-    queueEditRef,
-    queuedDisplay,
-    queueEditIdx,
-    enqueue,
-    dequeue,
-    removeQ,
-    replaceQ,
-    setQueueEdit,
-    syncQueue
-  } = useQueue()
+  const { queueRef, queueEditRef, queuedDisplay, queueEditIdx, enqueue, dequeue, removeQ, replaceQ, setQueueEdit, syncQueue } = useQueue()
 
   const { historyRef, historyIdx, setHistoryIdx, historyDraftRef, pushHistory } = useInputHistory()
   const { completions, compIdx, setCompIdx, compReplace, dismissCompletions } = useCompletion(input, isBlocked, gw)
@@ -219,12 +197,7 @@ export function useComposerState({
   }, [historyDraftRef, setQueueEdit, setHistoryIdx])
 
   const handleResolvedPaste = useCallback(
-    async ({
-      bracketed,
-      cursor,
-      text,
-      value
-    }: Omit<PasteEvent, 'hotkey'>): Promise<null | { cursor: number; value: string }> => {
+    async ({ bracketed, cursor, text, value }: Omit<PasteEvent, 'hotkey'>): Promise<null | { cursor: number; value: string }> => {
       const cleanedText = stripTrailingPasteNewlines(text)
 
       if (!cleanedText || !/[^\n]/.test(cleanedText)) {
@@ -316,18 +289,18 @@ export function useComposerState({
       const label = pasteTokenLabel(cleanedText, lineCount)
       const inserted = insertAtCursor(value, cursor, label)
 
-      setPasteSnips(prev => trimSnips([...prev, { label, text: cleanedText }]))
+      setPasteSnips((prev) => trimSnips([...prev, { label, text: cleanedText }]))
 
       void gw
         .request<{ path?: string }>('paste.collapse', { text: cleanedText })
-        .then(r => {
+        .then((r) => {
           const path = r?.path
 
           if (!path) {
             return
           }
 
-          setPasteSnips(prev => prev.map(s => (s.label === label ? { ...s, path } : s)))
+          setPasteSnips((prev) => prev.map((s) => (s.label === label ? { ...s, path } : s)))
         })
         .catch(() => {})
 
@@ -337,25 +310,19 @@ export function useComposerState({
   )
 
   const handleTextPaste = useCallback(
-    ({
-      bracketed,
-      cursor,
-      hotkey,
-      text,
-      value
-    }: PasteEvent): MaybePromise<null | { cursor: number; value: string }> => {
+    ({ bracketed, cursor, hotkey, text, value }: PasteEvent): MaybePromise<null | { cursor: number; value: string }> => {
       if (hotkey) {
         const preferOsc52 = isRemoteShellSession(process.env)
 
         const readPreferredText = preferOsc52
-          ? readOsc52Clipboard(querier).then(async osc52Text => {
+          ? readOsc52Clipboard(querier).then(async (osc52Text) => {
               if (isUsableClipboardText(osc52Text)) {
                 return osc52Text
               }
 
               return readClipboardText()
             })
-          : readClipboardText().then(async clipText => {
+          : readClipboardText().then(async (clipText) => {
               if (isUsableClipboardText(clipText)) {
                 return clipText
               }
@@ -363,16 +330,18 @@ export function useComposerState({
               return readOsc52Clipboard(querier)
             })
 
-        return readPreferredText.then(async preferredText => {
+        return readPreferredText.then(async (preferredText) => {
           const decision = await resolveHotkeyPaste({
-            probeClipboardImage: () =>
-              gw.request<ImageAttachResponse>('image.clipboard', { placeholder: true }).catch(() => null),
+            probeClipboardImage: () => gw.request<ImageAttachResponse>('image.clipboard', { placeholder: true }).catch(() => null),
             text: preferredText
           })
 
           if (decision.kind === 'text') {
             return handleResolvedPaste({
-              bracketed: false, cursor, text: decision.text, value
+              bracketed: false,
+              cursor,
+              text: decision.text,
+              value
             })
           }
 
@@ -415,7 +384,7 @@ export function useComposerState({
       return
     }
 
-    setInput(prev => appendImageChip(prev, id).value)
+    setInput((prev) => appendImageChip(prev, id).value)
   }, [])
 
   const openEditor = useCallback(async () => {

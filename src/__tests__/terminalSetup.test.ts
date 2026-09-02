@@ -21,17 +21,10 @@ describe('terminalSetup helpers', () => {
     expect(getVSCodeStyleConfigDir('Code', 'darwin', {} as NodeJS.ProcessEnv, '/home/me')).toBe(
       '/home/me/Library/Application Support/Code/User'
     )
-    expect(getVSCodeStyleConfigDir('Code', 'linux', {} as NodeJS.ProcessEnv, '/home/me')).toBe(
-      '/home/me/.config/Code/User'
+    expect(getVSCodeStyleConfigDir('Code', 'linux', {} as NodeJS.ProcessEnv, '/home/me')).toBe('/home/me/.config/Code/User')
+    expect(getVSCodeStyleConfigDir('Code', 'win32', { APPDATA: 'C:/Users/me/AppData/Roaming' } as NodeJS.ProcessEnv, '/home/me')).toBe(
+      'C:/Users/me/AppData/Roaming/Code/User'
     )
-    expect(
-      getVSCodeStyleConfigDir(
-        'Code',
-        'win32',
-        { APPDATA: 'C:/Users/me/AppData/Roaming' } as NodeJS.ProcessEnv,
-        '/home/me'
-      )
-    ).toBe('C:/Users/me/AppData/Roaming/Code/User')
   })
 
   it('strips line comments from keybindings JSON', () => {

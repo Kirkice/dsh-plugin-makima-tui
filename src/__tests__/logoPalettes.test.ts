@@ -111,15 +111,11 @@ describe('banner painting with /logo palettes', () => {
     const themed = whale(C, undefined, undefined)
     const explicit = whale(C, undefined, 'ocean')
     expect(explicit).toEqual(themed)
-    themed.forEach((row, i) =>
-      expect(row[0]).toBe(rgbStr(gradientStopForRow(LOGO_PALETTES.ocean.gradient, i, 6)))
-    )
+    themed.forEach((row, i) => expect(row[0]).toBe(rgbStr(gradientStopForRow(LOGO_PALETTES.ocean.gradient, i, 6))))
 
     const forest = whale(C, undefined, 'forest')
     expect(forest).toHaveLength(6)
-    forest.forEach((row, i) =>
-      expect(row[0]).toBe(rgbStr(gradientStopForRow(LOGO_PALETTES.forest.gradient, i, 6)))
-    )
+    forest.forEach((row, i) => expect(row[0]).toBe(rgbStr(gradientStopForRow(LOGO_PALETTES.forest.gradient, i, 6))))
   })
 
   it('lets a skin banner override win over the palette', () => {

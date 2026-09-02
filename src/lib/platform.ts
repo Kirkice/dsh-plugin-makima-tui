@@ -34,8 +34,7 @@ export const isMacActionFallback = (
 export const isAction = (key: { ctrl: boolean; meta: boolean; super?: boolean }, ch: string, target: string): boolean =>
   isActionMod(key) && ch.toLowerCase() === target
 
-export const isRemoteShell = (env: NodeJS.ProcessEnv = process.env): boolean =>
-  Boolean(env.SSH_CONNECTION || env.SSH_CLIENT || env.SSH_TTY)
+export const isRemoteShell = (env: NodeJS.ProcessEnv = process.env): boolean => Boolean(env.SSH_CONNECTION || env.SSH_CLIENT || env.SSH_TTY)
 
 export const isCopyShortcut = (
   key: { ctrl: boolean; meta: boolean; super?: boolean },
@@ -239,7 +238,7 @@ export const parseVoiceRecordKey = (raw: unknown): ParsedVoiceRecordKey => {
 
   const parts = lower
     .split('+')
-    .map(p => p.trim())
+    .map((p) => p.trim())
     .filter(Boolean)
 
   if (!parts.length) {
@@ -327,8 +326,7 @@ export const parseVoiceRecordKey = (raw: unknown): ParsedVoiceRecordKey => {
  * Linux/Windows users the wrong modifier to press (Copilot review, round
  * 2 on #19835). */
 export const formatVoiceRecordKey = (parsed: ParsedVoiceRecordKey): string => {
-  const modLabel =
-    parsed.mod === 'super' ? (isMac ? 'Cmd' : 'Super') : parsed.mod[0].toUpperCase() + parsed.mod.slice(1)
+  const modLabel = parsed.mod === 'super' ? (isMac ? 'Cmd' : 'Super') : parsed.mod[0].toUpperCase() + parsed.mod.slice(1)
 
   // Named tokens render in title case (Ctrl+Space, Ctrl+Enter); single
   // chars render upper-case to match the existing Ctrl+B convention.

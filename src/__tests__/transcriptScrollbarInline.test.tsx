@@ -129,7 +129,7 @@ async function paintedRows(bar: null | { scrollHeight: number; viewportHeight: n
       lastSize = out.length
     }
 
-    await new Promise(resolve => setTimeout(resolve, 20))
+    await new Promise((resolve) => setTimeout(resolve, 20))
   }
 
   app.unmount()

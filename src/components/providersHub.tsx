@@ -54,10 +54,10 @@ export function ProvidersHub({ gw, onClose, t }: ProvidersHubProps) {
   const load = () => {
     setLoading(true)
     gw.request<ProvidersListResponse>('providers.list', {})
-      .then(result => {
+      .then((result) => {
         setItems(Array.isArray(result.items) ? result.items : [])
         setProtocols(result.protocols?.length ? result.protocols : ['openai-completions'])
-        setIndex(current => Math.min(current, Math.max(0, (result.items?.length ?? 1) - 1)))
+        setIndex((current) => Math.min(current, Math.max(0, (result.items?.length ?? 1) - 1)))
         setError('')
       })
       .catch((cause: unknown) => setError(rpcErrorMessage(cause)))
@@ -66,11 +66,13 @@ export function ProvidersHub({ gw, onClose, t }: ProvidersHubProps) {
 
   const pollOAuth = () => {
     gw.request<OAuthStatus>('llm.openAiCodex.status', {})
-      .then(status => setOauth(status ?? {}))
+      .then((status) => setOauth(status ?? {}))
       .catch((cause: unknown) => setError(rpcErrorMessage(cause)))
   }
 
-  useEffect(() => { load() }, [gw])
+  useEffect(() => {
+    load()
+  }, [gw])
   useEffect(() => {
     if (view !== 'oauth') return
     pollOAuth()
@@ -78,14 +80,17 @@ export function ProvidersHub({ gw, onClose, t }: ProvidersHubProps) {
     return () => clearInterval(timer)
   }, [view])
 
-  const formRows = useMemo(() => [
-    ['Provider name', name],
-    ['Base URL', baseUrl],
-    ['API key', apiKey ? '••••••••' : selected?.credential_configured ? '(stored; leave blank to keep)' : ''],
-    ['Models (comma-separated)', models],
-    ['Image-capable models', imageModels],
-    ['Protocol', protocol]
-  ], [apiKey, baseUrl, imageModels, models, name, protocol, selected?.credential_configured])
+  const formRows = useMemo(
+    () => [
+      ['Provider name', name],
+      ['Base URL', baseUrl],
+      ['API key', apiKey ? '••••••••' : selected?.credential_configured ? '(stored; leave blank to keep)' : ''],
+      ['Models (comma-separated)', models],
+      ['Image-capable models', imageModels],
+      ['Protocol', protocol]
+    ],
+    [apiKey, baseUrl, imageModels, models, name, protocol, selected?.credential_configured]
+  )
 
   const beginAdd = () => {
     setSelected(null)
@@ -128,7 +133,7 @@ export function ProvidersHub({ gw, onClose, t }: ProvidersHubProps) {
       image_models: modelIds(imageModels),
       models: modelIds(models)
     })
-      .then(result => {
+      .then((result) => {
         setNotice(`${result.id} saved`)
         setView('list')
         load()
@@ -142,7 +147,7 @@ export function ProvidersHub({ gw, onClose, t }: ProvidersHubProps) {
     setSaving(true)
     setError('')
     gw.request<{ id: string }>('providers.remove', { id: selected.id })
-      .then(result => {
+      .then((result) => {
         setNotice(`${result.id} removed`)
         setSelected(null)
         setView('list')
@@ -155,7 +160,7 @@ export function ProvidersHub({ gw, onClose, t }: ProvidersHubProps) {
   const login = (method: 'browser' | 'device_code') => {
     setError('')
     gw.request<OAuthStatus>('llm.openAiCodex.login', { method })
-      .then(status => setOauth(status ?? {}))
+      .then((status) => setOauth(status ?? {}))
       .catch((cause: unknown) => setError(rpcErrorMessage(cause)))
   }
 
@@ -201,11 +206,11 @@ export function ProvidersHub({ gw, onClose, t }: ProvidersHubProps) {
 
     // TextInput owns arrow keys for caret movement. Tab deliberately moves
     // between form fields so navigation remains available while editing.
-    if (key.tab) return setField(current => Math.min(formRows.length - 1, Math.max(0, current + (key.shift ? -1 : 1))))
-    if (key.upArrow) return setField(current => Math.max(0, current - 1))
-    if (key.downArrow) return setField(current => Math.min(formRows.length - 1, current + 1))
+    if (key.tab) return setField((current) => Math.min(formRows.length - 1, Math.max(0, current + (key.shift ? -1 : 1))))
+    if (key.upArrow) return setField((current) => Math.max(0, current - 1))
+    if (key.downArrow) return setField((current) => Math.min(formRows.length - 1, current + 1))
     if (field === 5 && (key.leftArrow || key.rightArrow)) {
-      return setProtocolIndex(current => (current + (key.rightArrow ? 1 : -1) + protocols.length) % protocols.length)
+      return setProtocolIndex((current) => (current + (key.rightArrow ? 1 : -1) + protocols.length) % protocols.length)
     }
     if (key.return && field === 5) return save()
     if (ch.toLowerCase() === 's') return save()
@@ -217,13 +222,25 @@ export function ProvidersHub({ gw, onClose, t }: ProvidersHubProps) {
   if (view === 'oauth') {
     return (
       <Box flexDirection="column" width={width}>
-        <Text bold color={t.color.accent}>ChatGPT / Codex</Text>
-        <Text color={oauth.authenticated ? t.color.accent : t.color.warn}>{oauth.authenticated ? 'Signed in and ready' : 'Not signed in'}</Text>
+        <Text bold color={t.color.accent}>
+          ChatGPT / Codex
+        </Text>
+        <Text color={oauth.authenticated ? t.color.accent : t.color.warn}>
+          {oauth.authenticated ? 'Signed in and ready' : 'Not signed in'}
+        </Text>
         {oauth.authorization_url ? <Link url={oauth.authorization_url}>Open ChatGPT authorization page</Link> : null}
-        {oauth.device_code?.verification_uri ? <Text color={t.color.text}>Visit {oauth.device_code.verification_uri} · code: {oauth.device_code.user_code}</Text> : null}
+        {oauth.device_code?.verification_uri ? (
+          <Text color={t.color.text}>
+            Visit {oauth.device_code.verification_uri} · code: {oauth.device_code.user_code}
+          </Text>
+        ) : null}
         {oauth.login_pending ? <Text color={t.color.muted}>Waiting for authorization…</Text> : null}
         {oauth.login_error || error ? <Text color={t.color.error}>error: {oauth.login_error || error}</Text> : null}
-        <OverlayHint t={t}>{oauth.authenticated ? 'l log out · Esc/q back' : `b browser login${oauth.device_code_available ? ' · d device code' : ''}${oauth.login_pending ? ' · c cancel' : ''} · Esc/q back`}</OverlayHint>
+        <OverlayHint t={t}>
+          {oauth.authenticated
+            ? 'l log out · Esc/q back'
+            : `b browser login${oauth.device_code_available ? ' · d device code' : ''}${oauth.login_pending ? ' · c cancel' : ''} · Esc/q back`}
+        </OverlayHint>
       </Box>
     )
   }
@@ -231,10 +248,18 @@ export function ProvidersHub({ gw, onClose, t }: ProvidersHubProps) {
   if (view === 'confirm-remove' && selected) {
     return (
       <Box flexDirection="column" width={width}>
-        <Text bold color={t.color.warn}>Remove provider?</Text>
-        <Text color={t.color.text}>{selected.display_name} ({selected.id})</Text>
-        <Text color={t.color.muted} wrap="wrap">Its Makima-managed profile and stored API key will be deleted. This cannot remove built-in or composition providers.</Text>
-        <Text bold color={confirmRemove ? t.color.error : t.color.accent} inverse={confirmRemove}>▸ {confirmRemove ? 'Remove provider' : 'Cancel'}</Text>
+        <Text bold color={t.color.warn}>
+          Remove provider?
+        </Text>
+        <Text color={t.color.text}>
+          {selected.display_name} ({selected.id})
+        </Text>
+        <Text color={t.color.muted} wrap="wrap">
+          Its Makima-managed profile and stored API key will be deleted. This cannot remove built-in or composition providers.
+        </Text>
+        <Text bold color={confirmRemove ? t.color.error : t.color.accent} inverse={confirmRemove}>
+          ▸ {confirmRemove ? 'Remove provider' : 'Cancel'}
+        </Text>
         <OverlayHint t={t}>←/→ select · Enter confirm · Esc/q back</OverlayHint>
       </Box>
     )
@@ -247,15 +272,22 @@ export function ProvidersHub({ gw, onClose, t }: ProvidersHubProps) {
     const values = [name, baseUrl, apiKey, models, imageModels]
     return (
       <Box flexDirection="column" width={width}>
-        <Text bold color={t.color.accent}>{selected ? 'Edit OpenAI-compatible provider' : 'Add OpenAI-compatible provider'}</Text>
+        <Text bold color={t.color.accent}>
+          {selected ? 'Edit OpenAI-compatible provider' : 'Add OpenAI-compatible provider'}
+        </Text>
         <Text color={t.color.muted}>List image-capable models explicitly; this enables screenshot attachments only for those models.</Text>
         <Text color={t.color.muted}>Tab/↑/↓ select fields; Enter on protocol or s saves.</Text>
         {formRows.map(([label, value], row) => (
           <Box key={label}>
-            <Text bold={field === row} color={field === row ? t.color.accent : t.color.muted}>{field === row ? '▸ ' : '  '}{label}: </Text>
+            <Text bold={field === row} color={field === row ? t.color.accent : t.color.muted}>
+              {field === row ? '▸ ' : '  '}
+              {label}:{' '}
+            </Text>
             {row < 5 && field === row ? (
               <TextInput columns={inputWidth} mask={row === 2 ? '*' : undefined} onChange={setters[row]!} value={values[row]!} />
-            ) : <Text color={t.color.text}>{value || (row === 2 ? '(required for new provider)' : '(empty)')}</Text>}
+            ) : (
+              <Text color={t.color.text}>{value || (row === 2 ? '(required for new provider)' : '(empty)')}</Text>
+            )}
           </Box>
         ))}
         {error ? <Text color={t.color.error}>error: {error}</Text> : null}
@@ -267,13 +299,30 @@ export function ProvidersHub({ gw, onClose, t }: ProvidersHubProps) {
 
   return (
     <Box flexDirection="column" width={width}>
-      <Text bold color={t.color.accent}>Providers</Text>
+      <Text bold color={t.color.accent}>
+        Providers
+      </Text>
       <Text color={t.color.muted}>/provider switches quickly · /model chooses a model</Text>
-      {items.length ? items.map((item, row) => (
-        <Text bold={row === clampedIndex} color={item.current ? t.color.accent : row === clampedIndex ? t.color.accent : t.color.text} key={item.id} wrap="truncate-end">
-          {row === clampedIndex ? '▸ ' : '  '}{item.display_name} <Text color={t.color.muted}>[{item.type}{item.current ? ' · active' : ''}{item.credential_configured ? ' · key set' : ''}]</Text>
-        </Text>
-      )) : <Text color={t.color.muted}>no providers are currently available</Text>}
+      {items.length ? (
+        items.map((item, row) => (
+          <Text
+            bold={row === clampedIndex}
+            color={item.current ? t.color.accent : row === clampedIndex ? t.color.accent : t.color.text}
+            key={item.id}
+            wrap="truncate-end"
+          >
+            {row === clampedIndex ? '▸ ' : '  '}
+            {item.display_name}{' '}
+            <Text color={t.color.muted}>
+              [{item.type}
+              {item.current ? ' · active' : ''}
+              {item.credential_configured ? ' · key set' : ''}]
+            </Text>
+          </Text>
+        ))
+      ) : (
+        <Text color={t.color.muted}>no providers are currently available</Text>
+      )}
       {notice ? <Text color={t.color.accent}>{notice}</Text> : null}
       {error ? <Text color={t.color.error}>error: {error}</Text> : null}
       <OverlayHint t={t}>a add API-key provider · o ChatGPT/Codex · Enter edit · r refresh · Esc/q close</OverlayHint>

@@ -21,9 +21,7 @@ import { ToolTrail } from '../components/thinking.js'
 import { stripAnsi } from '../lib/text.js'
 import { DEFAULT_THEME } from '../theme.js'
 
-const REASONING = Array.from({ length: 60 }, (_, i) => `reasoning line ${i + 1}: weighing the options at length`).join(
-  '\n'
-)
+const REASONING = Array.from({ length: 60 }, (_, i) => `reasoning line ${i + 1}: weighing the options at length`).join('\n')
 
 const renderToString = (element: React.ReactElement): string => {
   const stdout = new PassThrough()
@@ -52,9 +50,7 @@ const renderToString = (element: React.ReactElement): string => {
 }
 
 const trail = (detailsMode: 'collapsed' | 'expanded') =>
-  renderToString(
-    React.createElement(ToolTrail, { detailsMode, reasoning: REASONING, t: DEFAULT_THEME, trail: [] })
-  )
+  renderToString(React.createElement(ToolTrail, { detailsMode, reasoning: REASONING, t: DEFAULT_THEME, trail: [] }))
 
 describe('ToolTrail reasoning', () => {
   it('shows a line or two by default, and says where the rest is', () => {
@@ -66,7 +62,7 @@ describe('ToolTrail reasoning', () => {
     expect(out).toContain('(ctrl+o to expand)')
     // the tail is not printed above the answer
     expect(out).not.toContain('reasoning line 40')
-    expect(body.split('\n').filter(line => line.trim()).length).toBeLessThanOrEqual(3)
+    expect(body.split('\n').filter((line) => line.trim()).length).toBeLessThanOrEqual(3)
   })
 
   it('gives the whole chain back under ctrl+o', () => {

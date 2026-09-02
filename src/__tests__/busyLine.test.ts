@@ -25,7 +25,7 @@ const renderToString = (element: React.ReactElement): string => {
   Object.assign(stdout, { columns: 100, isTTY: false, rows: 30 })
   Object.assign(stdin, { isTTY: false })
   Object.assign(stderr, { isTTY: false })
-  stdout.on('data', chunk => {
+  stdout.on('data', (chunk) => {
     output += chunk.toString()
   })
 
@@ -128,9 +128,7 @@ describe('BusyLine', () => {
     resetTurnState()
     patchTurnState({
       lastDeltaAt: Date.now(),
-      subagents: [
-        { depth: 1, goal: 'explore', id: 'sa1', status: 'running' } as never
-      ]
+      subagents: [{ depth: 1, goal: 'explore', id: 'sa1', status: 'running' } as never]
     })
 
     const plain = stripAnsi(busyRender(Date.now()))

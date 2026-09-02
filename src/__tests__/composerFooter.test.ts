@@ -24,7 +24,7 @@ const renderToString = (element: React.ReactElement): string => {
   Object.assign(stdout, { columns: 100, isTTY: false, rows: 20 })
   Object.assign(stdin, { isTTY: false })
   Object.assign(stderr, { isTTY: false })
-  stdout.on('data', chunk => {
+  stdout.on('data', (chunk) => {
     output += chunk.toString()
   })
 
@@ -106,7 +106,7 @@ describe('ComposerFooter', () => {
     expect(Object.keys(MODE_BADGES).sort()).toContain('bypassPermissions')
     expect(MODE_BADGES.default).toBeUndefined()
 
-    for (const level of PERMISSION_LEVELS.filter(l => l.mode !== 'default')) {
+    for (const level of PERMISSION_LEVELS.filter((l) => l.mode !== 'default')) {
       expect(MODE_BADGES[level.mode]!.label).toBe(`${level.label.toLowerCase()} on`)
     }
   })
@@ -129,7 +129,7 @@ describe('ComposerFooter', () => {
 import { createGatewayEventHandler } from '../app/createGatewayEventHandler.js'
 import { $uiState, patchUiState } from '../app/uiStore.js'
 
-const ref = <T,>(current: T) => ({ current })
+const ref = <T>(current: T) => ({ current })
 
 const buildHandlerCtx = () =>
   ({
