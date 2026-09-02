@@ -171,14 +171,59 @@ const parseTodos = (value: unknown): null | TodoItem[] => {
 const textSegments = (segments: Msg[]) =>
   segments.filter(msg => msg.role === 'assistant' && msg.kind !== 'diff').map(msg => msg.text)
 
-const finalTail = (finalText: string, segments: Msg[]) => {
-  let tail = finalText
+// A backend may close an assistant/message at a tool boundary and begin its
+// next message by repeating the final paragraph for continuity. The live TUI
+// has already persisted that paragraph in a settled segment, so retaining the
+// repeated prefix produces two identical rows at turn completion. Only remove
+// an exact line/paragraph suffix-prefix overlap; requiring a line boundary and
+// a meaningful length avoids eating ordinary short transitions such as "结果".
+const removeSettledOverlap = (tail: string, settledText: string): string => {
+  const settled = settledText.trimEnd()
 
-  for (const text of textSegments(segments)) {
+  if (!settled || !tail) {
+    return tail
+  }
+
+  const starts = [0]
+
+  for (let i = 0; i < settled.length; i++) {
+    if (settled[i] === '\n') {
+      starts.push(i + 1)
+    }
+  }
+
+  for (const start of starts) {
+    const candidate = settled.slice(start).trimStart()
+
+    if (candidate.trim().length >= 12 && tail.startsWith(candidate)) {
+      return tail.slice(candidate.length).trimStart()
+    }
+  }
+
+  return tail
+}
+
+export const finalTail = (finalText: string, segments: Msg[]) => {
+  let tail = finalText.trimStart()
+  const settled = textSegments(segments)
+
+  // Normal case: the completion payload is the full turn text, including all
+  // chunks that were flushed around tool calls.
+  for (const text of settled) {
     const trimmed = text.trim()
 
     if (trimmed && tail.startsWith(trimmed)) {
       tail = tail.slice(trimmed.length).trimStart()
+    }
+  }
+
+  // Tool-boundary continuation case: the completion starts in the middle of a
+  // settled segment by replaying its final paragraph/line.
+  for (let i = settled.length - 1; i >= 0; i--) {
+    const deduped = removeSettledOverlap(tail, settled[i]!)
+
+    if (deduped !== tail) {
+      return deduped
     }
   }
 

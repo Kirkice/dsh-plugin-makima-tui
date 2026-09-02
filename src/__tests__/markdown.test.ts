@@ -285,6 +285,73 @@ describe('Md wrapping', () => {
   })
 })
 
+describe('Md fenced-code layout', () => {
+  it('keeps short fences content-sized while respecting the actual parent width', async () => {
+    const { stringWidth } = await import('@makima-tui/ink')
+    const parentWidth = 48
+    const lines = renderPlain(
+      React.createElement(
+        Box,
+        { flexDirection: 'column', width: parentWidth },
+        React.createElement(Md, {
+          // `cols` is only a maximum-width hint. The fence must not stretch to
+          // either this stale value or the actual parent when its content is short.
+          cols: 76,
+          t: DEFAULT_THEME,
+          text: [
+            'Before',
+            '```ts',
+            'const value = 42',
+            'console.log(value)',
+            '```',
+            '',
+            '| Name | Status |',
+            '| --- | --- |',
+            '| Makima | Ready |',
+            '',
+            'After'
+          ].join('\n')
+        })
+      )
+    )
+
+    const top = lines.find(line => line.includes('╭'))
+    const bottom = lines.find(line => line.includes('╰'))
+
+    expect(top).toBeDefined()
+    expect(bottom).toBeDefined()
+    expect(stringWidth(top!)).toBeLessThan(parentWidth)
+    expect(stringWidth(bottom!)).toBe(stringWidth(top!))
+    expect(lines.every(line => stringWidth(line) <= parentWidth)).toBe(true)
+    expect(lines).toContain('  │ Name   │ Status │')
+    expect(lines).toContain('After')
+  })
+
+  it('keeps CJK code content inside connected content-sized borders on narrow layouts', async () => {
+    const { stringWidth } = await import('@makima-tui/ink')
+    const parentWidth = 32
+    const lines = renderPlain(
+      React.createElement(
+        Box,
+        { flexDirection: 'column', width: parentWidth },
+        React.createElement(Md, {
+          cols: 28,
+          t: DEFAULT_THEME,
+          text: '```text\n中文内容与边框\n第二行\n```'
+        })
+      )
+    )
+
+    const frame = lines.filter(line => /[╭│╰]/.test(line))
+
+    expect(frame.length).toBe(4)
+    expect(frame.every(line => stringWidth(line) < parentWidth)).toBe(true)
+    expect(frame.every(line => stringWidth(line) === stringWidth(frame[0]!))).toBe(true)
+    expect(frame[0]).toMatch(/^ ╭─+╮$/)
+    expect(frame.at(-1)).toMatch(/^ ╰─+╯$/)
+  })
+})
+
 describe('Md tables', () => {
   it('renders a complete Unicode frame around every table cell', () => {
     const lines = renderPlain(

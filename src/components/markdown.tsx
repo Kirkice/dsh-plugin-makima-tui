@@ -795,7 +795,16 @@ function MdImpl({ cols, compact, t, text }: MdProps) {
         const highlighted = !isDiff && isHighlightable(lang)
 
         nodes.push(
-          <Box borderColor={t.color.frame} borderStyle="round" flexDirection="column" key={key} marginLeft={1} paddingX={1}>
+          <Box
+            alignSelf="flex-start"
+            borderColor={t.color.frame}
+            borderStyle="round"
+            flexDirection="column"
+            key={key}
+            marginLeft={1}
+            maxWidth={cols === undefined ? undefined : Math.max(1, cols - 1)}
+            paddingX={1}
+          >
             {lang && !isDiff && <Text color={t.color.command}>{'◆ ' + lang.toUpperCase()}</Text>}
 
             {block.map((l, j) => {
@@ -858,7 +867,16 @@ function MdImpl({ cols, compact, t, text }: MdProps) {
 
           start('code')
           nodes.push(
-            <Box borderColor={t.color.frame} borderStyle="round" flexDirection="column" key={key} marginLeft={1} paddingX={1}>
+            <Box
+              alignSelf="flex-start"
+              borderColor={t.color.frame}
+              borderStyle="round"
+              flexDirection="column"
+              key={key}
+              marginLeft={1}
+              maxWidth={cols === undefined ? undefined : Math.max(1, cols - 1)}
+              paddingX={1}
+            >
               {inner ? <Text color={t.color.thinking}>{renderMath(texToUnicode(inner))}</Text> : null}
             </Box>
           )
@@ -904,7 +922,16 @@ function MdImpl({ cols, compact, t, text }: MdProps) {
 
         start('code')
         nodes.push(
-          <Box borderColor={t.color.frame} borderStyle="round" flexDirection="column" key={key} marginLeft={1} paddingX={1}>
+          <Box
+            alignSelf="flex-start"
+            borderColor={t.color.frame}
+            borderStyle="round"
+            flexDirection="column"
+            key={key}
+            marginLeft={1}
+            maxWidth={cols === undefined ? undefined : Math.max(1, cols - 1)}
+            paddingX={1}
+          >
             {block.map((l, j) => (
               <Text color={t.color.thinking} key={j}>
                 {renderMath(texToUnicode(l))}

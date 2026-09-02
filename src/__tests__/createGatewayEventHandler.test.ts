@@ -388,6 +388,32 @@ describe('createGatewayEventHandler', () => {
     expect(appended[appended.length - 1]).toMatchObject({ role: 'assistant', text: 'final answer' })
   })
 
+  it('removes a repeated final paragraph when completion follows a flushed segment', () => {
+    const appended: Msg[] = []
+    const onEvent = createGatewayEventHandler(buildCtx(appended))
+    const repeated = '不建议完全替代光追，而建议混合：'
+    const beforeTool = `前置说明。\n\n${repeated}`
+
+    onEvent({ payload: {}, type: 'message.start' } as any)
+    onEvent({ payload: { text: beforeTool }, type: 'message.delta' } as any)
+    turnController.flushStreamingSegment()
+    onEvent({ payload: { text: `${repeated}\n\n后续说明。` }, type: 'message.complete' } as any)
+
+    expect(appended.filter(msg => msg.role === 'assistant').map(msg => msg.text)).toEqual([beforeTool, '后续说明。'])
+  })
+
+  it('does not remove an ordinary short prefix shared with a settled segment', () => {
+    const appended: Msg[] = []
+    const onEvent = createGatewayEventHandler(buildCtx(appended))
+
+    onEvent({ payload: {}, type: 'message.start' } as any)
+    onEvent({ payload: { text: '第一段\n\n结果' }, type: 'message.delta' } as any)
+    turnController.flushStreamingSegment()
+    onEvent({ payload: { text: '结果如下。' }, type: 'message.complete' } as any)
+
+    expect(appended.at(-1)).toMatchObject({ role: 'assistant', text: '结果如下。' })
+  })
+
   it('filters spinner/status-only reasoning noise from completed thinking', () => {
     const appended: Msg[] = []
     const streamed = '(¬_¬) synthesizing...\nactual plan\n( ͡° ͜ʖ ͡°) pondering...\nnext step'

@@ -22,17 +22,32 @@ import { getSpawnHistory, pushDiskSnapshot, setDiffPair, type SpawnSnapshot } fr
 import type { SlashCommand } from '../types.js'
 
 interface ManagedMcpServer {
+  agentIds?: string[]
   enabled: boolean
   error?: string
+  managed?: boolean
   name: string
+  runtimeDisabled?: boolean
   status?: 'connected' | 'connecting' | 'disabled' | 'failed' | 'stopped'
+  toolNames?: string[]
   tools?: number
-  transport: 'stdio' | 'streamable-http'
+  transport: 'stdio' | 'streamable-http' | 'external'
+}
+
+interface ManagedMcpTool {
+  agentIds?: string[]
+  enabled: boolean
+  name: string
 }
 
 interface ManagedMcpListResponse {
   config_path?: string
+  policy_path?: string
   servers?: ManagedMcpServer[]
+}
+
+interface ManagedMcpToolsResponse {
+  tools?: ManagedMcpTool[]
 }
 
 interface ManagedMcpMutationResponse {
@@ -221,8 +236,8 @@ export const opsCommands: SlashCommand[] = [
   },
 
   {
-    argumentHint: '[manage|list|reload|enable <name>|disable <name>|delete <name>]',
-    help: 'open or manage backend-owned MCP connections and their runtime state',
+    argumentHint: '[manage|list|reload|tools <server>|enable <server>|disable <server>|enable-tool <tool>|disable-tool <tool>|delete <server>]',
+    help: 'list every live MCP scope and control services or individual MCP tools',
     name: 'mcp',
     run: (arg, ctx) => {
       const [action = 'manage', ...nameParts] = arg.trim().split(/\s+/).filter(Boolean)
@@ -237,25 +252,50 @@ export const opsCommands: SlashCommand[] = [
         const method = action === 'reload' ? 'mcp.manager.reload' : 'mcp.manager.list'
         ctx.gateway.rpc<ManagedMcpListResponse>(method, {}).then(ctx.guarded(r => {
           const servers = r.servers ?? []
-          if (!servers.length) return ctx.transcript.sys(`no managed MCP servers · ${r.config_path ?? '~/.dsh/mcp.json'}`)
-          ctx.transcript.panel('MCP Servers', [{
+          if (!servers.length) return ctx.transcript.sys(`no MCP tools are visible in the global or live Agent scopes · ${r.config_path ?? '~/.dsh/mcp.json'}`)
+          ctx.transcript.panel('Global MCP Servers', [{
             rows: servers.map(server => [
               server.name,
-              `${server.status ?? (server.enabled ? 'connecting' : 'disabled')} · ${server.transport} · ${server.tools ?? 0} tools${server.error ? ` · ${server.error}` : ''}`
+              `${server.status ?? (server.enabled ? 'connecting' : 'disabled')} · ${server.transport} · ${server.tools ?? 0} tools · ${server.agentIds?.join(', ') || 'global'}${server.managed === false ? server.runtimeDisabled ? ' · external runtime-disabled' : ' · externally managed' : ''}${server.error ? ` · ${server.error}` : ''}`
             ])
-          }, { text: action === 'reload' ? 'Backend MCP runtime reconciled.' : 'Connections and tools are owned by the Harness backend.' }])
+          }, { text: action === 'reload' ? 'Makima-owned clients reconciled; the inventory covers global and live Agent scopes.' : `Runtime policy: ${r.policy_path ?? '~/.dsh/makima-mcp-policy.json'}` }])
         })).catch(ctx.guardedErr)
         return
       }
 
-      if (!name || !['enable', 'disable', 'delete'].includes(action)) {
-        return ctx.transcript.sys('usage: /mcp [manage|list|reload|enable <name>|disable <name>|delete <name>]')
+      if (action === 'tools') {
+        if (!name) return ctx.transcript.sys('usage: /mcp tools <server>')
+        ctx.gateway.rpc<ManagedMcpToolsResponse>('mcp.manager.tools', { name }).then(ctx.guarded(r => {
+          const tools = r.tools ?? []
+          if (!tools.length) return ctx.transcript.sys(`no visible MCP tools for ${name}`)
+          ctx.transcript.panel(`MCP Tools · ${name}`, [{ rows: tools.map(tool => [tool.name, `${tool.enabled ? 'enabled' : 'runtime-disabled'} · ${tool.agentIds?.join(', ') || 'global'}`]) }])
+        })).catch(ctx.guardedErr)
+        return
+      }
+
+      if (!name || !['enable', 'disable', 'delete', 'enable-tool', 'disable-tool'].includes(action)) {
+        return ctx.transcript.sys('usage: /mcp [manage|list|reload|tools <server>|enable <server>|disable <server>|enable-tool <tool>|disable-tool <tool>|delete <server>]')
+      }
+
+      if (action === 'enable-tool' || action === 'disable-tool') {
+        ctx.gateway.rpc<ManagedMcpMutationResponse>('mcp.manager.set_tool_enabled', { enabled: action === 'enable-tool', name }).then(ctx.guarded(() => {
+          ctx.transcript.sys(`MCP tool ${name} ${action === 'enable-tool' ? 'enabled globally' : 'disabled globally by runtime policy'}`)
+        })).catch(ctx.guardedErr)
+        return
       }
 
       const rpc = action === 'delete' ? 'mcp.manager.delete' : 'mcp.manager.set_enabled'
       const params = action === 'delete' ? { name } : { enabled: action === 'enable', name }
-      ctx.gateway.rpc<ManagedMcpMutationResponse>(rpc, params).then(ctx.guarded(() => {
-        ctx.transcript.sys(`MCP ${name} ${action === 'delete' ? 'deleted and unloaded' : action === 'enable' ? 'enabled and applying' : 'disabled and unloaded'}`)
+      ctx.gateway.rpc<ManagedMcpListResponse>('mcp.manager.list', {}).then(ctx.guarded(result => {
+        const server = result.servers?.find(entry => entry.name === name)
+        if (action === 'delete' && server?.managed === false) {
+          ctx.transcript.sys(`MCP ${name} is externally managed and cannot be deleted here; use /mcp disable ${name} for Makima runtime control`)
+          return
+        }
+        return ctx.gateway.rpc<ManagedMcpMutationResponse>(rpc, params).then(ctx.guarded(() => {
+          const outcome = action === 'delete' ? 'deleted and unloaded' : action === 'enable' ? 'enabled' : server?.managed === false ? 'disabled by Makima runtime policy (external service remains running)' : 'disabled and unloaded'
+          ctx.transcript.sys(`MCP ${name} ${outcome}`)
+        })).catch(ctx.guardedErr)
       })).catch(ctx.guardedErr)
     }
   },

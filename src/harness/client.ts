@@ -506,7 +506,9 @@ export class HarnessGatewayClient extends GatewayClient {
   private async init(): Promise<void> {
     const loader = this.ctx.get('loader') as { await?: () => Promise<unknown> } | undefined
 
-    await loader?.await?.()
+    // Loader may stay pending while a profile-owned MCP reconnects. Makima must
+    // still render so its manager can show and control that external MCP.
+    void loader?.await?.().catch(() => undefined)
     await this.mcp.reload()
     await this.removeEmptyPersistedSessions()
 
@@ -1471,13 +1473,60 @@ export class HarnessGatewayClient extends GatewayClient {
   }
 
   // ── outbound ───────────────────────────────────────────────────────────
-  private deliver(text: string, placement: 'followup' | 'steer'): void {
+  private async activeModelAcceptsImages(): Promise<boolean | undefined> {
+    const route = this.selection.current
+
+    if (!route) return undefined
+
+    const llm = this.ctx.get('llm') as
+      | { resolveModelInfo?: (provider: string, model: string) => Promise<{ inputModalities?: readonly string[] }> }
+      | undefined
+    const info = await llm?.resolveModelInfo?.(route.provider, route.model)
+
+    return info?.inputModalities === undefined ? undefined : info.inputModalities.includes('image')
+  }
+
+  /**
+   * Older builds could persist an image prompt before discovering that the
+   * selected model was text-only. Shadow those image-bearing surface nodes with
+   * text-only copies so the next ordinary prompt can recover the session.
+   */
+  private unsupportedHistoricalImageNodes(agent: Agent): number[] {
+    const session = agent.session
+
+    if (!session.surface?.nodes) return []
+
+    return session.surface.nodes.filter(seq => {
+      const event = session.events[seq]
+
+      return event?.type === 'user/message' && event.data.content.some(block => block.type === 'image')
+    })
+  }
+
+  private repairUnsupportedHistoricalImages(agent: Agent, nodes: readonly number[]): void {
+    const session = agent.session
+
+    for (const seq of nodes) {
+      const event = session.events[seq]
+
+      if (event?.type !== 'user/message') continue
+
+      session.append(
+        'user/message',
+        createUserMessage({
+          content: event.data.content.filter(block => block.type !== 'image'),
+          source: event.data.source
+        }),
+        { sourceEventSeqs: [seq], surfaceOp: { end: seq, op: 'replace', start: seq } }
+      )
+    }
+  }
+
+  private async deliver(text: string, placement: 'followup' | 'steer'): Promise<void> {
     const agent = this.agent
 
     if (!agent) {
-      this.publishLocalEvent({ payload: { message: 'agent not ready yet' }, type: 'error' })
-
-      return
+      throw new Error('agent not ready yet')
     }
 
     const pending = this.pendingImages.get(this.sid)
@@ -1486,6 +1535,20 @@ export class HarnessGatewayClient extends GatewayClient {
       const attachment = pending?.get(id)
       return attachment ? [{ attachment, type: 'image' } as ContentBlock] : []
     })
+    const historicalImageNodes = images.length === 0 ? this.unsupportedHistoricalImageNodes(agent) : []
+    const acceptsImages = images.length > 0 || historicalImageNodes.length > 0
+      ? await this.activeModelAcceptsImages()
+      : undefined
+
+    if (acceptsImages === false && images.length > 0) {
+      this.pendingImages.delete(this.sid)
+      const model = this.selection.current?.model ?? '(current model)'
+      throw new Error(`model "${model}" does not support image input; switch to an image-capable model and attach the image again`)
+    }
+
+    if (acceptsImages === false && historicalImageNodes.length > 0) {
+      this.repairUnsupportedHistoricalImages(agent, historicalImageNodes)
+    }
 
     // The chip is a live attachment contract: once submitted, both attached and
     // deleted chips leave this composer staging area. The durable store retains
@@ -2265,10 +2328,10 @@ export class HarnessGatewayClient extends GatewayClient {
       }
 
       case 'mcp.manager.list':
-        return Promise.resolve({ config_path: this.mcp.configPath(), servers: this.mcp.list() } as T)
+        return Promise.resolve({ config_path: this.mcp.configPath(), policy_path: this.mcp.policyPath(), servers: this.mcp.list() } as T)
 
       case 'mcp.manager.reload':
-        return this.mcp.reload().then(servers => ({ config_path: this.mcp.configPath(), servers }) as T)
+        return this.mcp.reload().then(servers => ({ config_path: this.mcp.configPath(), policy_path: this.mcp.policyPath(), servers }) as T)
 
       case 'mcp.manager.save':
         return this.mcp.save(p.server as McpServerConfig).then(server => ({ server }) as T)
@@ -2276,14 +2339,17 @@ export class HarnessGatewayClient extends GatewayClient {
       case 'mcp.manager.set_enabled':
         return this.mcp.setEnabled(String(p.name ?? ''), p.enabled === true).then(server => ({ server }) as T)
 
+      case 'mcp.manager.tools':
+        return Promise.resolve({ tools: this.mcp.toolsFor(String(p.name ?? '')) } as T)
+
+      case 'mcp.manager.set_tool_enabled':
+        return Promise.resolve({ tool: this.mcp.setToolEnabled(String(p.name ?? ''), p.enabled === true) } as T)
+
       case 'mcp.manager.delete':
         return this.mcp.delete(String(p.name ?? '')).then(() => ({ deleted: String(p.name ?? '') }) as T)
 
-      case 'prompt.submit': {
-        this.deliver(String(p.text ?? ''), 'followup')
-
-        return Promise.resolve({ ok: true } as T)
-      }
+      case 'prompt.submit':
+        return this.deliver(String(p.text ?? ''), 'followup').then(() => ({ ok: true }) as T)
 
       case 'image.clipboard':
         return this.attachImageFromClipboard().then(result => result as T)
@@ -2306,11 +2372,8 @@ export class HarnessGatewayClient extends GatewayClient {
       case 'input.detect_drop':
         return Promise.resolve(this.detectDroppedFile(String(p.text ?? '')) as T)
 
-      case 'session.steer': {
-        this.deliver(String(p.text ?? ''), 'steer')
-
-        return Promise.resolve({ ok: true } as T)
-      }
+      case 'session.steer':
+        return this.deliver(String(p.text ?? ''), 'steer').then(() => ({ ok: true }) as T)
 
       case 'session.interrupt': {
         this.agent?.cancel({ kind: 'user' })

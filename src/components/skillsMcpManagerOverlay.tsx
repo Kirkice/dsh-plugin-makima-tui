@@ -9,9 +9,10 @@ import { OverlayHint } from './overlayControls.js'
 import { TextInput } from './textInput.js'
 
 type Tab = 'mcp' | 'skills'
-type View = 'confirm-delete' | 'detail' | 'edit-mcp' | 'list'
+type View = 'confirm-delete' | 'detail' | 'edit-mcp' | 'list' | 'mcp-actions' | 'mcp-tools'
 type SkillKind = 'bundle' | 'file'
 type McpTransport = 'stdio' | 'streamable-http'
+type McpRuntimeTransport = McpTransport | 'external'
 
 interface ManagedSkill {
   description: string
@@ -33,15 +34,26 @@ interface McpServer {
   command?: string
   cwd?: string
   enabled?: boolean
+  /** False for a server observed or mounted outside Makima's mcp.json. */
+  managed?: boolean
+  /** Makima blocks this external server's tools but does not stop its owner. */
+  runtimeDisabled?: boolean
+  agentIds?: string[]
   env?: Record<string, string>
   headers?: Record<string, string>
   name: string
-  transport: McpTransport
+  transport: McpRuntimeTransport
   url?: string
   /** Live state is reported by the Harness backend that owns the connection. */
   error?: string
   status?: 'connected' | 'connecting' | 'disabled' | 'failed' | 'stopped'
   tools?: number
+}
+
+interface McpTool {
+  agentIds?: string[]
+  enabled: boolean
+  name: string
 }
 
 const WIDTH_MIN = 56
@@ -74,6 +86,9 @@ export function SkillsMcpManagerOverlay({ gw, initialTab, onClose, t }: SkillsMc
   const [index, setIndex] = useState(0)
   const [selectedSkill, setSelectedSkill] = useState<ManagedSkillDetail | null>(null)
   const [selectedServer, setSelectedServer] = useState<McpServer | null>(null)
+  const [mcpTools, setMcpTools] = useState<McpTool[]>([])
+  const [mcpActionIndex, setMcpActionIndex] = useState(0)
+  const [mcpToolIndex, setMcpToolIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -153,7 +168,10 @@ export function SkillsMcpManagerOverlay({ gw, initialTab, onClose, t }: SkillsMc
     setError('')
     void gw.request('mcp.manager.set_enabled', { enabled: server.enabled === false, name: server.name })
       .then(() => {
-        setNotice(`${server.name} ${server.enabled === false ? 'enabled and applying' : 'disabled and unloaded'}`)
+        const outcome = server.enabled === false
+          ? server.managed === false ? 'enabled by Makima runtime policy' : 'enabled and applying'
+          : server.managed === false ? 'runtime-disabled; its external service is still running' : 'disabled and unloaded'
+        setNotice(`${server.name} ${outcome}`)
         load()
       })
       .catch((cause: unknown) => setError(rpcErrorMessage(cause)))
@@ -174,10 +192,48 @@ export function SkillsMcpManagerOverlay({ gw, initialTab, onClose, t }: SkillsMc
     setView('edit-mcp')
   }
 
+  const inspectMcp = (server: McpServer) => {
+    setSelectedServer(server)
+    setMcpActionIndex(0)
+    setError('')
+    setNotice('')
+    setView('mcp-actions')
+  }
+
+  const loadMcpTools = (server: McpServer) => {
+    setLoading(true)
+    setError('')
+    void gw.request<{ tools?: McpTool[] }>('mcp.manager.tools', { name: server.name })
+      .then(result => {
+        const next = result.tools ?? []
+        setMcpTools(next)
+        setMcpToolIndex(current => Math.min(current, Math.max(0, next.length - 1)))
+        setView('mcp-tools')
+      })
+      .catch((cause: unknown) => setError(rpcErrorMessage(cause)))
+      .finally(() => setLoading(false))
+  }
+
+  const toggleTool = (tool: McpTool) => {
+    setSaving(true)
+    setError('')
+    void gw.request('mcp.manager.set_tool_enabled', { enabled: !tool.enabled, name: tool.name })
+      .then(() => {
+        setMcpTools(current => current.map(item => item.name === tool.name ? { ...item, enabled: !tool.enabled } : item))
+        setNotice(`${tool.name} ${tool.enabled ? 'disabled globally' : 'enabled globally'}`)
+      })
+      .catch((cause: unknown) => setError(rpcErrorMessage(cause)))
+      .finally(() => setSaving(false))
+  }
+
   const beginEdit = (server: McpServer) => {
+    if (server.managed === false) {
+      setError(`${server.name} is externally managed and read-only here`)
+      return
+    }
     setSelectedServer(server)
     setName(server.name)
-    setTransport(server.transport)
+    setTransport(server.transport === 'external' ? 'stdio' : server.transport)
     setCommandOrUrl(server.transport === 'stdio' ? server.command ?? '' : server.url ?? '')
     setArgsOrHeaders(server.transport === 'stdio' ? (server.args ?? []).join(' ') : prettyMap(server.headers))
     setCwdOrEnv(server.transport === 'stdio' ? server.cwd ?? '' : '')
@@ -229,6 +285,8 @@ export function SkillsMcpManagerOverlay({ gw, initialTab, onClose, t }: SkillsMc
     if (saving) return
     if (view === 'list') return onClose()
     if (view === 'confirm-delete') return setView(tab === 'skills' ? 'detail' : 'edit-mcp')
+    if (view === 'mcp-tools') return setView('mcp-actions')
+    if (view === 'mcp-actions') return setView('list')
     setView('list')
   }
 
@@ -247,13 +305,31 @@ export function SkillsMcpManagerOverlay({ gw, initialTab, onClose, t }: SkillsMc
       if (key.return) {
         const item = items[clampedIndex]
         if (!item) return
-        return tab === 'skills' ? inspectSkill(item as ManagedSkill) : beginEdit(item as McpServer)
+        return tab === 'skills' ? inspectSkill(item as ManagedSkill) : inspectMcp(item as McpServer)
       }
       if (ch === ' ') {
         const item = items[clampedIndex]
         if (!item) return
         return tab === 'skills' ? toggleSkill(item as ManagedSkill) : toggleServer(item as McpServer)
       }
+      return
+    }
+    if (view === 'mcp-actions') {
+      const server = selectedServer
+      if (!server) return back()
+      if (key.upArrow && mcpActionIndex > 0) return setMcpActionIndex(mcpActionIndex - 1)
+      if (key.downArrow && mcpActionIndex < 2) return setMcpActionIndex(mcpActionIndex + 1)
+      if (!key.return) return
+      if (mcpActionIndex === 0) return toggleServer(server)
+      if (mcpActionIndex === 1) return loadMcpTools(server)
+      if (server.managed === false) return setError('External MCP servers cannot be edited; use the enable switch or tool permissions.')
+      return beginEdit(server)
+    }
+    if (view === 'mcp-tools') {
+      const tool = mcpTools[mcpToolIndex]
+      if (key.upArrow && mcpToolIndex > 0) return setMcpToolIndex(mcpToolIndex - 1)
+      if (key.downArrow && mcpToolIndex < mcpTools.length - 1) return setMcpToolIndex(mcpToolIndex + 1)
+      if (key.return && tool) return toggleTool(tool)
       return
     }
     if (view === 'detail') {
@@ -296,6 +372,34 @@ export function SkillsMcpManagerOverlay({ gw, initialTab, onClose, t }: SkillsMc
     </Box>
   }
 
+  if (view === 'mcp-actions' && selectedServer) {
+    const actions = [
+      `${selectedServer.enabled === false ? 'Enable' : 'Disable'} MCP server`,
+      `Tools (${selectedServer.tools ?? 0})`,
+      selectedServer.managed === false ? 'Edit connection (external: unavailable)' : 'Edit connection'
+    ]
+    return <Box flexDirection="column" width={width}>
+      <Text bold color={t.color.accent}>MCP · {selectedServer.name}</Text>
+      <Text color={t.color.muted}>{selectedServer.managed === false ? 'External service: enable/disable applies Makima runtime policy only.' : 'Makima-managed connection: enable/disable starts or stops the client.'}</Text>
+      <Text color={t.color.muted}>{selectedServer.agentIds?.length ? `visible in: ${selectedServer.agentIds.join(', ')}` : 'visible in: global'}</Text>
+      <Box marginTop={1} flexDirection="column">{actions.map((action, row) => <Text key={action} color={row === mcpActionIndex ? t.color.accent : t.color.text}>{row === mcpActionIndex ? '▸ ' : '  '}{action}</Text>)}</Box>
+      {notice ? <Text color={t.color.accent}>{notice}</Text> : null}
+      {error ? <Text color={t.color.error}>error: {error}</Text> : null}
+      <OverlayHint t={t}>↑↓ select · Enter open/toggle · Esc/q back</OverlayHint>
+    </Box>
+  }
+
+  if (view === 'mcp-tools' && selectedServer) {
+    return <Box flexDirection="column" width={width}>
+      <Text bold color={t.color.accent}>MCP Tools · {selectedServer.name}</Text>
+      <Text color={t.color.muted}>Enter toggles the globally persisted runtime permission.</Text>
+      <Box marginTop={1} flexDirection="column">{mcpTools.length ? mcpTools.map((tool, row) => <Text key={tool.name} color={row === mcpToolIndex ? t.color.accent : t.color.text} wrap="truncate-end">{row === mcpToolIndex ? '▸ ' : '  '}{tool.name} <Text color={tool.enabled ? t.color.muted : t.color.warn}>[{tool.enabled ? 'enabled' : 'disabled'} · {tool.agentIds?.join(', ') || 'global'}]</Text></Text>) : <Text color={t.color.muted}>no tools currently visible</Text>}</Box>
+      {notice ? <Text color={t.color.accent}>{notice}</Text> : null}
+      {error ? <Text color={t.color.error}>error: {error}</Text> : null}
+      <OverlayHint t={t}>↑↓ select · Enter enable/disable · Esc/q back</OverlayHint>
+    </Box>
+  }
+
   if (view === 'detail' && selectedSkill) {
     return <Box flexDirection="column" width={width}>
       <Text bold color={t.color.accent}>{selectedSkill.name}</Text>
@@ -335,11 +439,13 @@ export function SkillsMcpManagerOverlay({ gw, initialTab, onClose, t }: SkillsMc
           const runtime = server.status ?? (server.enabled === false ? 'disabled' : 'connecting')
           const color = runtime === 'connected' ? t.color.muted : runtime === 'failed' ? t.color.error : t.color.warn
           const tools = typeof server.tools === 'number' ? ` · ${server.tools} tool${server.tools === 1 ? '' : 's'}` : ''
-          return <Text color={row === clampedIndex ? t.color.accent : t.color.text} key={server.name} wrap="truncate-end">{row === clampedIndex ? '▸ ' : '  '}{server.name} <Text color={color}>[{runtime} · {server.transport}{tools}{server.error ? ` · ${server.error}` : ''}]</Text></Text>
-        }) : <Text color={t.color.muted}>no configured MCP servers</Text>}
+          const ownership = server.managed === false ? server.runtimeDisabled ? ' · external runtime-disabled' : ' · externally managed' : ''
+          const scopes = server.agentIds?.length ? ` · ${server.agentIds.join(', ')}` : ''
+          return <Text color={row === clampedIndex ? t.color.accent : t.color.text} key={server.name} wrap="truncate-end">{row === clampedIndex ? '▸ ' : '  '}{server.name} <Text color={color}>[{runtime} · {server.transport}{tools}{scopes}{ownership}{server.error ? ` · ${server.error}` : ''}]</Text></Text>
+        }) : <Text color={t.color.muted}>no MCP tools visible in global or live Agent scopes</Text>}
     {notice ? <Text color={t.color.accent}>{notice}</Text> : null}
     {error ? <Text color={t.color.error}>error: {error}</Text> : null}
-    <OverlayHint t={t}>{tab === 'skills' ? '↑↓ select · Enter inspect · Space enable/disable · r refresh · Esc/q close' : '↑↓ select · Enter edit · a add · Space enable/disable · r refresh status · Esc/q close'}</OverlayHint>
+    <OverlayHint t={t}>{tab === 'skills' ? '↑↓ select · Enter inspect · Space enable/disable · r refresh · Esc/q close' : '↑↓ select · Enter open menu · Space enable/disable · a add · r refresh status · Esc/q close'}</OverlayHint>
   </Box>
 }
 

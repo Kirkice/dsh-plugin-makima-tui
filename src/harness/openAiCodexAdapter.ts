@@ -10,13 +10,13 @@ import { OPENAI_CODEX_PROVIDER, type OpenAiCodexAuthManager } from './openAiCode
  * model to eligible Plus/Pro users.
  */
 const MODELS = [
-  { id: 'gpt-5.3-codex-spark', name: 'GPT-5.3 Codex Spark', contextWindow: 128_000 },
-  { id: 'gpt-5.4', name: 'GPT-5.4', contextWindow: 272_000 },
-  { id: 'gpt-5.4-mini', name: 'GPT-5.4 mini', contextWindow: 272_000 },
-  { id: 'gpt-5.5', name: 'GPT-5.5', contextWindow: 272_000 },
-  { id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol', contextWindow: 272_000 },
-  { id: 'gpt-5.6-terra', name: 'GPT-5.6 Terra', contextWindow: 272_000 },
-  { id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna', contextWindow: 272_000 }
+  { id: 'gpt-5.3-codex-spark', name: 'GPT-5.3 Codex Spark', contextWindow: 128_000, inputModalities: ['text'] },
+  { id: 'gpt-5.4', name: 'GPT-5.4', contextWindow: 272_000, inputModalities: ['text', 'image'] },
+  { id: 'gpt-5.4-mini', name: 'GPT-5.4 mini', contextWindow: 272_000, inputModalities: ['text', 'image'] },
+  { id: 'gpt-5.5', name: 'GPT-5.5', contextWindow: 272_000, inputModalities: ['text', 'image'] },
+  { id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol', contextWindow: 272_000, inputModalities: ['text', 'image'] },
+  { id: 'gpt-5.6-terra', name: 'GPT-5.6 Terra', contextWindow: 272_000, inputModalities: ['text', 'image'] },
+  { id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna', contextWindow: 272_000, inputModalities: ['text', 'image'] }
 ] as const
 
 type OutputBlock =
@@ -44,12 +44,23 @@ export class OpenAiCodexAdapter extends LlmAdapter {
   }
 
   async listModels(provider: string): Promise<readonly LlmModelInfo[]> {
-    return MODELS.map(model => ({ id: model.id, name: model.name, provider }))
+    return MODELS.map(model => ({
+      id: model.id,
+      inputModalities: model.inputModalities,
+      name: model.name,
+      provider
+    }))
   }
 
   async resolveModel(provider: string, model: string, _signal?: AbortSignal): Promise<LlmResolvedModelInfo> {
     const known = MODELS.find(entry => entry.id === model)
-    return { context: { contextWindow: known?.contextWindow ?? 272_000 }, id: model, name: known?.name ?? model, provider }
+    return {
+      context: { contextWindow: known?.contextWindow ?? 272_000 },
+      id: model,
+      ...(known ? { inputModalities: known.inputModalities } : {}),
+      name: known?.name ?? model,
+      provider
+    }
   }
 
   async *stream(options: GenerateOptions): AsyncIterable<StreamChunk> {

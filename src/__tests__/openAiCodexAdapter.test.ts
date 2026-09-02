@@ -24,6 +24,20 @@ describe('OpenAI Codex Responses adapter', () => {
       'gpt-5.6-terra',
       'gpt-5.6-luna'
     ])
+    expect(models.find(model => model.id === 'gpt-5.3-codex-spark')?.inputModalities).toEqual(['text'])
+    expect(models.find(model => model.id === 'gpt-5.6-terra')?.inputModalities).toEqual(['text', 'image'])
+  })
+
+  it('resolves model input modalities for image preflight', async () => {
+    const adapter = new OpenAiCodexAdapter({} as never)
+
+    await expect(adapter.resolveModel('openai-codex', 'gpt-5.3-codex-spark')).resolves.toMatchObject({
+      inputModalities: ['text']
+    })
+    await expect(adapter.resolveModel('openai-codex', 'gpt-5.6-terra')).resolves.toMatchObject({
+      inputModalities: ['text', 'image']
+    })
+    await expect(adapter.resolveModel('openai-codex', 'future-model')).resolves.not.toHaveProperty('inputModalities')
   })
 
   it('serializes messages, tools, and generation settings for Responses', async () => {

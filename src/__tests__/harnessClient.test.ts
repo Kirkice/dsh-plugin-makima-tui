@@ -10,7 +10,27 @@ import { HarnessGatewayClient } from '../harness/client.js'
 
 type Listener = (...args: unknown[]) => void
 
-const SESSION = { events: [] as unknown[], header: { createdAt: 100, cwd: '/tmp/w', id: 'cc-test-session', version: 1 }, marker: 'session' }
+const SESSION = {
+  events: [] as any[],
+  header: { createdAt: 100, cwd: '/tmp/w', id: 'cc-test-session', version: 1 },
+  marker: 'session',
+  surface: { nodes: [] as number[] },
+  append(type: string, data: unknown, meta?: { surfaceOp?: unknown }) {
+    const event = { data, seq: this.events.length, time: 0, type, ...meta }
+    this.events.push(event)
+
+    if (type === 'user/message' && meta?.surfaceOp === 'append') {
+      this.surface.nodes.push(event.seq)
+    } else if (type === 'user/message' && meta?.surfaceOp && typeof meta.surfaceOp === 'object') {
+      const op = meta.surfaceOp as { end: number; start: number }
+      const start = this.surface.nodes.indexOf(op.start)
+      const end = this.surface.nodes.indexOf(op.end)
+      if (start >= 0 && end >= start) this.surface.nodes.splice(start, end - start + 1, event.seq)
+    }
+
+    return event
+  }
+}
 
 const TOOL_CARDS: Record<string, unknown> = {
   bash: { card: 'terminal', exitCode: 0, output: 'ran fine' },
@@ -159,7 +179,7 @@ function makeWorld() {
         return {
           listModels: async () => [{ id: 'mock-1' }, { id: 'mock-2' }],
           listProviders: () => [{ id: 'mock', name: 'Mock' }],
-          resolveModelInfo: async () => ({ context: { contextWindow: 64000 }, reasoning: { efforts: [{ id: 'low' }, { id: 'high' }] } })
+          resolveModelInfo: async () => ({ context: { contextWindow: 64000 }, inputModalities: ['text', 'image'], reasoning: { efforts: [{ id: 'low' }, { id: 'high' }] } })
         }
       }
 
@@ -266,6 +286,11 @@ function makeWorld() {
 const settle = () => new Promise(resolve => setTimeout(resolve, 0))
 
 describe('HarnessGatewayClient', () => {
+  afterEach(() => {
+    SESSION.events.length = 0
+    SESSION.surface.nodes.length = 0
+  })
+
   it('turns referenced staged images into durable user message blocks', async () => {
     const w = makeWorld()
     w.client.start()
@@ -283,6 +308,56 @@ describe('HarnessGatewayClient', () => {
         { attachment: { attachmentId: 'stored-image' }, type: 'image' }
       ]
     })
+  })
+
+  it('rejects an image before followup when the active model is text-only', async () => {
+    const w = makeWorld()
+    const originalGet = w.ctx.get
+    ;(w.ctx as any).get = (name: string) => name === 'llm'
+      ? { resolveModelInfo: async () => ({ inputModalities: ['text'] }) }
+      : originalGet(name)
+    w.client.start()
+    await settle()
+
+    ;(w.client as any).pendingImages.set('cc-test-session', new Map([[7, {
+      attachmentId: 'stored-image', bytes: 3, height: 12, mediaType: 'image/png', name: 'clipboard-screenshot.png', width: 16
+    }]]))
+
+    await expect(w.client.request('prompt.submit', { text: '[Image #7] inspect this' }))
+      .rejects.toThrow('does not support image input')
+    expect(w.followups).toHaveLength(0)
+    expect(SESSION.events).toHaveLength(0)
+    expect((w.client as any).pendingImages.has('cc-test-session')).toBe(false)
+  })
+
+  it('shadows a legacy unsupported image prompt before sending later text', async () => {
+    const w = makeWorld()
+    const originalGet = w.ctx.get
+    ;(w.ctx as any).get = (name: string) => name === 'llm'
+      ? { resolveModelInfo: async () => ({ inputModalities: ['text'] }) }
+      : originalGet(name)
+    const poisoned = SESSION.append('user/message', {
+      content: [
+        { text: '[Image #1] inspect this', type: 'text' },
+        { attachment: { attachmentId: 'old-image' }, type: 'image' }
+      ],
+      source: { kind: 'user' }
+    }, { surfaceOp: 'append' })
+    w.client.start()
+    await settle()
+
+    await expect(w.client.request('prompt.submit', { text: 'text only now' })).resolves.toEqual({ ok: true })
+
+    expect(w.followups).toHaveLength(1)
+    expect(w.followups[0]).toMatchObject({ content: [{ text: 'text only now', type: 'text' }] })
+    const replacement = SESSION.events.at(-1)
+    expect(replacement).toMatchObject({
+      data: { content: [{ text: '[Image #1] inspect this', type: 'text' }] },
+      sourceEventSeqs: [poisoned.seq],
+      surfaceOp: { end: poisoned.seq, op: 'replace', start: poisoned.seq },
+      type: 'user/message'
+    })
+    expect(SESSION.surface.nodes).toEqual([replacement.seq])
   })
 
   it('returns a direct image id from clipboard.paste for the in-process composer', async () => {
@@ -1020,6 +1095,95 @@ describe('HarnessGatewayClient', () => {
     // agent's own id (identical in a real harness, distinct in this fake).
     expect(String(createOpts.sessionId)).toMatch(/^makima-tui-/)
     expect(res.session_id).toBe(String(w.agent.id))
+  })
+
+  it('lists profile-owned MCP clients that were connected before Makima started', async () => {
+    const w = makeWorld()
+    ;(w.ctx as { loader?: unknown }).loader = {
+      entries: () => [{
+        disabled: false,
+        fiber: { state: 2 },
+        options: {
+          config: {
+            args: ['server.mjs'],
+            command: 'node',
+            cwd: '/tmp/w',
+            env: { TOKEN: 'redacted' },
+            serverName: 'memory',
+            transport: 'stdio'
+          },
+          name: '@deepseek-ai/dsh-mcp-client'
+        }
+      }]
+    }
+    const response = await w.client.request<{
+      servers: Array<{ managed: boolean; name: string; status: string; tools: number }>
+    }>('mcp.manager.list', {})
+
+    expect(response.servers).toContainEqual(expect.objectContaining({
+      args: ['server.mjs'],
+      command: 'node',
+      cwd: '/tmp/w',
+      enabled: true,
+      env: { TOKEN: 'redacted' },
+      managed: false,
+      name: 'memory',
+      status: 'connected',
+      tools: 0,
+      transport: 'stdio'
+    }))
+  })
+
+  it('lists externally mounted MCP clients observed through registered tool names', async () => {
+    const w = makeWorld()
+    const ctx = w.ctx as { get: (name: string) => unknown }
+    const get = ctx.get
+    const tools = get('tools') as {
+      get: (toolName: string) => unknown
+      schemas: (scope?: unknown) => Array<{ name: string }>
+    }
+    const child = { id: 'child-agent' }
+    ctx.get = name => {
+      if (name === 'agents') return { list: () => [child] }
+      if (name !== 'tools') return get(name)
+      return {
+        ...tools,
+        schemas: (scope?: unknown) => scope === child
+          ? [{ name: 'mcp__unity_console__unity_get_status' }]
+          : [
+              { name: 'bash' },
+              { name: 'mcp__memory__search' },
+              { name: 'mcp__memory__fetch' },
+              { name: 'mcp__bad.name__ignored' },
+              { name: 'mcp__empty__' }
+            ]
+      }
+    }
+
+    const response = await w.client.request<{
+      servers: Array<{ enabled: boolean; managed: boolean; name: string; status: string; tools: number; transport: string }>
+    }>('mcp.manager.list', {})
+
+    expect(response.servers).toContainEqual(expect.objectContaining({
+      agentIds: ['global'],
+      enabled: true,
+      managed: false,
+      name: 'memory',
+      status: 'connected',
+      tools: 2,
+      transport: 'external'
+    }))
+    expect(response.servers).toContainEqual(expect.objectContaining({
+      agentIds: ['child-agent'],
+      enabled: true,
+      managed: false,
+      name: 'unity_console',
+      toolNames: ['mcp__unity_console__unity_get_status'],
+      tools: 1,
+      transport: 'external'
+    }))
+    expect(response.servers).not.toContainEqual(expect.objectContaining({ name: 'bad.name' }))
+    expect(response.servers).not.toContainEqual(expect.objectContaining({ name: 'empty' }))
   })
 
   it('unmapped RPCs resolve to an empty object', async () => {
