@@ -731,11 +731,11 @@ describe('GatewayClient NDJSON adapter', () => {
     await expect(p).resolves.toEqual({ message: 'skill body here', name: 'my-skill', type: 'skill' })
   })
 
-  it('lists /loop in the slash-completion menu', async () => {
+  it('does not list legacy /loop in the slash-completion menu', async () => {
     const p = gw.request<{ items: Array<{ text: string }> }>('complete.slash', { text: '/lo' })
     await replyToControl('list_workflow_commands', { commands: [], ok: true })
     const r = await p
-    expect(r.items.map(i => i.text)).toContain('/loop')
+    expect(r.items.map(i => i.text)).not.toContain('/loop')
   })
 
   it('maps cron_status system envelopes to a cron transcript line and a cron.state snapshot', async () => {

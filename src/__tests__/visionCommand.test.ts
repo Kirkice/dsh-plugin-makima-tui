@@ -102,18 +102,13 @@ describe('/vision', () => {
     })
   })
 
-  it('lists /vision in the slash-command menu', async () => {
-    // SLASHES drives both recognition and the menu, so an entry missing here
-    // means /vision is untypeable in the TUI — and hand-editing config.json
-    // becomes the only way to turn the feature on.
-    const p = gw.request('complete.slash', { text: '/vis' })
+  it('does not list legacy /vision in the slash-command menu', async () => {
+    const p = gw.request<{ items: Array<{ text: string }> }>('complete.slash', { text: '/vis' })
 
-    // The menu merges dynamic workflow commands in, so that control has to
-    // be answered or the request never settles.
+    // Dynamic workflow commands are still merged into the menu.
     await replyToControl('list_workflow_commands', { commands: [] })
-    const r: any = await p
+    const r = await p
 
-    expect(JSON.stringify(r)).toContain('/vision')
-    expect(JSON.stringify(r)).toContain('vision_analyze')   // the description
+    expect(r.items.map(item => item.text)).not.toContain('/vision')
   })
 })

@@ -126,18 +126,14 @@ describe('fusion models', () => {
     await expect(p).resolves.toMatchObject({ output: expect.stringContaining('single-session') })
   })
 
-  it('lists /fusion in the slash-command menu', async () => {
-    // SLASHES drives both recognition and the menu, so an entry missing here
-    // means /fusion is untypeable in the TUI.
-    const p = gw.request('complete.slash', { text: '/fus' })
+  it('does not list legacy /fusion in the slash-command menu', async () => {
+    const p = gw.request<{ items: Array<{ text: string }> }>('complete.slash', { text: '/fus' })
 
-    // The menu merges dynamic workflow commands in, so that control has to
-    // be answered or the request never settles.
+    // Dynamic workflow commands are still merged into the menu.
     await replyToControl('list_workflow_commands', { commands: [] })
-    const r: any = await p
+    const r = await p
 
-    expect(JSON.stringify(r)).toContain('/fusion')
-    expect(JSON.stringify(r)).toContain('vision')   // the hint/description
+    expect(r.items.map(item => item.text)).not.toContain('/fusion')
   })
 
   // ── /model interaction ────────────────────────────────────────────────────
