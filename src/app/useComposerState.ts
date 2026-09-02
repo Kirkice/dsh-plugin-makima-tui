@@ -127,6 +127,18 @@ export function looksLikeDroppedPath(text: string): boolean {
   return false
 }
 
+/**
+ * Pasted source must remain editable in the composer by default. Collapsing is
+ * opt-in for users who explicitly configure either threshold above zero.
+ */
+export function shouldCollapsePaste(
+  text: string,
+  { chars, lines }: { chars: number; lines: number }
+): boolean {
+  const lineCount = text.split('\n').length
+  return (lines > 0 && lineCount >= lines) || (chars > 0 && text.length >= chars)
+}
+
 /** What a Ctrl+V/Cmd+V hotkey paste resolved to. */
 export type HotkeyPasteDecision =
   | { image: ImageAttachResponse; kind: 'image' }
@@ -293,10 +305,8 @@ export function useComposerState({
       const lineCount = cleanedText.split('\n').length
       const pasteCollapseLines = getUiState().pasteCollapseLines
       const pasteCollapseChars = getUiState().pasteCollapseChars
-      const linesHit = pasteCollapseLines > 0 && lineCount >= pasteCollapseLines
-      const charsHit = pasteCollapseChars > 0 && cleanedText.length >= pasteCollapseChars
 
-      if (!linesHit && !charsHit) {
+      if (!shouldCollapsePaste(cleanedText, { chars: pasteCollapseChars, lines: pasteCollapseLines })) {
         return {
           cursor: cursor + cleanedText.length,
           value: value.slice(0, cursor) + cleanedText + value.slice(cursor)

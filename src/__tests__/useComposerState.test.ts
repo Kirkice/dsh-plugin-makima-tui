@@ -1,6 +1,19 @@
 import { describe, expect, it } from 'vitest'
 
-import { looksLikeDroppedPath } from '../app/useComposerState.js'
+import { looksLikeDroppedPath, shouldCollapsePaste } from '../app/useComposerState.js'
+
+describe('shouldCollapsePaste', () => {
+  const source = "import { config } from './mcpManager.js'\n\nexport const enabled = true\n"
+
+  it('keeps multi-line pasted source in the composer when collapse is not configured', () => {
+    expect(shouldCollapsePaste(source, { chars: 0, lines: 0 })).toBe(false)
+  })
+
+  it('only produces a summary chip when the user explicitly sets a threshold', () => {
+    expect(shouldCollapsePaste(source, { chars: 0, lines: 3 })).toBe(true)
+    expect(shouldCollapsePaste(source, { chars: 20, lines: 0 })).toBe(true)
+  })
+})
 
 describe('looksLikeDroppedPath', () => {
   it('recognizes macOS screenshot temp paths and file URIs', () => {

@@ -26,8 +26,10 @@ const buildUiState = (): UiState => ({
   logoPalette: readLogoColorSync(),
   mouseTracking: MOUSE_TRACKING,
   notice: null,
-  pasteCollapseLines: 5,
-  pasteCollapseChars: 2000,
+  // Keep pasted source directly editable. Users can opt into summary chips via
+  // paste_collapse_threshold / paste_collapse_char_threshold.
+  pasteCollapseLines: 0,
+  pasteCollapseChars: 0,
   pendingSuggestion: null,
   sections: {},
   sessionTitle: '',

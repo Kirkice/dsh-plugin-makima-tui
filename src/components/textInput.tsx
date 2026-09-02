@@ -1041,7 +1041,7 @@ export function TextInput({
       let v = vRef.current
       const mod = isActionMod(k)
       const wordMod = mod || k.meta
-      const actionHome = k.home || (!isMac && mod && inp === 'a') || isMacActionFallback(k, inp, 'a')
+      const actionHome = k.home || isMacActionFallback(k, inp, 'a')
       const actionEnd = k.end || (mod && inp === 'e') || isMacActionFallback(k, inp, 'e')
       const actionDeleteToStart = (mod && inp === 'u') || isMacActionFallback(k, inp, 'u')
       const actionKillToEnd = (mod && inp === 'k') || isMacActionFallback(k, inp, 'k')
@@ -1064,7 +1064,9 @@ export function TextInput({
         return swap(redo, undo)
       }
 
-      if (isMac && mod && inp === 'a') {
+      // Ctrl+A (Windows/Linux) and Cmd+A (macOS) select the complete editable
+      // composer buffer, including hard-wrapped pasted source.
+      if (mod && inp.toLowerCase() === 'a') {
         return selectAll()
       }
 

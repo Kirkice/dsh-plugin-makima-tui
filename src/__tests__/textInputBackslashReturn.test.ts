@@ -60,6 +60,16 @@ describe('multi-line value produced by backslash+Enter stays editable', () => {
 const TEXT_INPUT_PATH = join(dirname(fileURLToPath(import.meta.url)), '..', 'components', 'textInput.tsx')
 const source = readFileSync(TEXT_INPUT_PATH, 'utf8')
 
+describe('select-all shortcut contract (source pin)', () => {
+  it('maps the platform action modifier plus A to the complete composer selection', () => {
+    expect(source).toMatch(/if\s*\(mod\s*&&\s*inp\.toLowerCase\(\)\s*===\s*'a'\)\s*\{\s*return\s+selectAll\(\)/)
+  })
+
+  it('does not reserve Ctrl+A as start-of-line navigation on non-mac terminals', () => {
+    expect(source).not.toContain("(!isMac && mod && inp === 'a')")
+  })
+})
+
 describe('k.return handler contract (source pin)', () => {
   it('gates the continuation on the multiline prop, so plain TextInputs still submit trailing backslashes', () => {
     expect(source).toMatch(/multiline\s*\?\s*applyBackslashReturn\(/)
