@@ -124,21 +124,52 @@ export class OpenAiCodexAdapter extends LlmAdapter {
 
 export async function serializeRequest(options: GenerateOptions, readImage?: ImageReader): Promise<Record<string, unknown>> {
   const input: unknown[] = []
+  const invalidToolCallIds = new Set<string>()
+
+  // Partial or legacy provider events can leave an incomplete tool call in
+  // persisted history. Codex rejects empty function names (and orphaned
+  // outputs), so omit the malformed pair rather than making the next turn
+  // permanently unrecoverable.
+  for (const message of options.messages) {
+    if (message.role !== 'assistant') continue
+    for (const block of message.content) {
+      if (block.type === 'tool-call' && (!String(block.id).trim() || !block.name.trim())) invalidToolCallIds.add(String(block.id))
+    }
+  }
+
   if (options.system) input.push({ content: [{ text: options.system, type: 'input_text' }], role: 'system' })
 
   for (const message of options.messages) {
     if (message.role === 'assistant') {
-      const content: unknown[] = []
-      for (const block of message.content) {
-        if (block.type === 'text') content.push({ text: block.text, type: 'output_text' })
-        else if (block.type === 'tool-call')
-          content.push({ arguments: block.arguments, call_id: block.id, name: block.name, type: 'function_call' })
+      let content: unknown[] = []
+      const flushContent = () => {
+        if (!content.length) return
+        input.push({ content, role: 'assistant' })
+        content = []
       }
-      if (content.length) input.push({ content, role: 'assistant' })
+
+      for (const block of message.content) {
+        if (block.type === 'text') {
+          content.push({ text: block.text, type: 'output_text' })
+        } else if (block.type === 'tool-call') {
+          if (invalidToolCallIds.has(String(block.id))) continue
+          // Responses function calls are top-level input items, not message
+          // content parts. Flush text first to preserve the original block order.
+          flushContent()
+          input.push({ arguments: block.arguments, call_id: block.id, name: block.name, type: 'function_call' })
+        }
+      }
+      flushContent()
       continue
     }
 
-    const content: unknown[] = []
+    let content: unknown[] = []
+    const flushContent = () => {
+      if (!content.length) return
+      input.push({ content, role: 'user' })
+      content = []
+    }
+
     for (const block of message.content) {
       if (block.type === 'text') content.push({ text: block.text, type: 'input_text' })
       else if (block.type === 'image') {
@@ -152,10 +183,15 @@ export async function serializeRequest(options: GenerateOptions, readImage?: Ima
           image_url: `data:${stored.ref.mediaType};base64,${Buffer.from(stored.data).toString('base64')}`,
           type: 'input_image'
         })
-      } else if (block.type === 'tool-result')
+      } else if (block.type === 'tool-result') {
+        if (invalidToolCallIds.has(String(block.toolCallId))) continue
+        // Tool outputs are top-level items too. Flush preceding user content so
+        // mixed content/result messages retain their chronological order.
+        flushContent()
         input.push({ call_id: block.toolCallId, output: flattenText(block.content) || '(no output)', type: 'function_call_output' })
+      }
     }
-    if (content.length) input.push({ content, role: 'user' })
+    flushContent()
   }
 
   return {

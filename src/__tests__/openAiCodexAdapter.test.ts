@@ -61,7 +61,9 @@ describe('OpenAI Codex Responses adapter', () => {
         {
           content: [
             { text: 'private chain of thought', type: 'reasoning' },
-            { arguments: '{"path":"a.ts"}', id: 'call-1', name: 'read_file', type: 'tool-call' }
+            { text: 'I will read it.', type: 'text' },
+            { arguments: '{"path":"a.ts"}', id: 'call-1', name: 'read_file', type: 'tool-call' },
+            { text: 'Waiting for the result.', type: 'text' }
           ],
           role: 'assistant'
         },
@@ -84,16 +86,50 @@ describe('OpenAI Codex Responses adapter', () => {
       temperature: 0.2,
       tools: [{ name: 'read_file', type: 'function' }]
     })
-    expect(request.input).toEqual(
-      expect.arrayContaining([
-        { content: [{ text: 'be concise', type: 'input_text' }], role: 'system' },
-        { content: [{ text: 'hello', type: 'input_text' }], role: 'user' },
-        { content: [{ arguments: '{"path":"a.ts"}', call_id: 'call-1', name: 'read_file', type: 'function_call' }], role: 'assistant' },
-        { call_id: 'call-1', output: 'source', type: 'function_call_output' }
-      ])
-    )
+    expect(request.input).toEqual([
+      { content: [{ text: 'be concise', type: 'input_text' }], role: 'system' },
+      { content: [{ text: 'hello', type: 'input_text' }], role: 'user' },
+      { content: [{ text: 'I will read it.', type: 'output_text' }], role: 'assistant' },
+      { arguments: '{"path":"a.ts"}', call_id: 'call-1', name: 'read_file', type: 'function_call' },
+      { content: [{ text: 'Waiting for the result.', type: 'output_text' }], role: 'assistant' },
+      { call_id: 'call-1', output: 'source', type: 'function_call_output' }
+    ])
+    const nestedContent = (request.input as Array<{ content?: Array<{ type?: string }> }>).flatMap((item) => item.content ?? [])
+    expect(nestedContent).not.toContainEqual(expect.objectContaining({ type: 'function_call' }))
     expect(JSON.stringify(request.input)).not.toContain('private chain of thought')
     expect(JSON.stringify(request.input)).not.toContain('"reasoning"')
+  })
+
+  it('omits incomplete historical tool calls with empty names and their paired outputs', async () => {
+    const request = await serializeRequest({
+      messages: [
+        {
+          content: [
+            { text: 'before', type: 'text' },
+            { arguments: '{}', id: 'broken-call', name: '', type: 'tool-call' },
+            { arguments: '{}', id: '', name: 'missing_id', type: 'tool-call' },
+            { arguments: '{}', id: 'valid-call', name: 'ping', type: 'tool-call' }
+          ],
+          role: 'assistant'
+        },
+        {
+          content: [
+            { content: [{ text: 'broken', type: 'text' }], toolCallId: 'broken-call', type: 'tool-result' },
+            { content: [{ text: 'missing id', type: 'text' }], toolCallId: '', type: 'tool-result' },
+            { content: [{ text: 'pong', type: 'text' }], toolCallId: 'valid-call', type: 'tool-result' }
+          ],
+          role: 'user'
+        }
+      ],
+      model: 'gpt-5.6-terra',
+      signal: new AbortController().signal
+    } as unknown as GenerateOptions)
+
+    expect(request.input).toEqual([
+      { content: [{ text: 'before', type: 'output_text' }], role: 'assistant' },
+      { arguments: '{}', call_id: 'valid-call', name: 'ping', type: 'function_call' },
+      { call_id: 'valid-call', output: 'pong', type: 'function_call_output' }
+    ])
   })
 
   it('uses the Codex backend path and sends its required routing headers', async () => {

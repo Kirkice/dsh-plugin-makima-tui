@@ -121,3 +121,42 @@ describe('handleMouseEvent right-click selection behavior', () => {
     expect(app.props.onMouseDownAt).toHaveBeenCalledWith(2, 0, 2)
   })
 })
+
+describe('handleMouseEvent left-click selection repaint behavior', () => {
+  it('does not notify selection subscribers for a bare click without drag motion', () => {
+    const app = makeApp()
+    app.props.onClickAt = vi.fn(() => false)
+    app.props.getHyperlinkAt = vi.fn()
+
+    handleMouseEvent(app, { action: 'press', button: 0, col: 3, kind: 'mouse', row: 1, sequence: '' })
+    handleMouseEvent(app, { action: 'release', button: 0, col: 3, kind: 'mouse', row: 1, sequence: '' })
+
+    expect(hasSelection(app.props.selection)).toBe(false)
+    expect(app.props.onClickAt).toHaveBeenCalledWith(2, 0)
+    expect(app.props.onSelectionChange).not.toHaveBeenCalled()
+  })
+
+  it('repaints immediately when a fresh press replaces a visible selection', () => {
+    const app = makeApp()
+
+    startSelection(app.props.selection, 0, 0)
+    updateSelection(app.props.selection, 4, 0)
+    expect(hasSelection(app.props.selection)).toBe(true)
+
+    handleMouseEvent(app, { action: 'press', button: 0, col: 8, kind: 'mouse', row: 2, sequence: '' })
+
+    expect(hasSelection(app.props.selection)).toBe(false)
+    expect(app.props.onSelectionChange).toHaveBeenCalledOnce()
+  })
+
+  it('still notifies when a real drag selection is released', () => {
+    const app = makeApp()
+
+    handleMouseEvent(app, { action: 'press', button: 0, col: 1, kind: 'mouse', row: 1, sequence: '' })
+    updateSelection(app.props.selection, 4, 0)
+    handleMouseEvent(app, { action: 'release', button: 0, col: 4, kind: 'mouse', row: 1, sequence: '' })
+
+    expect(hasSelection(app.props.selection)).toBe(true)
+    expect(app.props.onSelectionChange).toHaveBeenCalledOnce()
+  })
+})

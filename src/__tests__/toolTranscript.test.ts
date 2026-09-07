@@ -184,13 +184,13 @@ describe('estimatedMsgHeight with multi-line tool details', () => {
 
 // ── ToolTrail render: CC anatomy ─────────────────────────────────────────────
 
-const renderToString = (element: React.ReactElement): string => {
+const renderToString = (element: React.ReactElement, columns = 100): string => {
   const stdout = new PassThrough()
   const stdin = new PassThrough()
   const stderr = new PassThrough()
   let output = ''
 
-  Object.assign(stdout, { columns: 100, isTTY: false, rows: 40 })
+  Object.assign(stdout, { columns, isTTY: false, rows: 40 })
   Object.assign(stdin, { isTTY: false })
   Object.assign(stderr, { isTTY: false })
   stdout.on('data', (chunk) => {
@@ -229,6 +229,19 @@ describe('ToolTrail rendering', () => {
     expect(rows[bullet + 2]).toMatch(/^\s{5,}lib/)
     expect(rows[bullet + 2]).not.toContain('⎿')
     expect(rows[bullet + 3]).toMatch(/^\s{5,}app/)
+  })
+
+  it('keeps a short tool card compact on an ultra-wide terminal', () => {
+    const line = buildToolTrailLine('Bash', 'pwd', false, 'C:\\repo')
+    const output = renderToString(React.createElement(ToolTrail, { detailsMode: 'expanded', t: DEFAULT_THEME, trail: [line] }), 240)
+    const rows = stripAnsi(output)
+      .split('\n')
+      .filter((row) => row.trim().length > 0)
+    const topBorder = rows.find((row) => row.includes('╭'))
+
+    expect(topBorder).toBeDefined()
+    expect(topBorder!.length).toBeLessThanOrEqual(120)
+    expect(topBorder!.length).toBeLessThan(240)
   })
 
   it('bolds the tool name and keeps args plain', () => {

@@ -1128,6 +1128,11 @@ export const ToolTrail = memo(function ToolTrail({
   // alternates glyph/space (original useBlink is 600ms — same read).
   const blinkOn = Math.floor(now / 500) % 2 === 0
 
+  // Keep short tool cards content-sized on ultra-wide terminals. Long commands
+  // and results still wrap, but at a readable width rather than stretching the
+  // border and divider across the entire viewport.
+  const toolCardMaxWidth = 120
+
   // One full `› Tool(args)` + `⎿ result` block. This is every row in the
   // expanded (ctrl+o) view, and the shape STANDALONE tools — edits,
   // delegations, questions — keep even while collapsed. `gap` opens the blank
@@ -1141,13 +1146,14 @@ export const ToolTrail = memo(function ToolTrail({
 
     return (
       <Box
+        alignSelf="flex-start"
         borderColor={group.error ? t.color.error : group.live ? t.color.highlight : t.color.frame}
         borderStyle="round"
         flexDirection="column"
         key={group.key}
         marginTop={gap ? 1 : 0}
+        maxWidth={toolCardMaxWidth}
         paddingX={1}
-        width="100%"
       >
         <Text color={group.color}>
           {group.live ? (

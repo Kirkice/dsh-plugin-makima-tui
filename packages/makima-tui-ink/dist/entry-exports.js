@@ -11022,9 +11022,12 @@ function handleMouseEvent(app, m) {
       app.props.onMultiClick(col, row, count);
       return;
     }
+    const replacedSelection = hasSelection(sel);
     startSelection(sel, col, row);
     sel.lastPressHadAlt = (m.button & 8) !== 0;
-    app.props.onSelectionChange();
+    if (replacedSelection) {
+      app.props.onSelectionChange();
+    }
     return;
   }
   if (app.mouseCaptureTarget) {
@@ -11041,6 +11044,7 @@ function handleMouseEvent(app, m) {
     return;
   }
   finishSelection(sel);
+  const selectionFinished = hasSelection(sel);
   if (!hasSelection(sel) && sel.anchor) {
     if (!app.props.onClickAt(col, row)) {
       const url = app.props.getHyperlinkAt(col, row);
@@ -11060,7 +11064,9 @@ function handleMouseEvent(app, m) {
       }
     }
   }
-  app.props.onSelectionChange();
+  if (selectionFinished) {
+    app.props.onSelectionChange();
+  }
 }
 
 // src/ink/events/keyboard-event.ts
