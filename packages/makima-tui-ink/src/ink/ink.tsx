@@ -304,6 +304,9 @@ export default class Ink {
   // expensive tree rebuild defers.
   private pendingResizeRender = false
   private resizeSettleTimer: ReturnType<typeof setTimeout> | null = null
+  // Inline safety heal. This timer only schedules a normal render; LogUpdate
+  // decides reachability and performs EL(2)+repaint without clearing scrollback.
+  private inlineHealTimer: ReturnType<typeof setInterval> | null = null
 
   // Fold synchronous re-entry (selection fanout, onFrame callback)
   // into one follow-up microtask instead of stacking renders.
@@ -383,10 +386,17 @@ export default class Ink {
     if (options.stdout.isTTY) {
       options.stdout.on('resize', this.handleResize)
       process.on('SIGCONT', this.handleResume)
+      this.inlineHealTimer = setInterval(this.scheduleInlineHeal, 5000)
+      this.inlineHealTimer.unref?.()
 
       this.unsubscribeTTYHandlers = () => {
         options.stdout.off('resize', this.handleResize)
         process.off('SIGCONT', this.handleResume)
+
+        if (this.inlineHealTimer !== null) {
+          clearInterval(this.inlineHealTimer)
+          this.inlineHealTimer = null
+        }
       }
     }
 
@@ -459,7 +469,11 @@ export default class Ink {
       return
     }
 
-    // Main screen: start fresh to prevent clobbering terminal content
+    // Main screen: start fresh to prevent clobbering terminal content and
+    // request an in-place reachable-row heal on the next render. The latter
+    // repairs physical cells changed while the process was suspended without
+    // erasing native scrollback.
+    this.log.requestInlineHeal()
     this.frontFrame = emptyFrame(
       this.frontFrame.viewport.height,
       this.frontFrame.viewport.width,
@@ -479,6 +493,20 @@ export default class Ink {
     // suspend. Clear displayCursor so the next frame's cursor preamble
     // doesn't emit a relative move from a stale park position.
     this.displayCursor = null
+    this.scheduleRender()
+  }
+
+  private scheduleInlineHeal = () => {
+    if (this.isUnmounted || this.isPaused || this.altScreenActive || this.currentNode === null) {
+      return
+    }
+
+    this.log.requestInlineHeal()
+    this.scheduleRender()
+  }
+
+  private handleTerminalFocus = () => {
+    this.scheduleInlineHeal()
   }
 
   // Dims captured sync — closes the stale-dim window the original
@@ -531,6 +559,8 @@ export default class Ink {
     // can take ~80ms; erasing first leaves the screen blank that whole time.
     if (this.altScreenActive && !this.isPaused && this.options.stdout.isTTY) {
       this.prepareAltScreenResizeRepaint()
+    } else if (!this.isPaused && this.options.stdout.isTTY) {
+      this.log.requestInlineHeal()
     }
 
     // Already queued: later events in this burst updated dims/alt-screen
@@ -2360,6 +2390,7 @@ export default class Ink {
         onSelectionChange={this.notifySelectionChange}
         onSelectionDrag={this.handleSelectionDrag}
         onStdinResume={this.reassertTerminalModes}
+        onTerminalFocus={this.handleTerminalFocus}
         selection={this.selection}
         stderr={this.options.stderr}
         stdin={this.options.stdin}

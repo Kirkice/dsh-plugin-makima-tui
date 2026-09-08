@@ -500,6 +500,9 @@ var CURSOR_RESTORE = csi("u");
 function eraseToEndOfLine() {
   return csi("K");
 }
+function eraseLine() {
+  return csi(2, "K");
+}
 var ERASE_LINE = csi(2, "K");
 var ERASE_SCREEN = csi(2, "J");
 var ERASE_SCROLLBACK = csi(3, "J");
@@ -2769,6 +2772,9 @@ function writeDiffToTerminal(terminal, diff2, skipSyncMarkers = false, onDrain) 
         break;
       case "clearTerminal":
         buffer += getClearTerminalSequence();
+        break;
+      case "eraseLine":
+        buffer += eraseLine();
         break;
       case "eraseToLineEnd":
         buffer += eraseToEndOfLine();
@@ -10869,6 +10875,9 @@ var App = class extends PureComponent {
   };
   handleTerminalFocus = (isFocused) => {
     setTerminalFocused(isFocused);
+    if (isFocused) {
+      this.props.onTerminalFocus?.();
+    }
   };
   handleSuspend = () => {
     if (!this.isRawModeSupported()) {
@@ -11359,6 +11368,8 @@ var LogUpdate = class {
   }
   options;
   state;
+  lastInlineHealAt = performance.now();
+  inlineHealRequested = false;
   /**
    * Physical viewport row (0-based) where the frame-end cursor physically
    * sits, carried frame to frame (main screen only — alt screen re-anchors
@@ -11387,6 +11398,10 @@ var LogUpdate = class {
    *  specific viewport row). */
   resetAnchor(row) {
     this.physCursorRow = row;
+  }
+  /** Request a scrollback-preserving full repaint of all reachable inline rows. */
+  requestInlineHeal() {
+    this.inlineHealRequested = true;
   }
   /** Physical viewport row of the frame-end cursor — the basis ink.tsx
    *  uses to keep its own cursor-park moves inside the viewport. */
@@ -11461,8 +11476,9 @@ var LogUpdate = class {
     }
     const startTime = performance.now();
     const stylePool = this.options.stylePool;
-    if (next.viewport.height !== prev.viewport.height || prev.viewport.width !== 0 && next.viewport.width !== prev.viewport.width) {
-      return this.fullReset(next, "resize", altScreen);
+    const viewportChanged = next.viewport.height !== prev.viewport.height || prev.viewport.width !== 0 && next.viewport.width !== prev.viewport.width;
+    if (viewportChanged && altScreen) {
+      return this.fullReset(next, "resize", true);
     }
     let scrollPatch = [];
     if (altScreen && next.scrollHint && decstbmSafe) {
@@ -11479,7 +11495,11 @@ var LogUpdate = class {
     }
     const cursorAtBottom = prev.cursor.y >= prev.screen.height;
     const isGrowing = next.screen.height > prev.screen.height;
-    const scrolledOffRows = Math.max(0, prev.cursor.y - this.physCursorRow);
+    const effectivePhysCursorRow = Math.min(
+      Math.max(this.physCursorRow, 0),
+      Math.max(0, next.viewport.height - 1)
+    );
+    const scrolledOffRows = Math.max(0, prev.cursor.y - effectivePhysCursorRow);
     const prevHadScrollback = altScreen ? cursorAtBottom && prev.screen.height >= prev.viewport.height : scrolledOffRows > 0;
     const isShrinking = next.screen.height < prev.screen.height;
     const nextFitsViewport = next.screen.height <= prev.viewport.height;
@@ -11513,14 +11533,14 @@ var LogUpdate = class {
       prev.cursor,
       next.viewport.width,
       next.viewport.height,
-      altScreen ? 0 : this.physCursorRow
+      altScreen ? 0 : effectivePhysCursorRow
     );
     const heightDelta = Math.max(next.screen.height, 1) - Math.max(prev.screen.height, 1);
     const shrinking = heightDelta < 0;
     const growing = heightDelta > 0;
     if (shrinking) {
       const linesToClear = prev.screen.height - next.screen.height;
-      const eraseReach = altScreen ? prev.viewport.height : this.physCursorRow + 1;
+      const eraseReach = altScreen ? prev.viewport.height : effectivePhysCursorRow + 1;
       if (linesToClear > eraseReach) {
         return this.fullReset(next, "offscreen", altScreen);
       }
@@ -11628,6 +11648,14 @@ var LogUpdate = class {
     if (growing) {
       renderFrameSlice(screen, next, prev.screen.height, next.screen.height, stylePool);
     }
+    const shouldHealInline = !altScreen && (this.inlineHealRequested || viewportChanged || next.layoutShifted === true || startTime - this.lastInlineHealAt >= 5e3);
+    if (shouldHealInline && next.screen.width >= next.viewport.width) {
+      const reachableTop = Math.max(0, screen.cursor.y - screen.phys);
+      const reachableBottom = Math.min(next.screen.height, reachableTop + next.viewport.height);
+      repaintRowsInPlace(screen, next, reachableTop, reachableBottom, stylePool);
+      this.lastInlineHealAt = startTime;
+      this.inlineHealRequested = false;
+    }
     if (altScreen) {
     } else if (next.cursor.y >= next.screen.height) {
       screen.txn((prev2) => {
@@ -11710,6 +11738,34 @@ function readLine(screen, y) {
 }
 function renderFrame(screen, frame, stylePool) {
   renderFrameSlice(screen, frame, 0, frame.screen.height, stylePool);
+}
+function repaintRowsInPlace(screen, frame, startY, endY, stylePool) {
+  let currentStyleId = stylePool.none;
+  let currentHyperlink = void 0;
+  const { width, cells, charPool, hyperlinkPool } = frame.screen;
+  for (let y = startY; y < endY; y++) {
+    moveCursorTo(screen, 0, y);
+    currentStyleId = transitionStyle(screen.diff, stylePool, currentStyleId, stylePool.none);
+    currentHyperlink = transitionHyperlink(screen.diff, currentHyperlink, void 0);
+    screen.diff.push({ type: "eraseLine" });
+    let lastRenderedStyleId = -1;
+    const rowStart = y * width;
+    for (let x = 0; x < width; x++) {
+      const cell = visibleCellAtIndex(cells, charPool, hyperlinkPool, rowStart + x, lastRenderedStyleId);
+      if (!cell) {
+        continue;
+      }
+      moveCursorTo(screen, x, y);
+      currentHyperlink = transitionHyperlink(screen.diff, currentHyperlink, cell.hyperlink);
+      const styleStr = stylePool.transition(currentStyleId, cell.styleId);
+      if (writeCellWithStyleStr(screen, cell, styleStr)) {
+        currentStyleId = cell.styleId;
+        lastRenderedStyleId = cell.styleId;
+      }
+    }
+  }
+  transitionStyle(screen.diff, stylePool, currentStyleId, stylePool.none);
+  transitionHyperlink(screen.diff, currentHyperlink, void 0);
 }
 function renderFrameSlice(screen, frame, startY, endY, stylePool) {
   let currentStyleId = stylePool.none;
@@ -11824,7 +11880,7 @@ var VirtualScreen = class {
     this.viewportWidth = viewportWidth;
     this.viewportHeight = viewportHeight;
     this.cursor = { ...origin };
-    this.phys = physStart;
+    this.phys = Math.min(Math.max(physStart, 0), Math.max(0, viewportHeight - 1));
   }
   viewportWidth;
   viewportHeight;
@@ -12370,9 +12426,9 @@ function writeLineToScreen(screen, line, x, y, screenWidth, stylePool, charCache
         for (let i = 0; i < spacesToNextStop && offsetX < screenWidth; i++) {
           setCellAt(screen, offsetX, y, {
             char: " ",
-            styleId: stylePool.none,
+            styleId: character.styleId,
             width: 0 /* Narrow */,
-            hyperlink: void 0
+            hyperlink: character.hyperlink
           });
           offsetX++;
         }
@@ -12551,7 +12607,7 @@ function createRenderer(node, stylePool) {
     resetScrollDrainNode();
     const absoluteRemoved = consumeAbsoluteRemovedFlag();
     render_node_to_output_default(node, output, {
-      prevScreen: absoluteRemoved || options.prevFrameContaminated ? void 0 : prevScreen
+      prevScreen: options.altScreen && !absoluteRemoved && !options.prevFrameContaminated ? prevScreen : void 0
     });
     const renderedScreen = output.get();
     const drainNode = getScrollDrainNode();
@@ -12560,6 +12616,7 @@ function createRenderer(node, stylePool) {
     }
     return {
       absoluteOverlayMoved: didAbsoluteOverlayMove(),
+      layoutShifted: didLayoutShift(),
       scrollHint: options.altScreen ? getScrollHint() : null,
       scrollDrainPending: drainNode !== null,
       screen: renderedScreen,
@@ -12711,9 +12768,15 @@ var Ink = class {
     if (options.stdout.isTTY) {
       options.stdout.on("resize", this.handleResize);
       process.on("SIGCONT", this.handleResume);
+      this.inlineHealTimer = setInterval(this.scheduleInlineHeal, 5e3);
+      this.inlineHealTimer.unref?.();
       this.unsubscribeTTYHandlers = () => {
         options.stdout.off("resize", this.handleResize);
         process.off("SIGCONT", this.handleResume);
+        if (this.inlineHealTimer !== null) {
+          clearInterval(this.inlineHealTimer);
+          this.inlineHealTimer = null;
+        }
       };
     }
     this.rootNode = createNode("ink-root");
@@ -12880,6 +12943,9 @@ var Ink = class {
   // expensive tree rebuild defers.
   pendingResizeRender = false;
   resizeSettleTimer = null;
+  // Inline safety heal. This timer only schedules a normal render; LogUpdate
+  // decides reachability and performs EL(2)+repaint without clearing scrollback.
+  inlineHealTimer = null;
   // Fold synchronous re-entry (selection fanout, onFrame callback)
   // into one follow-up microtask instead of stacking renders.
   isRendering = false;
@@ -12895,6 +12961,7 @@ var Ink = class {
       this.reenterAltScreen();
       return;
     }
+    this.log.requestInlineHeal();
     this.frontFrame = emptyFrame(
       this.frontFrame.viewport.height,
       this.frontFrame.viewport.width,
@@ -12911,6 +12978,17 @@ var Ink = class {
     );
     this.log.reset();
     this.displayCursor = null;
+    this.scheduleRender();
+  };
+  scheduleInlineHeal = () => {
+    if (this.isUnmounted || this.isPaused || this.altScreenActive || this.currentNode === null) {
+      return;
+    }
+    this.log.requestInlineHeal();
+    this.scheduleRender();
+  };
+  handleTerminalFocus = () => {
+    this.scheduleInlineHeal();
   };
   // Dims captured sync — closes the stale-dim window the original
   // debounce rejection warned about. Expensive React commit defers to
@@ -12939,6 +13017,8 @@ var Ink = class {
     }
     if (this.altScreenActive && !this.isPaused && this.options.stdout.isTTY) {
       this.prepareAltScreenResizeRepaint();
+    } else if (!this.isPaused && this.options.stdout.isTTY) {
+      this.log.requestInlineHeal();
     }
     if (this.pendingResizeRender) {
       return;
@@ -14167,6 +14247,7 @@ var Ink = class {
         onSelectionChange: this.notifySelectionChange,
         onSelectionDrag: this.handleSelectionDrag,
         onStdinResume: this.reassertTerminalModes,
+        onTerminalFocus: this.handleTerminalFocus,
         selection: this.selection,
         stderr: this.options.stderr,
         stdin: this.options.stdin,

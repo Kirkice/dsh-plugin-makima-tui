@@ -101,6 +101,10 @@ type Props = {
   // fullscreen) re-enters alt-screen + mouse tracking. Idempotent on the
   // terminal side. Optional so testing.tsx doesn't need to stub it.
   readonly onStdinResume?: () => void
+  // Called when DECSET 1004 reports that the terminal regained focus.
+  // Inline mode uses this to heal cells changed while another window owned
+  // the terminal; fullscreen already re-anchors every frame.
+  readonly onTerminalFocus?: () => void
   // Receives the declared native-cursor position from useDeclaredCursor
   // so ink.tsx can park the terminal cursor there after each frame.
   // Enables IME composition at the input caret and lets screen readers /
@@ -480,6 +484,10 @@ export default class App extends PureComponent<Props, State> {
     // setTerminalFocused notifies subscribers: TerminalFocusProvider (context)
     // and Clock (interval speed) — no App setState needed.
     setTerminalFocused(isFocused)
+
+    if (isFocused) {
+      this.props.onTerminalFocus?.()
+    }
   }
   handleSuspend = (): void => {
     if (!this.isRawModeSupported()) {

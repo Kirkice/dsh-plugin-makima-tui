@@ -6,6 +6,7 @@ import { consumeAbsoluteRemovedFlag } from './node-cache.js'
 import Output from './output.js'
 import renderNodeToOutput, {
   didAbsoluteOverlayMove,
+  didLayoutShift,
   getScrollDrainNode,
   getScrollHint,
   resetLayoutShifted,
@@ -118,9 +119,16 @@ export default function createRenderer(node: DOMElement, stylePool: StylePool): 
     // earlier in tree order), so their blits would restore the removed
     // node's pixels. hasRemovedChild only shields direct siblings.
     // Normal-flow removals don't paint cross-subtree and are fine.
+    //
+    // Inline mode must rebuild from the current DOM/Yoga tree. Its physical
+    // terminal buffer also contains native scrollback and can be positioned
+    // below pre-existing shell output, so a previous-screen blit can copy
+    // stale/blank cells into the current transcript while the composer
+    // reflows. Correctness takes precedence here; alternate-screen retains
+    // the stable-subtree blit fast path.
     const absoluteRemoved = consumeAbsoluteRemovedFlag()
     renderNodeToOutput(node, output, {
-      prevScreen: absoluteRemoved || options.prevFrameContaminated ? undefined : prevScreen
+      prevScreen: options.altScreen && !absoluteRemoved && !options.prevFrameContaminated ? prevScreen : undefined
     })
 
     const renderedScreen = output.get()
@@ -137,6 +145,7 @@ export default function createRenderer(node: DOMElement, stylePool: StylePool): 
 
     return {
       absoluteOverlayMoved: didAbsoluteOverlayMove(),
+      layoutShifted: didLayoutShift(),
       scrollHint: options.altScreen ? getScrollHint() : null,
       scrollDrainPending: drainNode !== null,
       screen: renderedScreen,

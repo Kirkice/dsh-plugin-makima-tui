@@ -17,6 +17,28 @@ const paint = (screen: ReturnType<typeof createScreen>, x: number, y: number, te
   }
 }
 
+describe('Output styled control-character handling', () => {
+  it('preserves a tab background while expanding it into indentation cells', () => {
+    const styles = new StylePool()
+    const chars = new CharPool()
+    const links = new HyperlinkPool()
+    const screen = createScreen(WIDTH, HEIGHT, styles, chars, links)
+    const output = new Output({ height: HEIGHT, screen, stylePool: styles, width: WIDTH })
+
+    output.write(0, 0, '\u001b[48;2;24;67;82m+\tcode\u001b[49m')
+
+    const rendered = output.get()
+    const backgroundStyle = cellAt(rendered, 0, 0)!.styleId
+
+    // The tab begins after '+', so it expands through column 7. Every generated
+    // space must keep the same diff background rather than exposing the terminal.
+    for (let x = 1; x < 8; x++) {
+      expect(cellAt(rendered, x, 0)).toMatchObject({ char: ' ', styleId: backgroundStyle })
+    }
+    expect(cellAt(rendered, 8, 0)).toMatchObject({ char: 'c', styleId: backgroundStyle })
+  })
+})
+
 describe('Output stale-region handling', () => {
   it('does not let a later clean-subtree blit restore a cleared old border region', () => {
     const styles = new StylePool()

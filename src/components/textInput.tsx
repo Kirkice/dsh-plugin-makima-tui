@@ -13,6 +13,7 @@ import {
   isVoiceToggleKey,
   type ParsedVoiceRecordKey
 } from '../lib/platform.js'
+import { INLINE_MODE } from '../config/env.js'
 import { isTermuxTuiMode } from '../lib/termux.js'
 
 type InkExt = typeof Ink & {
@@ -683,7 +684,13 @@ export function TextInput({
     }, FRAME_BATCH_MS)
   }
 
-  const canFastEchoBase = () => supportsFastEchoTerminal() && focus && termFocus && !selected && !mask && !!stdout?.isTTY
+  // Inline mode renders into the host terminal's native scrollback. Direct
+  // stdout fast-echo writes bypass Ink's virtual screen and can race with a
+  // pending layout/render commit, temporarily erasing transcript rows until
+  // the next full render. Keep the optimization for alternate-screen mode,
+  // where Ink owns the complete terminal buffer and can re-anchor safely.
+  const canFastEchoBase = () =>
+    !INLINE_MODE && supportsFastEchoTerminal() && focus && termFocus && !selected && !mask && !!stdout?.isTTY
 
   const canFastAppend = (current: string, cursor: number, text: string) =>
     canFastEchoBase() && canFastAppendShape(current, cursor, text, columns, lineWidthRef.current)

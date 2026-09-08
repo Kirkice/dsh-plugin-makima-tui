@@ -350,6 +350,8 @@ function Harness({ busy, flash, lines, scrollbox, value }: HarnessState) {
 // Scenario runner
 // ---------------------------------------------------------------------------
 type StepOpts = Partial<HarnessState> & {
+  /** Skip invariant checks for setup steps that deliberately inject drift. */
+  assert?: boolean
   /** Invoke ink.forceRedraw() after rendering this step (the ctrl+L /
    *  /redraw recovery path — ERASE_SCREEN + CURSOR_HOME + full repaint). */
   forceRedraw?: boolean
@@ -360,7 +362,7 @@ type StepOpts = Partial<HarnessState> & {
   label: string
 }
 
-function runScenario(steps: Array<StepOpts & { assert?: boolean }>, scrollbox: boolean, shellRows = 0) {
+function runScenario(steps: StepOpts[], scrollbox: boolean, shellRows = 0) {
   const stdout = new FakeTty()
   const stdin = new FakeTty()
   const stderr = new FakeTty()
@@ -568,17 +570,9 @@ describe('inline-mode physical screen stays in sync across a full turn', () => {
     runScenario(steps, false, 3)
   })
 
-  // ---- Known gaps in the row-tail erase. Each asserts that the run throws
-  // FOR THE DOCUMENTED REASON. `it.fails` was the obvious tool and the wrong
-  // one: it passes on ANY throw, so the first version of the interior case
-  // "passed" because its stamp landed inside the word `deepseek` and tripped
-  // `prompt row missing` instead — the tripwire recorded nothing and would
-  // never have flipped when the gap closed. toThrow(/…/) pins the reason and
-  // still flips loudly if a heal makes the run stop throwing.
-  //
-  // Both gaps fall out of the design: the erase anchors at lastPaintedX + 1 and
-  // only runs for rows the diff pass wrote to. Closing them needs a periodic
-  // in-place full-row repaint, not a bigger tail.
+  // The full-row inline heal closes both historical row-tail gaps: unchanged
+  // interior cells and untouched transcript rows. The next layout-shifting
+  // lifecycle frame clears and repaints every reachable physical row.
 
   const gapSteps = (foreign: { ch: string; x: number; y: number }) => {
     const steps = lifecycleSteps({ flashOnEnd: false, reflowOnEnd: false, virtSlideOnIdle: true })
@@ -588,23 +582,12 @@ describe('inline-mode physical screen stays in sync across a full turn', () => {
     return steps
   }
 
-  // Interior: any cell whose model value does not change between frames is
-  // never re-emitted, and the tail anchor starts past it. Stamped on the
-  // composer's top border — a STABLE PAINTED cell, the sharpest form of the
-  // gap, and not one of the harness's own needles.
-  it('GAP: a foreign char INTERIOR to a row is not cleared', () => {
-    expect(() => runScenario(gapSteps({ ch: FOREIGN, x: 20, y: 4 }), false, 3)).toThrow(
-      /foreign char never cleared/
-    )
+  it('clears a foreign char INTERIOR to a stable painted row', () => {
+    runScenario(gapSteps({ ch: FOREIGN, x: 20, y: 4 }), false, 3)
   })
 
-  // Settled rows: during a long turn the only rows repainting are the busy line
-  // and the composer. Everything above is untouched, so nothing erases it —
-  // this is the "persists indefinitely" case from the bug report.
-  it('GAP: a foreign char on an UNTOUCHED transcript row is not cleared', () => {
-    expect(() => runScenario(gapSteps({ ch: FOREIGN, x: 35, y: 1 }), false, 3)).toThrow(
-      /foreign char never cleared/
-    )
+  it('clears a foreign char on an otherwise UNTOUCHED transcript row', () => {
+    runScenario(gapSteps({ ch: FOREIGN, x: 35, y: 1 }), false, 3)
   })
 
   it('H: ctrl+L mid-session re-anchors and typing stays correct after it', () => {

@@ -115,11 +115,29 @@ const modelsFrom = (value: unknown): string[] => {
 
 /**
  * Image support is opt-in per configured model. OpenAI-compatible gateways
- * differ, so guessing from a model name could send an invalid image request.
+ * differ, so guessing from an arbitrary model name could send an invalid image
+ * request. These first-party OpenAI aliases are the exception: their capability
+ * is part of the catalog and some host adapters still report stale text-only
+ * metadata for them.
  */
 const imageModelsFrom = (value: unknown, models: readonly string[]): string[] => {
   const requested = new Set(modelsFrom(value))
   return models.filter((model) => requested.has(model))
+}
+
+const OPENAI_IMAGE_MODELS = new Set([
+  'gpt-5.4',
+  'gpt-5.4-mini',
+  'gpt-5.5',
+  'gpt-5.6-sol',
+  'gpt-5.6-terra',
+  'gpt-5.6-luna'
+])
+
+const isKnownOpenAiImageModel = (provider: string, model: string): boolean => {
+  if (provider !== 'openai' && provider !== 'openai-codex') return false
+  const id = model.includes('/') ? model.slice(model.lastIndexOf('/') + 1) : model
+  return OPENAI_IMAGE_MODELS.has(id.toLowerCase())
 }
 
 /**
@@ -1465,6 +1483,12 @@ export class HarnessGatewayClient extends GatewayClient {
     const route = this.selection.current
 
     if (!route) return undefined
+
+    // The bundled Codex catalog and OpenAI's first-party aliases support image
+    // input. Prefer that durable knowledge over stale host metadata: older pi-ai
+    // catalogs can resolve these models as text-only and reject the attachment
+    // before the image-capable adapter ever receives it.
+    if (isKnownOpenAiImageModel(route.provider, route.model)) return true
 
     const llm = this.ctx.get('llm') as
       | { resolveModelInfo?: (provider: string, model: string) => Promise<{ inputModalities?: readonly string[] }> }

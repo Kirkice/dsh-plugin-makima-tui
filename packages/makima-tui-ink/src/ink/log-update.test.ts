@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import type { Frame } from './frame.js'
 import { LogUpdate } from './log-update.js'
@@ -142,17 +142,7 @@ describe('LogUpdate.render diff contract', () => {
     expect(stdoutOnly(diff)).toContain('newrows')
   })
 
-  it('drift repro: identical prev/next emits no heal, even when the physical terminal is stale', () => {
-    // Load-bearing theory for the rapid-resize scattered-letter bug: if the
-    // physical terminal has stale cells that prev.screen doesn't know about
-    // (e.g. resize-induced reflow wrote past ink's tracked range), the
-    // renderer has no signal to heal them. LogUpdate.render only sees
-    // prev/next — no view of the physical terminal — so when prev==next,
-    // it emits nothing and any orphaned glyphs survive.
-    //
-    // The fix path is upstream of this diff: either (a) defensively
-    // full-repaint on xterm.js frames where prevFrameContaminated is set,
-    // or (b) close the drift window so prev.screen cannot diverge.
+  it('heals identical inline rows on request without clearing scrollback', () => {
     const w = 20
     const h = 3
 
@@ -164,10 +154,149 @@ describe('LogUpdate.render diff contract', () => {
     next.damage = { x: 0, y: 0, width: w, height: h }
 
     const log = new LogUpdate({ isTTY: true, stylePool })
-    const diff = log.render(mkFrame(prev, w, h), mkFrame(next, w, h), true, false)
+    log.requestInlineHeal()
+    const diff = log.render(mkFrame(prev, w, h, h), mkFrame(next, w, h, h), false, false)
 
-    expect(stdoutOnly(diff)).toBe('')
+    expect(stdoutOnly(diff)).toContain('same')
+    expect(diff.some(p => p.type === 'eraseLine')).toBe(true)
     expect(diff.some(p => p.type === 'clearTerminal')).toBe(false)
+  })
+
+  it('heals every reachable row after an inline layout shift', () => {
+    const w = 20
+    const h = 4
+    const prev = mkScreen(w, h)
+    const next = mkScreen(w, h)
+
+    paint(prev, 0, 'old border')
+    paint(prev, 1, 'unchanged')
+    paint(next, 0, 'new border')
+    paint(next, 1, 'unchanged')
+
+    const log = new LogUpdate({ isTTY: true, stylePool })
+    const nextFrame: Frame = {
+      ...mkFrame(next, w, h, h),
+      layoutShifted: true
+    }
+    const diff = log.render(mkFrame(prev, w, h, h), nextFrame, false, false)
+
+    expect(stdoutOnly(diff)).toContain('newborder')
+    expect(stdoutOnly(diff)).toContain('unchanged')
+    expect(diff.filter(p => p.type === 'eraseLine')).toHaveLength(h)
+    expect(diff.some(p => p.type === 'clearTerminal')).toBe(false)
+  })
+
+  it('throttles repeated layout-shift heals while keeping explicit heals immediate', () => {
+    const w = 20
+    const h = 3
+    const prev = mkScreen(w, h)
+    const next = mkScreen(w, h)
+    paint(prev, 0, 'old')
+    paint(next, 0, 'new')
+
+    const now = vi.spyOn(performance, 'now').mockReturnValue(1000)
+
+    try {
+      const log = new LogUpdate({ isTTY: true, stylePool })
+      const shiftedFrame: Frame = {
+        ...mkFrame(next, w, h, h),
+        layoutShifted: true
+      }
+
+      const first = log.render(mkFrame(prev, w, h, h), shiftedFrame, false, false)
+      expect(first.filter(p => p.type === 'eraseLine')).toHaveLength(h)
+
+      now.mockReturnValue(1050)
+      const throttled = log.render(shiftedFrame, shiftedFrame, false, false)
+      expect(throttled.some(p => p.type === 'eraseLine')).toBe(false)
+
+      log.requestInlineHeal()
+      const requested = log.render(shiftedFrame, shiftedFrame, false, false)
+      expect(requested.filter(p => p.type === 'eraseLine')).toHaveLength(h)
+    } finally {
+      now.mockRestore()
+    }
+  })
+
+  it('limits inline healing to rows reachable from the physical cursor', () => {
+    const w = 20
+    const viewportH = 3
+    const h = 6
+    const prev = mkScreen(w, h)
+    const next = mkScreen(w, h)
+
+    for (let y = 0; y < h; y++) {
+      paint(prev, y, `row${y}`)
+      paint(next, y, `row${y}`)
+    }
+
+    const log = new LogUpdate({ isTTY: true, stylePool })
+    log.resetAnchor(viewportH - 1)
+    log.requestInlineHeal()
+    const diff = log.render(mkFrame(prev, w, viewportH, h), mkFrame(next, w, viewportH, h), false, false)
+    const written = stdoutOnly(diff)
+
+    expect(written).not.toContain('row0')
+    expect(written).not.toContain('row1')
+    expect(written).not.toContain('row2')
+    expect(written).toContain('row3')
+    expect(written).toContain('row4')
+    expect(written).toContain('row5')
+    expect(diff.filter(p => p.type === 'eraseLine')).toHaveLength(viewportH)
+  })
+
+  it('heals an inline viewport resize without clearing terminal scrollback', () => {
+    const w = 20
+    const screenH = 4
+    const prevViewportH = 5
+    const nextViewportH = 3
+    const prev = mkScreen(w, screenH)
+    const next = mkScreen(w, screenH)
+
+    for (let y = 0; y < screenH; y++) {
+      paint(prev, y, `row${y}`)
+      paint(next, y, `row${y}`)
+    }
+
+    const log = new LogUpdate({ isTTY: true, stylePool })
+    // Simulate the old cursor being below the newly shrunken viewport. The
+    // renderer must clamp reachability to nextViewportH before moving upward.
+    log.resetAnchor(prevViewportH - 1)
+    const diff = log.render(
+      mkFrame(prev, w, prevViewportH, screenH - 1),
+      mkFrame(next, w, nextViewportH, screenH - 1),
+      false,
+      false
+    )
+
+    expect(diff.filter(p => p.type === 'eraseLine')).toHaveLength(nextViewportH)
+    expect(diff.some(p => p.type === 'clearTerminal')).toBe(false)
+    expect(stdoutOnly(diff)).toContain('row1')
+    expect(stdoutOnly(diff)).toContain('row3')
+  })
+
+  it('runs the low-frequency inline safety heal on a later frame', () => {
+    const w = 20
+    const h = 2
+    const prev = mkScreen(w, h)
+    const next = mkScreen(w, h)
+
+    paint(prev, 0, 'stable')
+    paint(next, 0, 'stable')
+
+    const now = vi.spyOn(performance, 'now').mockReturnValue(0)
+
+    try {
+      const log = new LogUpdate({ isTTY: true, stylePool })
+      now.mockReturnValue(5001)
+      const diff = log.render(mkFrame(prev, w, h, h), mkFrame(next, w, h, h), false, false)
+
+      expect(diff.filter(p => p.type === 'eraseLine')).toHaveLength(h)
+      expect(stdoutOnly(diff)).toContain('stable')
+      expect(diff.some(p => p.type === 'clearTerminal')).toBe(false)
+    } finally {
+      now.mockRestore()
+    }
   })
 
   it('ignores main-screen scrollback-only changes instead of resetting repeatedly', () => {

@@ -41,6 +41,8 @@ const NEWLINE = { type: 'stdout', content: '\n' } as const
 
 export class LogUpdate {
   private state: State
+  private lastInlineHealAt = performance.now()
+  private inlineHealRequested = false
 
   /**
    * Physical viewport row (0-based) where the frame-end cursor physically
@@ -77,6 +79,11 @@ export class LogUpdate {
    *  specific viewport row). */
   resetAnchor(row: number): void {
     this.physCursorRow = row
+  }
+
+  /** Request a scrollback-preserving full repaint of all reachable inline rows. */
+  requestInlineHeal(): void {
+    this.inlineHealRequested = true
   }
 
   /** Physical viewport row of the frame-end cursor — the basis ink.tsx
@@ -183,14 +190,15 @@ export class LogUpdate {
     const stylePool = this.options.stylePool
 
     // Terminal hosts can reflow/preserve old cells on any resize, including
-    // height-only growth. A partial diff can then leave stale transcript rows
-    // or cut off bordered content even when our virtual scrollTop is correct.
-    // Resizing is rare enough that a full repaint is the safer tradeoff.
-    if (
+    // height-only growth. Alt-screen owns the complete buffer and can safely
+    // reset it. Inline mode must preserve native scrollback, so it falls
+    // through and performs an in-place reachable-row heal below instead.
+    const viewportChanged =
       next.viewport.height !== prev.viewport.height ||
       (prev.viewport.width !== 0 && next.viewport.width !== prev.viewport.width)
-    ) {
-      return this.fullReset(next, 'resize', altScreen)
+
+    if (viewportChanged && altScreen) {
+      return this.fullReset(next, 'resize', true)
     }
 
     // DECSTBM scroll optimization: when a ScrollBox's scrollTop changed,
@@ -253,7 +261,11 @@ export class LogUpdate {
     // unlike frame-height arithmetic, it stays correct when the frame
     // started below pre-existing shell output (inline mode), where content
     // scrolls earlier than height-vs-viewport comparison predicts.
-    const scrolledOffRows = Math.max(0, prev.cursor.y - this.physCursorRow)
+    const effectivePhysCursorRow = Math.min(
+      Math.max(this.physCursorRow, 0),
+      Math.max(0, next.viewport.height - 1)
+    )
+    const scrolledOffRows = Math.max(0, prev.cursor.y - effectivePhysCursorRow)
 
     const prevHadScrollback = altScreen
       ? cursorAtBottom && prev.screen.height >= prev.viewport.height
@@ -312,7 +324,7 @@ export class LogUpdate {
       prev.cursor,
       next.viewport.width,
       next.viewport.height,
-      altScreen ? 0 : this.physCursorRow
+      altScreen ? 0 : effectivePhysCursorRow
     )
 
     // Treat empty screen as height 1 to avoid spurious adjustments on first render
@@ -327,9 +339,10 @@ export class LogUpdate {
 
       // eraseLines walks upward from the cursor row and can only erase rows
       // that are physically on screen — above the viewport top the walk
-      // clamps. Main screen: the cursor sits at physCursorRow, so at most
-      // physCursorRow + 1 rows are reachable. If more must go, full reset.
-      const eraseReach = altScreen ? prev.viewport.height : this.physCursorRow + 1
+      // clamps. Main screen: use the cursor row clamped to the NEW viewport;
+      // after a height shrink the old tracker may point below its bottom and
+      // would otherwise overstate how many rows are safely reachable.
+      const eraseReach = altScreen ? prev.viewport.height : effectivePhysCursorRow + 1
 
       if (linesToClear > eraseReach) {
         return this.fullReset(next, 'offscreen', altScreen)
@@ -506,17 +519,12 @@ export class LogUpdate {
     // cell its model calls empty and no diff can ever remove it; EL(0) restores
     // the guarantee the old trailing-space padding gave us, at 4 bytes.
     //
-    // PARTIAL BY CONSTRUCTION — this heals a row's TAIL, on rows the diff pass
-    // TOUCHED. It does not reach:
-    //   - interior columns (the anchor starts past the content, and an
-    //     unchanged painted cell is never re-emitted either), or
-    //   - rows no frame rewrote, which during a long turn is everything above
-    //     the busy line and composer.
-    // Both are pinned as it.fails cases in inline-scrollback-drift.test.ts.
-    // Closing them needs a periodic in-place full-row repaint (EL(2) + repaint
-    // per reachable row — NOT fullReset, whose clearTerminal carries
-    // ERASE_SCROLLBACK and would destroy the user's history). Until then a
-    // stray glyph outside the tail still needs ctrl+L.
+    // PARTIAL BY CONSTRUCTION — this cheap per-frame path only heals a touched
+    // row's tail. Interior columns and untouched transcript rows are repaired
+    // by the reachable-row EL(2) + repaint pass below after layout/viewport
+    // shifts, explicit resume/resize requests, or the periodic safety interval.
+    // Keep that separate from fullReset: clearTerminal carries ERASE_SCROLLBACK
+    // and would destroy the user's native history in inline mode.
     //
     // Ordering is load-bearing. After the style reset above: EL honours the
     // current background (BCE), so erasing under an active style would paint a
@@ -557,6 +565,28 @@ export class LogUpdate {
     // Handle growth: render new rows directly (they naturally scroll the terminal)
     if (growing) {
       renderFrameSlice(screen, next, prev.screen.height, next.screen.height, stylePool)
+    }
+
+    // Heal virtual/physical divergence in inline mode without destroying
+    // native scrollback. Layout shifts are correctness-critical here: a
+    // reflow can leave stale physical cells even when the virtual diff sees
+    // no changed text, so repair every reachable row immediately. This is
+    // intentionally paired with inline's no-blit renderer path; correctness
+    // takes precedence over the more aggressive but unsafe fast path.
+    const shouldHealInline =
+      !altScreen &&
+      (this.inlineHealRequested ||
+        viewportChanged ||
+        next.layoutShifted === true ||
+        startTime - this.lastInlineHealAt >= 5000)
+
+    if (shouldHealInline && next.screen.width >= next.viewport.width) {
+      const reachableTop = Math.max(0, screen.cursor.y - screen.phys)
+      const reachableBottom = Math.min(next.screen.height, reachableTop + next.viewport.height)
+
+      repaintRowsInPlace(screen, next, reachableTop, reachableBottom, stylePool)
+      this.lastInlineHealAt = startTime
+      this.inlineHealRequested = false
     }
 
     // Restore cursor. Skipped in alt-screen: the cursor is hidden, its
@@ -699,6 +729,54 @@ function readLine(screen: Screen, y: number): string {
 
 function renderFrame(screen: VirtualScreen, frame: Frame, stylePool: StylePool): void {
   renderFrameSlice(screen, frame, 0, frame.screen.height, stylePool)
+}
+
+/**
+ * Clear and repaint complete reachable rows without LF/newline or ED(3).
+ * Keeping the cursor inside the existing viewport preserves native scrollback
+ * while deliberately rewriting unchanged cells that an ordinary diff cannot
+ * use to repair physical-terminal drift.
+ */
+function repaintRowsInPlace(
+  screen: VirtualScreen,
+  frame: Frame,
+  startY: number,
+  endY: number,
+  stylePool: StylePool
+): void {
+  let currentStyleId = stylePool.none
+  let currentHyperlink: Hyperlink = undefined
+  const { width, cells, charPool, hyperlinkPool } = frame.screen
+
+  for (let y = startY; y < endY; y++) {
+    moveCursorTo(screen, 0, y)
+    currentStyleId = transitionStyle(screen.diff, stylePool, currentStyleId, stylePool.none)
+    currentHyperlink = transitionHyperlink(screen.diff, currentHyperlink, undefined)
+    screen.diff.push({ type: 'eraseLine' })
+
+    let lastRenderedStyleId = -1
+    const rowStart = y * width
+
+    for (let x = 0; x < width; x++) {
+      const cell = visibleCellAtIndex(cells, charPool, hyperlinkPool, rowStart + x, lastRenderedStyleId)
+
+      if (!cell) {
+        continue
+      }
+
+      moveCursorTo(screen, x, y)
+      currentHyperlink = transitionHyperlink(screen.diff, currentHyperlink, cell.hyperlink)
+      const styleStr = stylePool.transition(currentStyleId, cell.styleId)
+
+      if (writeCellWithStyleStr(screen, cell, styleStr)) {
+        currentStyleId = cell.styleId
+        lastRenderedStyleId = cell.styleId
+      }
+    }
+  }
+
+  transitionStyle(screen.diff, stylePool, currentStyleId, stylePool.none)
+  transitionHyperlink(screen.diff, currentHyperlink, undefined)
 }
 
 /**
@@ -956,7 +1034,7 @@ class VirtualScreen {
     physStart: number
   ) {
     this.cursor = { ...origin }
-    this.phys = physStart
+    this.phys = Math.min(Math.max(physStart, 0), Math.max(0, viewportHeight - 1))
   }
 
   /** Advance the physical row by an LF-driven step (pins at the bottom). */

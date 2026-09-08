@@ -11,6 +11,8 @@ export type Frame = {
   readonly scrollHint?: ScrollHint | null
   /** A ScrollBox has remaining pendingScrollDelta — schedule another frame. */
   readonly scrollDrainPending?: boolean
+  /** Normal-flow geometry changed; inline mode must heal reachable physical rows. */
+  readonly layoutShifted?: boolean
   /** Absolute overlay moved/resized — schedule corrective frame without prevScreen. */
   readonly absoluteOverlayMoved?: boolean
 }
@@ -87,6 +89,10 @@ export type Patch =
   | { type: 'cursorShow' }
   | { type: 'cursorMove'; x: number; y: number }
   | { type: 'cursorTo'; col: number }
+  // EL(2). Used by inline-mode healing to clear a reachable physical row before
+  // repainting it from the virtual screen. Unlike clearTerminal, this preserves
+  // terminal scrollback.
+  | { type: 'eraseLine' }
   // EL(0). Emitted after a row's last painted cell to wipe anything living to
   // the right of it. The renderer skips empty cells rather than painting
   // spaces, so without this a character the renderer did not write (and does

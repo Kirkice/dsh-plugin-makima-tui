@@ -703,7 +703,9 @@ function writeLineToScreen(
     // mismatches. stringWidth treats these as width 0, but terminals may
     // move the cursor differently.
     if (codePoint !== undefined && codePoint <= 0x1f) {
-      // Tab (0x09): expand to spaces to reach next tab stop
+      // Tab (0x09): expand to spaces to reach the next tab stop. Preserve the
+      // tab's active style: a tab inside a diff row carries its line background,
+      // and replacing it with unstyled cells creates indentation-shaped holes.
       if (codePoint === 0x09) {
         const tabWidth = 8
         const spacesToNextStop = tabWidth - (offsetX % tabWidth)
@@ -711,9 +713,9 @@ function writeLineToScreen(
         for (let i = 0; i < spacesToNextStop && offsetX < screenWidth; i++) {
           setCellAt(screen, offsetX, y, {
             char: ' ',
-            styleId: stylePool.none,
+            styleId: character.styleId,
             width: CellWidth.Narrow,
-            hyperlink: undefined
+            hyperlink: character.hyperlink
           })
           offsetX++
         }

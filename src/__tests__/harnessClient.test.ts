@@ -390,6 +390,42 @@ describe('HarnessGatewayClient', () => {
     })
   })
 
+  it('accepts Luna images when stale host metadata incorrectly says text-only', async () => {
+    const w = makeWorld()
+    const originalGet = w.ctx.get
+    ;(w.ctx as any).get = (name: string) =>
+      name === 'llm' ? { resolveModelInfo: async () => ({ inputModalities: ['text'] }) } : originalGet(name)
+    ;(w.client as any).selection.current = { model: 'gpt-5.6-luna', provider: 'openai' }
+    w.client.start()
+    await settle()
+
+    ;(w.client as any).pendingImages.set(
+      'cc-test-session',
+      new Map([
+        [
+          7,
+          {
+            attachmentId: 'stored-image',
+            bytes: 3,
+            height: 12,
+            mediaType: 'image/png',
+            name: 'clipboard-screenshot.png',
+            width: 16
+          }
+        ]
+      ])
+    )
+
+    await expect(w.client.request('prompt.submit', { text: '[Image #7] inspect this' })).resolves.toEqual({ ok: true })
+    expect(w.followups).toHaveLength(1)
+    expect(w.followups[0]).toMatchObject({
+      content: [
+        { text: '[Image #7] inspect this', type: 'text' },
+        { attachment: { attachmentId: 'stored-image' }, type: 'image' }
+      ]
+    })
+  })
+
   it('rejects an image before followup when the active model is text-only', async () => {
     const w = makeWorld()
     const originalGet = w.ctx.get
