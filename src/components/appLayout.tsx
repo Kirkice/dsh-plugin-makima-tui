@@ -102,10 +102,10 @@ const PromptPrefix = memo(function PromptPrefix({
 
 const TranscriptPane = memo(function TranscriptPane({
   actions,
-  composer,
+  cols,
   progress,
   transcript
-}: Pick<AppLayoutProps, 'actions' | 'composer' | 'progress' | 'transcript'>) {
+}: Pick<AppLayoutProps, 'actions' | 'progress' | 'transcript'> & { cols: number }) {
   const ui = useStore($uiState)
 
   // Monochrome fallback only: with color disabled the user-input band can't
@@ -151,13 +151,13 @@ const TranscriptPane = memo(function TranscriptPane({
 
               {row.msg.kind === 'intro' ? (
                 <Box flexDirection="column" paddingTop={1}>
-                  <Banner logoPalette={ui.logoPalette} maxWidth={transcriptPanelWidth(composer.cols)} t={ui.theme} />
+                  <Banner logoPalette={ui.logoPalette} maxWidth={transcriptPanelWidth(cols)} t={ui.theme} />
 
                   {row.msg.info && (
                     <SessionPanel
                       info={row.msg.info}
                       logoPalette={ui.logoPalette}
-                      maxWidth={transcriptPanelWidth(composer.cols)}
+                      maxWidth={transcriptPanelWidth(cols)}
                       sid={ui.sid}
                       t={ui.theme}
                     />
@@ -167,7 +167,7 @@ const TranscriptPane = memo(function TranscriptPane({
                 <Panel sections={row.msg.panelData.sections} t={ui.theme} title={row.msg.panelData.title} />
               ) : (
                 <MessageLine
-                  cols={composer.cols}
+                  cols={cols}
                   compact={ui.compact}
                   detailExpanded={ui.detailExpanded}
                   detailScope={row.detailScope}
@@ -189,7 +189,7 @@ const TranscriptPane = memo(function TranscriptPane({
           {transcript.virtualHistory.bottomSpacer > 0 ? <Box height={transcript.virtualHistory.bottomSpacer} /> : null}
 
           <StreamingAssistant
-            cols={composer.cols}
+            cols={cols}
             compact={ui.compact}
             detailExpanded={ui.detailExpanded}
             detailsMode={ui.detailsMode}
@@ -519,7 +519,7 @@ export const AppLayout = memo(function AppLayout({ actions, composer, mouseTrack
             </PerfPane>
           ) : (
             <PerfPane id="transcript">
-              <TranscriptPane actions={actions} composer={composer} progress={progress} transcript={transcript} />
+              <TranscriptPane actions={actions} cols={composer.cols} progress={progress} transcript={transcript} />
             </PerfPane>
           )}
         </Box>

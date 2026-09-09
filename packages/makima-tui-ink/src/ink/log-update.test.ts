@@ -186,7 +186,7 @@ describe('LogUpdate.render diff contract', () => {
     expect(diff.some(p => p.type === 'clearTerminal')).toBe(false)
   })
 
-  it('throttles repeated layout-shift heals while keeping explicit heals immediate', () => {
+  it('heals every repeated inline layout shift immediately', () => {
     const w = 20
     const h = 3
     const prev = mkScreen(w, h)
@@ -194,28 +194,19 @@ describe('LogUpdate.render diff contract', () => {
     paint(prev, 0, 'old')
     paint(next, 0, 'new')
 
-    const now = vi.spyOn(performance, 'now').mockReturnValue(1000)
-
-    try {
-      const log = new LogUpdate({ isTTY: true, stylePool })
-      const shiftedFrame: Frame = {
-        ...mkFrame(next, w, h, h),
-        layoutShifted: true
-      }
-
-      const first = log.render(mkFrame(prev, w, h, h), shiftedFrame, false, false)
-      expect(first.filter(p => p.type === 'eraseLine')).toHaveLength(h)
-
-      now.mockReturnValue(1050)
-      const throttled = log.render(shiftedFrame, shiftedFrame, false, false)
-      expect(throttled.some(p => p.type === 'eraseLine')).toBe(false)
-
-      log.requestInlineHeal()
-      const requested = log.render(shiftedFrame, shiftedFrame, false, false)
-      expect(requested.filter(p => p.type === 'eraseLine')).toHaveLength(h)
-    } finally {
-      now.mockRestore()
+    const log = new LogUpdate({ isTTY: true, stylePool })
+    const shiftedFrame: Frame = {
+      ...mkFrame(next, w, h, h),
+      layoutShifted: true
     }
+
+    const first = log.render(mkFrame(prev, w, h, h), shiftedFrame, false, false)
+    expect(first.filter(p => p.type === 'eraseLine')).toHaveLength(h)
+
+    // A second layout shift must not be throttled: delaying this repair can
+    // leave stale physical transcript cells visible until the next submit.
+    const repeated = log.render(shiftedFrame, shiftedFrame, false, false)
+    expect(repeated.filter(p => p.type === 'eraseLine')).toHaveLength(h)
   })
 
   it('limits inline healing to rows reachable from the physical cursor', () => {

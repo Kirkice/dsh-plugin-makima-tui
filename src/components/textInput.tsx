@@ -792,7 +792,11 @@ export function TextInput({
   }
 
   const scheduleKeyBurstCommit = (next: string, nextCur: number) => {
-    commit(next, nextCur, true, false, false)
+    // Keep the editor's local view immediate, like Pi's stateful Editor, but
+    // defer the controlled parent update until the current key burst settles.
+    // This prevents every printable key from reconciling AppLayout/transcript
+    // while preserving a responsive caret and text echo in the composer.
+    commit(next, nextCur, true, false, true)
 
     if (keyBurstTimer.current) {
       return
@@ -1230,7 +1234,10 @@ export function TextInput({
         return
       }
 
-      commit(v, c)
+      // Printable edits are rendered locally now and propagated to the
+      // controlled parent on the existing key-burst timer. Non-printable
+      // editing commands retain synchronous parent publication.
+      commit(v, c, true, !isPrintableInput, true)
     },
     { isActive: focus }
   )

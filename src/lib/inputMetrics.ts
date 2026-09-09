@@ -12,6 +12,11 @@ interface VisualLine {
   start: number
 }
 
+// Keep a bounded cache of recent composer layouts, following Pi's stateful
+// editor approach without retaining an unbounded history of keystrokes.
+const VISUAL_LINE_CACHE_LIMIT = 32
+const visualLineCache = new Map<string, VisualLine[]>()
+
 const graphemes = (value: string) =>
   [...seg().segment(value)].map(({ segment, index }) => ({
     end: index + segment.length,
@@ -33,11 +38,22 @@ const graphemes = (value: string) =>
 // hardware cursor several cells away from the last rendered character.
 // Sourcing both from wrap-ansi guarantees agreement.
 function visualLines(value: string, cols: number): VisualLine[] {
-  if (!value.length) {
-    return [{ start: 0, end: 0 }]
+  const width = Math.max(1, cols)
+  const cacheKey = `${width}\u0000${value}`
+  const cached = visualLineCache.get(cacheKey)
+
+  if (cached) {
+    visualLineCache.delete(cacheKey)
+    visualLineCache.set(cacheKey, cached)
+    return cached
   }
 
-  const width = Math.max(1, cols)
+  if (!value.length) {
+    const empty = [{ start: 0, end: 0 }]
+    visualLineCache.set(cacheKey, empty)
+    return empty
+  }
+
   const wrapped = wrapAnsi(value, width, { hard: true, trim: false })
   const lines: VisualLine[] = []
 
@@ -96,7 +112,15 @@ function visualLines(value: string, cols: number): VisualLine[] {
 
   // wrap-ansi collapses an empty input into [""] which we already handled
   // above; preserve the invariant that lines is never empty for any input.
-  return lines.length ? lines : [{ start: 0, end: 0 }]
+  const result = lines.length ? lines : [{ start: 0, end: 0 }]
+  visualLineCache.set(cacheKey, result)
+
+  if (visualLineCache.size > VISUAL_LINE_CACHE_LIMIT) {
+    const oldest = visualLineCache.keys().next().value
+    if (oldest !== undefined) visualLineCache.delete(oldest)
+  }
+
+  return result
 }
 
 function widthBetween(value: string, start: number, end: number) {

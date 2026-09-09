@@ -366,7 +366,10 @@ export function ActiveSessionSwitcher({
           gw.request<SessionActiveListResponse>('session.active_list', {
             current_session_id: currentSessionId
           }),
-          includeHistory ? gw.request<SessionListResponse>('session.list', { limit: 200 }) : Promise.resolve(null)
+          // Fetch the complete persisted history. The overlay still renders a
+          // bounded viewport and lets the user browse it with ↑/↓, but the
+          // data source must not silently discard older sessions.
+          includeHistory ? gw.request<SessionListResponse>('session.list') : Promise.resolve(null)
         ])
 
         const r = liveRes.status === 'fulfilled' ? asRpcResult<SessionActiveListResponse>(liveRes.value) : null

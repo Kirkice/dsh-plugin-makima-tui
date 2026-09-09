@@ -91,6 +91,24 @@ describe('cursorLayout — word-wrap parity with wrap-ansi', () => {
 })
 
 describe('input metrics helpers', () => {
+  it('reuses cached wrapping without changing cursor and height semantics', () => {
+    const value = 'cache-safe composer text with a wrapped tail'
+    const cols = 12
+
+    expect(cursorLayout(value, 8, cols)).toEqual({ column: 8, line: 0 })
+    expect(inputVisualHeight(value, cols)).toBe(4)
+    expect(cursorLayout(value, value.length, cols)).toEqual(wrapAnsiEndPosition(value, cols))
+    expect(inputVisualHeight(value, cols)).toBe(4)
+  })
+
+  it('keeps cache keys isolated by width and Unicode content', () => {
+    const value = 'wide emoji 😀'
+
+    expect(cursorLayout(value, value.length, 8)).toEqual(wrapAnsiEndPosition(value, 8))
+    expect(cursorLayout(value, value.length, 20)).toEqual(wrapAnsiEndPosition(value, 20))
+    expect(inputVisualHeight(value, 8)).toBeGreaterThanOrEqual(inputVisualHeight(value, 20))
+  })
+
   it('computes visual height matching wrap-ansi line count', () => {
     // Exact-fill text stays on one line in wrap-ansi (no phantom wrap), so
     // visual height is 1. The previous implementation reported 2 here.

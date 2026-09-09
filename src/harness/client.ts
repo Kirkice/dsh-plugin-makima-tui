@@ -2401,7 +2401,10 @@ export class HarnessGatewayClient extends GatewayClient {
 
       case 'session.list':
         return this.listPersisted().then(async (headers) => {
-          const limit = typeof p.limit === 'number' && Number.isSafeInteger(p.limit) && p.limit >= 0 ? p.limit : 50
+          // An omitted limit means the caller wants the complete persisted
+          // history. Keep an explicit limit for bounded callers, but do not
+          // silently hide older sessions from the Sessions overlay.
+          const limit = typeof p.limit === 'number' && Number.isSafeInteger(p.limit) && p.limit >= 0 ? p.limit : headers.length
           const selected = headers.slice(0, limit)
           // Do not fan out unbounded disk work for a large history list. Eight
           // concurrent inspections keep the browser responsive on JSONL and
