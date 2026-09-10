@@ -13,6 +13,8 @@ const buildOverlayState = (): OverlayState => ({
   logoPicker: false,
   memoryPicker: false,
   modelPicker: false,
+  personalityPicker: false,
+  ttsPicker: null,
   pager: null,
   permissionsPicker: false,
   petPicker: false,
@@ -42,6 +44,8 @@ export const $isBlocked = computed(
     logoPicker,
     memoryPicker,
     modelPicker,
+    personalityPicker,
+    ttsPicker,
     pager,
     permissionsPicker,
     petPicker,
@@ -66,6 +70,8 @@ export const $isBlocked = computed(
         logoPicker ||
         memoryPicker ||
         modelPicker ||
+        personalityPicker ||
+        ttsPicker ||
         pager ||
         permissionsPicker ||
         petPicker ||
@@ -106,6 +112,8 @@ export const resetFlowOverlays = () =>
     logoPicker: $overlayState.get().logoPicker,
     memoryPicker: $overlayState.get().memoryPicker,
     modelPicker: $overlayState.get().modelPicker,
+    personalityPicker: $overlayState.get().personalityPicker,
+    ttsPicker: $overlayState.get().ttsPicker,
     permissionsPicker: $overlayState.get().permissionsPicker,
     petPicker: $overlayState.get().petPicker,
     pluginsHub: $overlayState.get().pluginsHub,

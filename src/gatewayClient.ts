@@ -819,7 +819,10 @@ export const SLASHES: ReadonlyArray<{ desc: string; hint?: string; name: string 
     name: '/effort'
   },
   { desc: 'Manage API-key providers and ChatGPT/Codex sign-in', name: '/providers' },
+  { desc: 'Read the latest assistant reply aloud with Fish Audio', name: '/speak' },
+  { desc: 'Quickly read the latest reply with the selected Fish Audio voice', name: '/speakact' },
   { desc: 'Browse, switch, or resume saved sessions', hint: '[new | <id or title>]', name: '/sessions' },
+  { desc: 'Show or persistently switch personality', hint: '[default|makima]', name: '/personality' },
   { desc: 'Alias for /sessions', hint: '[new | <id or title>]', name: '/session' },
   { desc: 'Alias for /sessions', hint: '[new | <id or title>]', name: '/switch' },
   { desc: 'Alias for /sessions', hint: '[new | <id or title>]', name: '/resume' },

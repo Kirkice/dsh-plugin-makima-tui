@@ -43,6 +43,8 @@ import type { SessionInfo, Usage } from '../types.js'
 import { parseImageRefs } from '../protocol/imageRef.js'
 import { readImageFile, readWindowsClipboardImage, type IngressImage } from './imageIngress.js'
 import { HarnessMcpManager, type McpServerConfig } from './mcpManager.js'
+import { DEFAULT_PERSONALITY, personalityById, personalityCatalog } from './personas.js'
+import { speakWithFishAudio, type FishAudioProfile } from './fishAudio.js'
 
 const PLUGIN_VERSION = (() => {
   const require = createRequire(import.meta.url)
@@ -131,7 +133,8 @@ const OPENAI_IMAGE_MODELS = new Set([
   'gpt-5.5',
   'gpt-5.6-sol',
   'gpt-5.6-terra',
-  'gpt-5.6-luna'
+  'gpt-5.6-luna',
+  'gpt-6-astra'
 ])
 
 const isKnownOpenAiImageModel = (provider: string, model: string): boolean => {
@@ -494,6 +497,8 @@ export class HarnessGatewayClient extends GatewayClient {
   private nextImageId = 1
   /** MCP transports and tool fibers belong to the Harness backend, never Ink. */
   private readonly mcp: HarnessMcpManager
+  /** Per-agent prompt override disposal callbacks. */
+  private personaDisposers = new Map<Agent, () => void>()
 
   constructor(ctx: Context, opts: HarnessClientOptions = {}) {
     super()
@@ -591,6 +596,7 @@ export class HarnessGatewayClient extends GatewayClient {
     this.handle = handle
     this.agent = handle.agent
     this.sid = String(handle.agent.id)
+    this.applyPersonalityToActiveAgent(this.persistedPersonality())
     this.bindAgent(handle.agent)
 
     const events = handle.agent.session.events
@@ -602,6 +608,79 @@ export class HarnessGatewayClient extends GatewayClient {
     this.msgStartedHarness = false
     this.usageTotals = this.replayUsage(events)
     this.info = this.buildSessionInfo(this.selection.current, handle.agent.session.header.cwd ?? this.workingDir())
+  }
+
+  private persistedPersonality(): string {
+    try {
+      const config = JSON.parse(readFileSync(join(appHome(), 'config.json'), 'utf8')) as Record<string, unknown>
+      return personalityById(config.personality)?.id ?? DEFAULT_PERSONALITY
+    } catch {
+      return DEFAULT_PERSONALITY
+    }
+  }
+
+  /** Register a scoped section that shadows Harness's deployment persona. */
+  private installPersonality(agentCtx: Context, id: string): (() => void) | undefined {
+    const persona = personalityById(id)
+    if (!persona || persona.id === DEFAULT_PERSONALITY) return undefined
+
+    const systemPrompt = agentCtx.get('systemPrompt') as
+      | { section?: (section: { name: string; order: number; text: string }) => () => void }
+      | undefined
+
+    return systemPrompt?.section?.({ name: 'deployment:persona', order: 0, text: persona.prompt })
+  }
+
+  private applyPersonalityToActiveAgent(id: string): void {
+    const agent = this.agent
+    if (!agent) return
+
+    this.personaDisposers.get(agent)?.()
+    this.personaDisposers.delete(agent)
+
+    const dispose = this.installPersonality(agent.ctx, id)
+    if (dispose) this.personaDisposers.set(agent, dispose)
+  }
+
+  private savePersonality(id: string): void {
+    const dir = appHome()
+    const file = join(dir, 'config.json')
+    let current: Record<string, unknown> = {}
+
+    try {
+      current = JSON.parse(readFileSync(file, 'utf8')) as Record<string, unknown>
+    } catch {
+      current = {}
+    }
+
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(file, `${JSON.stringify({ ...current, personality: id }, null, 2)}\n`, 'utf8')
+  }
+
+  private readAppConfig(): Record<string, unknown> {
+    try {
+      return JSON.parse(readFileSync(join(appHome(), 'config.json'), 'utf8')) as Record<string, unknown>
+    } catch {
+      return {}
+    }
+  }
+
+  private writeAppConfig(config: Record<string, unknown>): void {
+    mkdirSync(appHome(), { recursive: true })
+    writeFileSync(join(appHome(), 'config.json'), `${JSON.stringify(config, null, 2)}\n`, 'utf8')
+  }
+
+  private fishProfiles(): FishAudioProfile[] {
+    const saved = this.readAppConfig().fishAudioProfiles
+    if (!Array.isArray(saved)) return []
+
+    return saved.flatMap((item): FishAudioProfile[] => {
+      if (!item || typeof item !== 'object') return []
+      const profile = item as Partial<FishAudioProfile>
+      return typeof profile.id === 'string' && typeof profile.name === 'string' && typeof profile.apiKey === 'string' && typeof profile.referenceId === 'string'
+        ? [{ apiKey: profile.apiKey, id: profile.id, name: profile.name, referenceId: profile.referenceId }]
+        : []
+    })
   }
 
   /**
@@ -2708,6 +2787,26 @@ export class HarnessGatewayClient extends GatewayClient {
       }
 
       case 'config.set': {
+        if (String(p.key ?? '') === 'personality') {
+          const requested = String(p.value ?? '')
+          const persona = personalityById(requested)
+
+          if (!persona) {
+            return Promise.resolve({
+              error: `unknown personality "${requested.trim() || '(empty)'}". Available: ${personalityCatalog()}`,
+              ok: false
+            } as T)
+          }
+
+          try {
+            this.savePersonality(persona.id)
+            this.applyPersonalityToActiveAgent(persona.id)
+            return Promise.resolve({ ok: true, persisted: true, value: persona.id } as T)
+          } catch (err) {
+            return Promise.resolve({ error: err instanceof Error ? err.message : String(err), ok: false } as T)
+          }
+        }
+
         if (String(p.key ?? '') === 'logoColor') {
           // Banner palette is a TUI-local preference: no harness service owns
           // it, so persist it in the app's own config (read back at the next
@@ -2766,6 +2865,64 @@ export class HarnessGatewayClient extends GatewayClient {
         return Promise.resolve({} as T)
       }
 
+      case 'tts.speak': {
+        const text = String(p.text ?? '')
+        const selectedId = typeof p.profile_id === 'string' ? p.profile_id : String(this.readAppConfig().fishAudioActiveProfileId ?? '')
+        if (selectedId === 'none') return Promise.resolve({ disabled: true, ok: true } as T)
+        const profile = selectedId ? this.fishProfiles().find((item) => item.id === selectedId) : undefined
+        if (selectedId && !profile) {
+          return Promise.resolve({ error: 'Fish Audio voice profile was not found', ok: false } as T)
+        }
+        if (!profile) return Promise.resolve({ error: 'no Fish Audio voice is selected', ok: false } as T)
+        return speakWithFishAudio(text, profile)
+          .then(({ chars }) => ({ chars, ok: true }) as T)
+          .catch((err: unknown) => ({ error: err instanceof Error ? err.message : String(err), ok: false }) as T)
+      }
+
+      case 'tts.latest': {
+        const events = this.agent?.session.events ?? []
+        const latest = [...events].reverse().find((event) => {
+          if (event.type !== 'assistant/message') return false
+          const message = (event as SessionEvent<'assistant/message'>).data.message
+          return textOf(message.content, ['text']).trim().length > 0
+        }) as SessionEvent<'assistant/message'> | undefined
+
+        return Promise.resolve({ text: latest ? textOf(latest.data.message.content, ['text']).trim() : '' } as T)
+      }
+
+      case 'tts.profiles':
+        return Promise.resolve({ active_id: String(this.readAppConfig().fishAudioActiveProfileId ?? 'none'), profiles: this.fishProfiles().map(({ apiKey: _apiKey, ...profile }) => profile) } as T)
+
+      case 'tts.profile.select': {
+        const id = String(p.id ?? 'none')
+        if (id !== 'none' && !this.fishProfiles().some((profile) => profile.id === id)) return Promise.resolve({ error: 'Fish Audio voice profile was not found', ok: false } as T)
+        this.writeAppConfig({ ...this.readAppConfig(), fishAudioActiveProfileId: id })
+        return Promise.resolve({ id, ok: true } as T)
+      }
+
+      case 'tts.profile.save': {
+        const name = String(p.name ?? '').trim()
+        const apiKey = String(p.api_key ?? '').trim()
+        const referenceId = String(p.reference_id ?? '').trim()
+        const profiles = this.fishProfiles()
+        const id = String(p.id ?? randomUUID())
+        const existing = profiles.find((item) => item.id === id)
+        if (!name || !referenceId || (!apiKey && !existing)) return Promise.resolve({ error: 'name, API key, and voice ID are required', ok: false } as T)
+        const profile: FishAudioProfile = { apiKey: apiKey || existing!.apiKey, id, name, referenceId }
+        const index = profiles.findIndex((item) => item.id === profile.id)
+        if (index >= 0) profiles[index] = profile
+        else profiles.push(profile)
+        this.writeAppConfig({ ...this.readAppConfig(), fishAudioProfiles: profiles })
+        return Promise.resolve({ ok: true, profile: { id: profile.id, name: profile.name, referenceId: profile.referenceId } } as T)
+      }
+
+      case 'tts.profile.delete': {
+        const id = String(p.id ?? '')
+        const profiles = this.fishProfiles().filter((item) => item.id !== id)
+        this.writeAppConfig({ ...this.readAppConfig(), fishAudioProfiles: profiles })
+        return Promise.resolve({ ok: true } as T)
+      }
+
       // Local filesystem completion is backend-free in the parent class.
       case 'complete.path':
         return super.request(method, params)
@@ -2785,8 +2942,15 @@ export class HarnessGatewayClient extends GatewayClient {
         } as T)
       }
 
+      case 'config.get': {
+        if (String(p.key ?? '') === 'personality') {
+          return Promise.resolve({ value: this.persistedPersonality(), options: personalityCatalog() } as T)
+        }
+
+        return Promise.resolve({} as T)
+      }
+
       case 'session.status':
-      case 'config.get':
       case 'terminal.resize':
         return Promise.resolve({} as T)
 

@@ -37,7 +37,8 @@ const MODELS = [
   { id: 'gpt-5.5', name: 'GPT-5.5', contextWindow: 272_000, inputModalities: ['text', 'image'] },
   { id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol', contextWindow: 272_000, inputModalities: ['text', 'image'] },
   { id: 'gpt-5.6-terra', name: 'GPT-5.6 Terra', contextWindow: 272_000, inputModalities: ['text', 'image'] },
-  { id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna', contextWindow: 272_000, inputModalities: ['text', 'image'] }
+  { id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna', contextWindow: 272_000, inputModalities: ['text', 'image'] },
+  { id: 'gpt-6-astra', name: 'GPT-6 Astra', contextWindow: 272_000, inputModalities: ['text', 'image'] }
 ] as const
 
 type OutputBlock =
@@ -81,7 +82,7 @@ export class OpenAiCodexAdapter extends LlmAdapter {
       ...(known ? { inputModalities: known.inputModalities } : {}),
       name: known?.name ?? model,
       provider,
-      ...model.startsWith('gpt-5.6-')
+      ...(model.startsWith('gpt-5.6-') || model === 'gpt-6-astra')
         ? {
           reasoning: {
             efforts: GPT_56_REASONING_EFFORTS,

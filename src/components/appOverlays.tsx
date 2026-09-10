@@ -14,6 +14,8 @@ import { LogoPicker } from './logoPicker.js'
 import { MaskedPrompt } from './maskedPrompt.js'
 import { MemoryPicker } from './memoryPicker.js'
 import { ModelPicker } from './modelPicker.js'
+import { PersonalityPicker } from './personalityPicker.js'
+import { FishAudioPicker } from './fishAudioPicker.js'
 import { OverlayHint, windowItems } from './overlayControls.js'
 import { PermissionsPicker } from './permissionsPicker.js'
 import { PetPicker } from './petPicker.js'
@@ -191,6 +193,8 @@ export function FloatingOverlays({
     overlay.logoPicker ||
     overlay.memoryPicker ||
     overlay.modelPicker ||
+    overlay.personalityPicker ||
+    overlay.ttsPicker ||
     overlay.permissionsPicker ||
     overlay.pager ||
     overlay.petPicker ||
@@ -283,6 +287,26 @@ export function FloatingOverlays({
             t={theme}
             usage={usage}
           />
+        </FloatBox>
+      )}
+
+      {overlay.personalityPicker && (
+        <FloatBox color={theme.color.border}>
+          <PersonalityPicker
+            gw={gw}
+            onClose={() => patchOverlayState({ personalityPicker: false })}
+            onSelect={(value) => {
+              patchOverlayState({ personalityPicker: false })
+              void gw.request('config.set', { key: 'personality', session_id: sid, value })
+            }}
+            t={theme}
+          />
+        </FloatBox>
+      )}
+
+      {overlay.ttsPicker && (
+        <FloatBox color={theme.color.border}>
+          <FishAudioPicker gw={gw} onClose={() => patchOverlayState({ ttsPicker: null })} t={theme} text={overlay.ttsPicker.text} />
         </FloatBox>
       )}
 

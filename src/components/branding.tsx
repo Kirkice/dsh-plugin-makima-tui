@@ -239,7 +239,7 @@ function MakimaPixelLogo() {
 // comfortably without forcing wrap or truncation drift on box-drawing edges.
 const TAG_FULL = 'Claude Code style TUI for Deepseek-Harness'
 const TAG_MID = 'Claude Code style TUI'
-const TAG_TINY = 'makima tui'
+const TAG_TINY = 'Makima'
 const HIDE_BELOW = 34
 const COMPACT_FROM = 58
 

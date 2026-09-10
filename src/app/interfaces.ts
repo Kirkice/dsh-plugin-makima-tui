@@ -141,6 +141,10 @@ export interface DetailPickerState {
   selected: number
 }
 
+export interface TtsPickerState {
+  text: string
+}
+
 export interface OverlayState {
   agents: boolean
   agentsInitialHistoryIndex: number
@@ -152,6 +156,8 @@ export interface OverlayState {
   logoPicker: boolean
   memoryPicker: boolean
   modelPicker: boolean
+  personalityPicker: boolean
+  ttsPicker: TtsPickerState | null
   pager: null | PagerState
   permissionsPicker: boolean
   petPicker: boolean

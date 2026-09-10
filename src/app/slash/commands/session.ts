@@ -66,6 +66,26 @@ export const sessionCommands: SlashCommand[] = [
   },
 
   {
+    help: 'quickly read the latest reply with the selected Fish Audio voice',
+    name: 'speakact',
+    run: (_arg, ctx) => {
+      ctx.gateway.rpc<{ text?: string }>('tts.latest', { session_id: ctx.sid }).then(
+        ctx.guarded((latest) => {
+          const text = latest?.text?.trim()
+          if (!text) return ctx.transcript.sys('speakact: no assistant reply is available; playback skipped')
+          ctx.transcript.sys('speakact: synthesizing latest reply…')
+          ctx.gateway.rpc<{ disabled?: boolean; error?: string; ok?: boolean }>('tts.speak', { text }).then(
+            ctx.guarded((result) => {
+              if (result?.disabled) return ctx.transcript.sys('speakact: disabled (select a Fish Audio voice to enable)')
+              ctx.transcript.sys(result?.ok ? 'speakact: playback completed' : `speakact: ${result?.error || 'playback failed'}`)
+            })
+          ).catch(ctx.guardedErr)
+        })
+      ).catch(ctx.guardedErr)
+    }
+  },
+
+  {
     argumentHint: '[<model> [--provider <slug>]]',
     help: 'change or show model',
     name: 'model',
@@ -178,20 +198,27 @@ export const sessionCommands: SlashCommand[] = [
 
   {
     argumentHint: '[<name>]',
-    help: 'switch personality for this session',
+    help: 'show or persistently switch personality',
     name: 'personality',
     run: (arg, ctx) => {
-      if (!arg) {
-        return
+      const requested = arg.trim()
+
+      if (!requested) {
+        return patchOverlayState({ personalityPicker: true })
       }
 
-      ctx.gateway.rpc<ConfigSetResponse>('config.set', { key: 'personality', session_id: ctx.sid, value: arg }).then(
+      ctx.gateway.rpc<ConfigSetResponse>('config.set', { key: 'personality', session_id: ctx.sid, value: requested }).then(
         ctx.guarded<ConfigSetResponse>((r) => {
+          if (r.error) {
+            ctx.transcript.sys(`personality: ${r.error}`)
+            return
+          }
+
           if (r.history_reset) {
             ctx.session.resetVisibleHistory(r.info ?? null)
           }
 
-          ctx.transcript.sys(`personality: ${r.value || 'default'}${r.history_reset ? ' · transcript cleared' : ''}`)
+          ctx.transcript.sys(`personality: ${r.value || 'default'}${r.history_reset ? ' · transcript cleared' : ''} · saved`)
           ctx.local.maybeWarn(r)
         })
       )
@@ -271,6 +298,23 @@ export const sessionCommands: SlashCommand[] = [
           ctx.transcript.sys(`branched → ${r.title ?? ''}`)
         })
       )
+    }
+  },
+
+  {
+    help: 'read the latest assistant reply aloud with Fish Audio',
+    name: 'speak',
+    run: (_arg, ctx) => {
+      // Fetch the authoritative session log from the in-process Harness.
+      // UI history is intentionally virtualized and may only retain display
+      // rows, particularly after a resumed session.
+      ctx.gateway.rpc<{ text?: string }>('tts.latest', { session_id: ctx.sid }).then(
+        ctx.guarded((result) => {
+          const text = result?.text?.trim()
+          if (!text) ctx.transcript.sys('speak: no assistant reply is available; opening Fish Audio settings without playback.')
+          patchOverlayState({ ttsPicker: { text: text ?? '' } })
+        })
+      ).catch(ctx.guardedErr)
     }
   },
 

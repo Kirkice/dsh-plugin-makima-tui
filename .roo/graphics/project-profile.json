@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "workspaceName": "dsh-makimaTUI",
+  "engine": "unknown",
+  "renderPipelines": [],
+  "graphicsApis": [],
+  "targetPlatforms": [
+    "Windows"
+  ],
+  "shaderLanguages": [],
+  "architectureSignals": [],
+  "architectureIndex": {
+    "version": 1,
+    "findings": [],
+    "analyzedFileCount": 8,
+    "truncated": false,
+    "graph": {
+      "nodes": [
+        {
+          "id": "file:.github/workflows/ci.yml",
+          "kind": "file",
+          "label": "ci.yml",
+          "path": ".github/workflows/ci.yml"
+        },
+        {
+          "id": "file:biome.json",
+          "kind": "file",
+          "label": "biome.json",
+          "path": "biome.json"
+        },
+        {
+          "id": "file:cordis.patch.yml",
+          "kind": "file",
+          "label": "cordis.patch.yml",
+          "path": "cordis.patch.yml"
+        },
+        {
+          "id": "file:package-lock.json",
+          "kind": "file",
+          "label": "package-lock.json",
+          "path": "package-lock.json"
+        },
+        {
+          "id": "file:package.json",
+          "kind": "file",
+          "label": "package.json",
+          "path": "package.json"
+        },
+        {
+          "id": "file:packages/makima-tui-ink/package.json",
+          "kind": "file",
+          "label": "package.json",
+          "path": "packages/makima-tui-ink/package.json"
+        },
+        {
+          "id": "file:tsconfig.json",
+          "kind": "file",
+          "label": "tsconfig.json",
+          "path": "tsconfig.json"
+        },
+        {
+          "id": "file:tsconfig.test.json",
+          "kind": "file",
+          "label": "tsconfig.test.json",
+          "path": "tsconfig.test.json"
+        }
+      ],
+      "edges": []
+    },
+    "similarFeatures": []
+  },
+  "evidence": [],
+  "warnings": [],
+  "scannedAt": "2026-09-10T16:12:23.893Z"
+}

@@ -127,7 +127,7 @@ const ANSI_NORMALIZED_FOREGROUNDS: readonly (keyof ThemeColors)[] = [
   'shellDollar'
 ]
 
-const ANSI_MUTED_FOREGROUNDS: readonly (keyof ThemeColors)[] = ['muted', 'sessionLabel', 'sessionBorder']
+const ANSI_MUTED_FOREGROUNDS: readonly (keyof ThemeColors)[] = ['muted', 'sessionLabel']
 
 function xtermEightBitRgb(colorNumber: number): [number, number, number] {
   if (colorNumber >= 232) {
@@ -297,7 +297,9 @@ export const DARK_THEME: Theme = {
 
     prompt: '#F8F8F2',
     sessionLabel: '#9AA4B2',
-    sessionBorder: '#302B45',
+    // Session IDs need to remain readable against the black/dark terminal
+    // background; the former border tone was visually indistinguishable.
+    sessionBorder: '#C4B5FD',
 
     statusBg: '#11131B',
     statusFg: '#F8F8F2',
@@ -665,7 +667,10 @@ export function fromSkin(
 
         prompt: c('prompt') ?? c('banner_text') ?? d.color.prompt,
         sessionLabel: c('session_label') ?? (hasSkinColors ? muted : d.color.sessionLabel),
-        sessionBorder: c('session_border') ?? (hasSkinColors ? muted : d.color.sessionBorder),
+        // A skin's generic banner_dim is intentionally subdued, but is too dark
+        // for an opaque session identifier. Preserve the theme's high-contrast
+        // session ID color unless a skin explicitly supplies session_border.
+        sessionBorder: c('session_border') ?? d.color.sessionBorder,
 
         statusBg: d.color.statusBg,
         statusFg: d.color.statusFg,

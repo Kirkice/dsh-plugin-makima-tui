@@ -21,9 +21,9 @@ export const HeaderPanel = memo(function HeaderPanel({ cols, cwdLabel, status }:
     <Box flexDirection="column" flexShrink={0} paddingX={1} paddingTop={1}>
       <Box flexDirection="row" justifyContent="space-between" width="100%">
         <Text bold color={t.color.primary}>
-          makima tui
+          Makima
         </Text>
-        <Text color={ui.busy ? t.color.warn : t.color.ok}>{ui.busy ? '● working' : '○ ready'}</Text>
+        {ui.busy && <Text color={t.color.warn}>● working</Text>}
       </Box>
       <Box flexDirection="row" flexWrap="wrap" width="100%">
         <Text color={t.color.accent}>{model}</Text>

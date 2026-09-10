@@ -11,7 +11,7 @@ const collect = async <T>(source: AsyncIterable<T>): Promise<T[]> => {
 }
 
 describe('OpenAI Codex Responses adapter', () => {
-  it('lists the ChatGPT/Codex catalog, including GPT-5.6 Sol, Terra, and Luna', async () => {
+  it('lists the ChatGPT/Codex catalog, including GPT-5.6 variants and GPT-6 Astra', async () => {
     const adapter = new OpenAiCodexAdapter({} as never)
     const models = await adapter.listModels('openai-codex')
 
@@ -22,10 +22,12 @@ describe('OpenAI Codex Responses adapter', () => {
       'gpt-5.5',
       'gpt-5.6-sol',
       'gpt-5.6-terra',
-      'gpt-5.6-luna'
+      'gpt-5.6-luna',
+      'gpt-6-astra'
     ])
     expect(models.find((model) => model.id === 'gpt-5.3-codex-spark')?.inputModalities).toEqual(['text'])
     expect(models.find((model) => model.id === 'gpt-5.6-terra')?.inputModalities).toEqual(['text', 'image'])
+    expect(models.find((model) => model.id === 'gpt-6-astra')?.inputModalities).toEqual(['text', 'image'])
   })
 
   it('resolves model input modalities and GPT-5.6 reasoning capabilities', async () => {
@@ -48,6 +50,10 @@ describe('OpenAI Codex Responses adapter', () => {
       }
     })
     await expect(adapter.resolveModel('openai-codex', 'gpt-5.6-luna')).resolves.toMatchObject({
+      reasoning: { defaultEffort: 'medium' }
+    })
+    await expect(adapter.resolveModel('openai-codex', 'gpt-6-astra')).resolves.toMatchObject({
+      inputModalities: ['text', 'image'],
       reasoning: { defaultEffort: 'medium' }
     })
     await expect(adapter.resolveModel('openai-codex', 'future-model')).resolves.not.toHaveProperty('inputModalities')
