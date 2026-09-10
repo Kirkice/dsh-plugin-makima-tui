@@ -12946,6 +12946,12 @@ var Ink = class {
   // expensive tree rebuild defers.
   pendingResizeRender = false;
   resizeSettleTimer = null;
+  // Main-screen cursor parking is relative to the physical cursor, which
+  // cannot be absolutely re-anchored without destroying native scrollback.
+  // Invalidate the old park across resize/layout-shift frames so the first
+  // stable frame leaves the cursor at log-update's known content cursor and
+  // the following frame parks it from a fresh coordinate basis.
+  inlineCursorReanchorPending = false;
   // Inline safety heal. This timer only schedules a normal render; LogUpdate
   // decides reachability and performs EL(2)+repaint without clearing scrollback.
   inlineHealTimer = null;
@@ -13022,6 +13028,7 @@ var Ink = class {
       this.prepareAltScreenResizeRepaint();
     } else if (!this.isPaused && this.options.stdout.isTTY) {
       this.log.requestInlineHeal();
+      this.inlineCursorReanchorPending = true;
     }
     if (this.pendingResizeRender) {
       return;
@@ -13272,9 +13279,10 @@ var Ink = class {
       y: rect.y + decl.relativeY
     } : null;
     const parked = this.displayCursor;
+    const reanchorCursor = !this.altScreenActive && (this.inlineCursorReanchorPending || frame.layoutShifted === true);
     const targetMoved = target2 !== null && (parked === null || parked.x !== target2.x || parked.y !== target2.y);
-    if (hasDiff || targetMoved || target2 === null && parked !== null) {
-      if (parked !== null && !this.altScreenActive && hasDiff) {
+    if (hasDiff || targetMoved || target2 === null && parked !== null || reanchorCursor) {
+      if (parked !== null && !this.altScreenActive && (hasDiff || reanchorCursor)) {
         const pdx = prevFrame.cursor.x - parked.x;
         const pdy = prevFrame.cursor.y - parked.y;
         if (pdx !== 0 || pdy !== 0) {
@@ -13284,7 +13292,7 @@ var Ink = class {
           });
         }
       }
-      if (target2 !== null) {
+      if (target2 !== null && !reanchorCursor) {
         if (this.altScreenActive) {
           const row = Math.min(Math.max(target2.y + 1, 1), terminalRows);
           const col = Math.min(Math.max(target2.x + 1, 1), terminalWidth);
@@ -13322,6 +13330,10 @@ var Ink = class {
           }
         }
         this.displayCursor = null;
+      }
+      if (reanchorCursor) {
+        this.displayCursor = null;
+        this.inlineCursorReanchorPending = false;
       }
     }
     const tWrite = performance.now();

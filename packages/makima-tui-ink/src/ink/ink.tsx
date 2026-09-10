@@ -304,6 +304,12 @@ export default class Ink {
   // expensive tree rebuild defers.
   private pendingResizeRender = false
   private resizeSettleTimer: ReturnType<typeof setTimeout> | null = null
+  // Main-screen cursor parking is relative to the physical cursor, which
+  // cannot be absolutely re-anchored without destroying native scrollback.
+  // Invalidate the old park across resize/layout-shift frames so the first
+  // stable frame leaves the cursor at log-update's known content cursor and
+  // the following frame parks it from a fresh coordinate basis.
+  private inlineCursorReanchorPending = false
   // Inline safety heal. This timer only schedules a normal render; LogUpdate
   // decides reachability and performs EL(2)+repaint without clearing scrollback.
   private inlineHealTimer: ReturnType<typeof setInterval> | null = null
@@ -561,6 +567,7 @@ export default class Ink {
       this.prepareAltScreenResizeRepaint()
     } else if (!this.isPaused && this.options.stdout.isTTY) {
       this.log.requestInlineHeal()
+      this.inlineCursorReanchorPending = true
     }
 
     // Already queued: later events in this burst updated dims/alt-screen
@@ -1026,17 +1033,22 @@ export default class Ink {
         : null
 
     const parked = this.displayCursor
+    const reanchorCursor =
+      !this.altScreenActive && (this.inlineCursorReanchorPending || frame.layoutShifted === true)
 
     // Preserve the empty-diff zero-write fast path: skip all cursor writes
-    // when nothing rendered AND the park target is unchanged.
+    // when nothing rendered AND the park target is unchanged. A re-anchor is
+    // the exception: even an empty diff must restore the old park to the
+    // frame cursor before we forget it, otherwise the next relative diff
+    // starts from a physical position the renderer no longer knows.
     const targetMoved = target !== null && (parked === null || parked.x !== target.x || parked.y !== target.y)
 
-    if (hasDiff || targetMoved || (target === null && parked !== null)) {
+    if (hasDiff || targetMoved || (target === null && parked !== null) || reanchorCursor) {
       // Main-screen preamble: log-update's relative moves assume the
       // physical cursor is at prevFrame.cursor. If last frame parked it
       // elsewhere, move back before the diff runs. Alt-screen's CSI H
       // already resets to (0,0) so no preamble needed.
-      if (parked !== null && !this.altScreenActive && hasDiff) {
+      if (parked !== null && !this.altScreenActive && (hasDiff || reanchorCursor)) {
         const pdx = prevFrame.cursor.x - parked.x
         const pdy = prevFrame.cursor.y - parked.y
 
@@ -1048,7 +1060,7 @@ export default class Ink {
         }
       }
 
-      if (target !== null) {
+      if (target !== null && !reanchorCursor) {
         if (this.altScreenActive) {
           // Absolute CUP (1-indexed); next frame's CSI H resets regardless.
           // Emitted after altScreenParkPatch so the declared position wins.
@@ -1112,6 +1124,14 @@ export default class Ink {
         }
 
         this.displayCursor = null
+      }
+
+      if (reanchorCursor) {
+        // Do not park against a declaration whose node rect was produced by
+        // the layout transition we just healed. The next stable frame will
+        // calculate the new target and park it normally.
+        this.displayCursor = null
+        this.inlineCursorReanchorPending = false
       }
     }
 
