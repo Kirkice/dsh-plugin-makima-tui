@@ -327,6 +327,13 @@ export class LogUpdate {
       altScreen ? 0 : effectivePhysCursorRow
     )
 
+    // Capture the physical reachability window before the diff mutates the
+    // virtual cursor. A resize can move many borders and wrapped rows; using
+    // screen.cursor after those writes makes the window depend on diff order,
+    // which can skip reachable rows and leave old border tails on screen.
+    const inlineHealTop = Math.max(0, prev.cursor.y - effectivePhysCursorRow)
+    const inlineHealBottom = Math.min(next.screen.height, inlineHealTop + next.viewport.height)
+
     // Treat empty screen as height 1 to avoid spurious adjustments on first render
     const heightDelta = Math.max(next.screen.height, 1) - Math.max(prev.screen.height, 1)
 
@@ -581,10 +588,7 @@ export class LogUpdate {
         startTime - this.lastInlineHealAt >= 5000)
 
     if (shouldHealInline && next.screen.width >= next.viewport.width) {
-      const reachableTop = Math.max(0, screen.cursor.y - screen.phys)
-      const reachableBottom = Math.min(next.screen.height, reachableTop + next.viewport.height)
-
-      repaintRowsInPlace(screen, next, reachableTop, reachableBottom, stylePool)
+      repaintRowsInPlace(screen, next, inlineHealTop, inlineHealBottom, stylePool)
       this.lastInlineHealAt = startTime
       this.inlineHealRequested = false
     }

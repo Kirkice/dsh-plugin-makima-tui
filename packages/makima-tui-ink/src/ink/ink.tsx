@@ -2367,6 +2367,17 @@ export default class Ink {
       }
     }
   }
+  /**
+   * Render the latest committed input without waiting for the normal throttle.
+   * Cancel the throttled trailing call first so one input batch produces one
+   * frame rather than an immediate frame followed by a duplicate 16ms frame.
+   * The microtask is intentional: React layout effects (including the native
+   * cursor declaration) must settle before the frame reads the DOM/Yoga cache.
+   */
+  private requestInputRender = (): void => {
+    this.scheduleRender.cancel?.()
+    queueMicrotask(this.onRender)
+  }
   render(node: ReactNode): void {
     this.currentNode = node
 
@@ -2390,6 +2401,7 @@ export default class Ink {
         onSelectionChange={this.notifySelectionChange}
         onSelectionDrag={this.handleSelectionDrag}
         onStdinResume={this.reassertTerminalModes}
+        onInputBatch={this.requestInputRender}
         onTerminalFocus={this.handleTerminalFocus}
         selection={this.selection}
         stderr={this.options.stderr}

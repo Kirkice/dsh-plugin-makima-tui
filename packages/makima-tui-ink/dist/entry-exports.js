@@ -10829,6 +10829,9 @@ var App = class extends PureComponent {
     this.keyParseState = newState;
     if (keys.length > 0) {
       reconciler_default.discreteUpdates(processKeysInBatch, this, keys, void 0, void 0);
+      if (keys.some((item) => item.kind === "key")) {
+        this.props.onInputBatch?.();
+      }
     }
     if (this.keyParseState.incomplete || this.keyParseState.mode === "IN_PASTE") {
       if (this.incompleteEscapeTimer) {
@@ -11535,6 +11538,8 @@ var LogUpdate = class {
       next.viewport.height,
       altScreen ? 0 : effectivePhysCursorRow
     );
+    const inlineHealTop = Math.max(0, prev.cursor.y - effectivePhysCursorRow);
+    const inlineHealBottom = Math.min(next.screen.height, inlineHealTop + next.viewport.height);
     const heightDelta = Math.max(next.screen.height, 1) - Math.max(prev.screen.height, 1);
     const shrinking = heightDelta < 0;
     const growing = heightDelta > 0;
@@ -11650,9 +11655,7 @@ var LogUpdate = class {
     }
     const shouldHealInline = !altScreen && (this.inlineHealRequested || viewportChanged || next.layoutShifted === true || startTime - this.lastInlineHealAt >= 5e3);
     if (shouldHealInline && next.screen.width >= next.viewport.width) {
-      const reachableTop = Math.max(0, screen.cursor.y - screen.phys);
-      const reachableBottom = Math.min(next.screen.height, reachableTop + next.viewport.height);
-      repaintRowsInPlace(screen, next, reachableTop, reachableBottom, stylePool);
+      repaintRowsInPlace(screen, next, inlineHealTop, inlineHealBottom, stylePool);
       this.lastInlineHealAt = startTime;
       this.inlineHealRequested = false;
     }
@@ -14224,6 +14227,17 @@ var Ink = class {
       };
     }
   };
+  /**
+   * Render the latest committed input without waiting for the normal throttle.
+   * Cancel the throttled trailing call first so one input batch produces one
+   * frame rather than an immediate frame followed by a duplicate 16ms frame.
+   * The microtask is intentional: React layout effects (including the native
+   * cursor declaration) must settle before the frame reads the DOM/Yoga cache.
+   */
+  requestInputRender = () => {
+    this.scheduleRender.cancel?.();
+    queueMicrotask(this.onRender);
+  };
   render(node) {
     this.currentNode = node;
     const tree = /* @__PURE__ */ jsx15(
@@ -14247,6 +14261,7 @@ var Ink = class {
         onSelectionChange: this.notifySelectionChange,
         onSelectionDrag: this.handleSelectionDrag,
         onStdinResume: this.reassertTerminalModes,
+        onInputBatch: this.requestInputRender,
         onTerminalFocus: this.handleTerminalFocus,
         selection: this.selection,
         stderr: this.options.stderr,

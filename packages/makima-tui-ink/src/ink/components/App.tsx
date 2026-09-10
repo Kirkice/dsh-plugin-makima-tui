@@ -101,6 +101,11 @@ type Props = {
   // fullscreen) re-enters alt-screen + mouse tracking. Idempotent on the
   // terminal side. Optional so testing.tsx doesn't need to stub it.
   readonly onStdinResume?: () => void
+  // Keyboard input is latency-sensitive. Request one render after the whole
+  // parsed input batch has been dispatched, rather than waiting for Ink's
+  // normal 16ms throttle. The callback is queued after the batch so React
+  // layout effects (including native cursor declaration) have settled.
+  readonly onInputBatch?: () => void
   // Called when DECSET 1004 reports that the terminal regained focus.
   // Inline mode uses this to heal cells changed while another window owned
   // the terminal; fullscreen already re-anchors every frame.
@@ -406,6 +411,13 @@ export default class App extends PureComponent<Props, State> {
     // listeners together within one high-priority update context.
     if (keys.length > 0) {
       reconciler.discreteUpdates(processKeysInBatch, this, keys, undefined, undefined)
+
+      // Pi treats keyboard input as a latency-sensitive render path. Keep the
+      // normal throttled scheduler for background updates, but let Ink render
+      // the newest input batch without waiting for the next 16ms tick.
+      if (keys.some((item) => item.kind === 'key')) {
+        this.props.onInputBatch?.()
+      }
     }
 
     // If we have incomplete escape sequences or an unterminated paste, set a

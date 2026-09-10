@@ -266,6 +266,38 @@ describe('LogUpdate.render diff contract', () => {
     expect(stdoutOnly(diff)).toContain('row3')
   })
 
+  it('repaints reachable border rows when inline width changes without clearing scrollback', () => {
+    const prevWidth = 32
+    const nextWidth = 20
+    const viewportHeight = 4
+    const screenHeight = 4
+    const prev = mkScreen(prevWidth, screenHeight)
+    const next = mkScreen(nextWidth, screenHeight)
+
+    paint(prev, 0, '╭────────────────────────────╮')
+    paint(prev, 1, '│ old wide border contents   │')
+    paint(prev, 2, '╰────────────────────────────╯')
+    paint(next, 0, '╭────────────────╮')
+    paint(next, 1, '│ resized panel │')
+    paint(next, 2, '╰────────────────╯')
+    next.damage = { x: 0, y: 0, width: nextWidth, height: screenHeight }
+
+    const log = new LogUpdate({ isTTY: true, stylePool })
+    const diff = log.render(
+      mkFrame(prev, prevWidth, viewportHeight, screenHeight),
+      mkFrame(next, nextWidth, viewportHeight, screenHeight),
+      false,
+      false
+    )
+
+    // The top row is already in inline scrollback for this cursor anchor;
+    // only the three visible/reachable rows may be rewritten.
+    expect(diff.filter(p => p.type === 'eraseLine')).toHaveLength(viewportHeight - 1)
+    expect(stdoutOnly(diff)).toContain('resized panel')
+    expect(stdoutOnly(diff)).toContain('╰────────────────╯')
+    expect(diff.some(p => p.type === 'clearTerminal')).toBe(false)
+  })
+
   it('runs the low-frequency inline safety heal on a later frame', () => {
     const w = 20
     const h = 2
