@@ -118,7 +118,7 @@ const TranscriptPane = memo(function TranscriptPane({
   )
 
   return (
-    <>
+    <Box flexDirection="row" flexGrow={1} flexShrink={1}>
       <ScrollBox
         flexDirection="column"
         flexGrow={1}
@@ -211,7 +211,7 @@ const TranscriptPane = memo(function TranscriptPane({
         onChange={actions.setStickyPrompt}
         scrollRef={transcript.scrollRef}
       />
-    </>
+    </Box>
   )
 })
 
@@ -502,17 +502,21 @@ export const AppLayout = memo(function AppLayout({ actions, composer, mouseTrack
   const overlay = useStore($overlayState)
   const ui = useStore($uiState)
 
-  // Inline mode skips AlternateScreen so the host terminal's native
-  // scrollback captures rows scrolled off the top; composer + progress
-  // stay anchored via normal flex-column flow.
+  // Fullscreen is the stable default: the root has a bounded viewport and the
+  // renderer owns every physical cell. Inline remains an explicit native-
+  // scrollback compatibility mode and uses the same non-shrinking chrome.
   const Shell = INLINE_MODE ? Fragment : AlternateScreen
   const shellProps = INLINE_MODE ? {} : { mouseTracking }
 
   return (
     <Shell {...shellProps}>
-      <Box flexDirection="column" flexGrow={1}>
-        {!overlay.agents && <HeaderPanel cols={composer.cols} cwdLabel={status.cwdLabel} status={ui.status} />}
-        <Box flexDirection="row" flexGrow={1}>
+      <Box flexDirection="column" flexGrow={1} flexShrink={1}>
+        {!overlay.agents && (
+          <Box flexShrink={0}>
+            <HeaderPanel cols={composer.cols} cwdLabel={status.cwdLabel} status={ui.status} />
+          </Box>
+        )}
+        <Box flexDirection="row" flexGrow={1} flexShrink={1}>
           {overlay.agents ? (
             <PerfPane id="agents">
               <AgentsOverlayPane />
@@ -526,23 +530,29 @@ export const AppLayout = memo(function AppLayout({ actions, composer, mouseTrack
 
         {!overlay.agents && (
           <>
-            <PetPane />
+            <Box flexShrink={0}>
+              <PetPane />
+            </Box>
 
-            <PerfPane id="prompt">
-              <PromptZone
-                cols={composer.cols}
-                onApprovalChoice={actions.answerApproval}
-                onClarifyAnswer={actions.answerClarify}
-                onPlanApprovalChoice={actions.answerPlanApproval}
-                onQuestionsAnswer={actions.answerQuestions}
-                onSecretSubmit={actions.answerSecret}
-                onSudoSubmit={actions.answerSudo}
-              />
-            </PerfPane>
+            <Box flexShrink={0}>
+              <PerfPane id="prompt">
+                <PromptZone
+                  cols={composer.cols}
+                  onApprovalChoice={actions.answerApproval}
+                  onClarifyAnswer={actions.answerClarify}
+                  onPlanApprovalChoice={actions.answerPlanApproval}
+                  onQuestionsAnswer={actions.answerQuestions}
+                  onSecretSubmit={actions.answerSecret}
+                  onSudoSubmit={actions.answerSudo}
+                />
+              </PerfPane>
+            </Box>
 
-            <PerfPane id="composer">
-              <ComposerPane actions={actions} composer={composer} status={status} />
-            </PerfPane>
+            <Box flexShrink={0}>
+              <PerfPane id="composer">
+                <ComposerPane actions={actions} composer={composer} status={status} />
+              </PerfPane>
+            </Box>
 
             {SHOW_FPS && (
               <Box flexShrink={0} justifyContent="flex-end" paddingRight={1}>

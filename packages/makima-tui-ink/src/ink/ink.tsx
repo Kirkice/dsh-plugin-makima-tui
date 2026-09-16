@@ -285,6 +285,11 @@ export default class Ink {
   // render() takes; deferring into the atomic block means old content stays
   // visible until the new frame is fully ready.
   private needsEraseBeforePaint = false
+  // Main-screen resize has the same stale-cell problem, but cannot use the
+  // ordinary clearTerminal patch because that also erases native scrollback.
+  // CSI 2J + CUP homes and clears only the visible viewport, giving the diff a
+  // known physical anchor while preserving the user's terminal history.
+  private needsInlineEraseBeforePaint = false
   // Native cursor positioning: a component (via useDeclaredCursor) declares
   // where the terminal cursor should be parked after each frame. Terminal
   // emulators render IME preedit text at the physical cursor position, and
@@ -524,12 +529,11 @@ export default class Ink {
     const rows = this.options.stdout.rows || 24
     const dimsChanged = cols !== this.terminalColumns || rows !== this.terminalRows
 
-    // Terminals often emit 2+ resize events for one user action
-    // (window settling). Same-dimension events are usually no-ops,
-    // but in alt-screen mode a same-dimension resize can signal a
-    // terminal host reflow or buffer restore that leaves stale glyphs
-    // on the physical screen — treat it as a repaint signal.
-    if (!dimsChanged && !(this.altScreenActive && !this.isPaused && this.options.stdout.isTTY)) {
+    // A resize event is also a terminal-buffer invalidation signal. Hosts can
+    // reflow/restore the physical buffer without changing the final dimensions
+    // (common after a rapid drag or tmux/ConPTY pane restore), so both screen
+    // modes must repaint even when cols/rows compare equal.
+    if (!dimsChanged && (this.isPaused || !this.options.stdout.isTTY)) {
       return
     }
 
@@ -566,8 +570,16 @@ export default class Ink {
     if (this.altScreenActive && !this.isPaused && this.options.stdout.isTTY) {
       this.prepareAltScreenResizeRepaint()
     } else if (!this.isPaused && this.options.stdout.isTTY) {
-      this.log.requestInlineHeal()
-      this.inlineCursorReanchorPending = true
+      // Width reflow makes both the old frame geometry and the tracked physical
+      // cursor row unknowable. A relative reachable-row heal therefore cannot
+      // be made reliable: CUU may clamp and every later border/text write then
+      // lands on the wrong row. Clear only the visible viewport, home, and paint
+      // from an empty frame. Unlike clearTerminal this deliberately preserves
+      // native scrollback (no CSI 3J).
+      this.repaint()
+      this.prevFrameContaminated = true
+      this.needsInlineEraseBeforePaint = true
+      this.inlineCursorReanchorPending = false
     }
 
     // Already queued: later events in this burst updated dims/alt-screen
@@ -587,6 +599,12 @@ export default class Ink {
       }
 
       this.render(this.currentNode)
+      // A same-dimension resize can produce no React host mutations, so the
+      // reconciler does not necessarily call rootNode.onRender. The terminal
+      // buffer was still invalidated and needsInlineEraseBeforePaint must be
+      // consumed regardless. Render synchronously here; any commit-scheduled
+      // throttled callback becomes an empty follow-up frame.
+      this.onRender()
     })
   }
 
@@ -983,6 +1001,15 @@ export default class Ink {
     const optimizeMs = performance.now() - tOptimize
     const hasDiff = optimized.length > 0
     const needsAltScreenErase = this.altScreenActive && this.needsEraseBeforePaint
+    const needsInlineErase = !this.altScreenActive && this.needsInlineEraseBeforePaint
+
+    if (needsInlineErase) {
+      // Keep clear + repaint in the same terminal write (and synchronized-output
+      // transaction where supported). This establishes the exact origin assumed
+      // by repaint()'s empty frame without deleting primary-buffer scrollback.
+      this.needsInlineEraseBeforePaint = false
+      optimized.unshift(ERASE_THEN_HOME_PATCH)
+    }
 
     if (this.altScreenActive && (hasDiff || needsAltScreenErase)) {
       // Prepend CSI H to anchor the physical cursor to (0,0) so

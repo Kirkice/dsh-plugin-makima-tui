@@ -705,7 +705,7 @@ export function StickyPromptTracker({ messages, offsets, scrollRef, onChange }: 
   return null
 }
 
-export function TranscriptScrollbar({ scrollRef, t }: TranscriptScrollbarProps) {
+export function TranscriptScrollbar({ inline = INLINE_MODE, scrollRef, t }: TranscriptScrollbarProps) {
   const [hover, setHover] = useState(false)
   const [grab, setGrab] = useState<number | null>(null)
   const grabRef = useRef<number | null>(null)
@@ -732,7 +732,7 @@ export function TranscriptScrollbar({ scrollRef, t }: TranscriptScrollbarProps) 
   // branch and paint a column of spaces. It is invisible there and contributes
   // nothing but height. Keep the 1-column gutter so transcriptPanelWidth's
   // reservation still matches what we draw.
-  if (!vp || INLINE_MODE) {
+  if (!vp || inline) {
     return <Box width={1} />
   }
 
@@ -828,6 +828,7 @@ interface StickyPromptTrackerProps {
 }
 
 interface TranscriptScrollbarProps {
+  inline?: boolean
   scrollRef: RefObject<ScrollBoxHandle | null>
   t: Theme
 }

@@ -412,7 +412,7 @@ dsh / Cordis Runtime
 | 变量 | 说明 |
 |:--|:--|
 | `MAKIMA_TUI_THEME=light\|dark` | 选择终端明暗主题。 |
-| `MAKIMA_TUI_INLINE=0` | 使用 alternate screen；默认保留 inline scrollback。 |
+| `MAKIMA_TUI_INLINE=1` | 使用保留原生 scrollback 的 inline 模式；默认使用更稳定的 alternate screen。 |
 | `MAKIMA_TUI_HOME` | Makima 数据目录，默认 `~/.makima-tui`。 |
 | `MAKIMA_TUI_WORKSPACE` | 显式指定工作目录。 |
 | `MAKIMA_TUI_RESUME` | 启动时恢复指定会话。 |

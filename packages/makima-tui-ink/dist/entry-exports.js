@@ -12930,6 +12930,11 @@ var Ink = class {
   // render() takes; deferring into the atomic block means old content stays
   // visible until the new frame is fully ready.
   needsEraseBeforePaint = false;
+  // Main-screen resize has the same stale-cell problem, but cannot use the
+  // ordinary clearTerminal patch because that also erases native scrollback.
+  // CSI 2J + CUP homes and clears only the visible viewport, giving the diff a
+  // known physical anchor while preserving the user's terminal history.
+  needsInlineEraseBeforePaint = false;
   // Native cursor positioning: a component (via useDeclaredCursor) declares
   // where the terminal cursor should be parked after each frame. Terminal
   // emulators render IME preedit text at the physical cursor position, and
@@ -13007,7 +13012,7 @@ var Ink = class {
     const cols = this.options.stdout.columns || 80;
     const rows = this.options.stdout.rows || 24;
     const dimsChanged = cols !== this.terminalColumns || rows !== this.terminalRows;
-    if (!dimsChanged && !(this.altScreenActive && !this.isPaused && this.options.stdout.isTTY)) {
+    if (!dimsChanged && (this.isPaused || !this.options.stdout.isTTY)) {
       return;
     }
     if (dimsChanged) {
@@ -13027,8 +13032,10 @@ var Ink = class {
     if (this.altScreenActive && !this.isPaused && this.options.stdout.isTTY) {
       this.prepareAltScreenResizeRepaint();
     } else if (!this.isPaused && this.options.stdout.isTTY) {
-      this.log.requestInlineHeal();
-      this.inlineCursorReanchorPending = true;
+      this.repaint();
+      this.prevFrameContaminated = true;
+      this.needsInlineEraseBeforePaint = true;
+      this.inlineCursorReanchorPending = false;
     }
     if (this.pendingResizeRender) {
       return;
@@ -13040,6 +13047,7 @@ var Ink = class {
         return;
       }
       this.render(this.currentNode);
+      this.onRender();
     });
   };
   canAltScreenRepaint() {
@@ -13263,6 +13271,11 @@ var Ink = class {
     const optimizeMs = performance.now() - tOptimize;
     const hasDiff = optimized.length > 0;
     const needsAltScreenErase = this.altScreenActive && this.needsEraseBeforePaint;
+    const needsInlineErase = !this.altScreenActive && this.needsInlineEraseBeforePaint;
+    if (needsInlineErase) {
+      this.needsInlineEraseBeforePaint = false;
+      optimized.unshift(ERASE_THEN_HOME_PATCH);
+    }
     if (this.altScreenActive && (hasDiff || needsAltScreenErase)) {
       if (needsAltScreenErase) {
         this.needsEraseBeforePaint = false;

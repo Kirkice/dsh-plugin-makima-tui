@@ -65,10 +65,11 @@ const inlineOverride = parseToggle(process.env.MAKIMA_TUI_INLINE)
 // Skip AlternateScreen — render into the primary buffer so the host terminal's
 // native scrollback captures whatever scrolls off the top.
 //
-// This is the DEFAULT, matching the original Claude Code's inline rendering (the
-// transcript stays in your terminal history rather than vanishing on exit).
-// Opt into the fullscreen/alternate-screen experience with MAKIMA_TUI_INLINE=0.
-export const INLINE_MODE = inlineOverride ?? true
+// Fullscreen/alternate-screen is the stable default: it gives the renderer a
+// bounded viewport and exclusive ownership of its physical cells. Inline mode
+// remains available for users who explicitly prefer native terminal scrollback.
+// Opt into inline rendering with MAKIMA_TUI_INLINE=1.
+export const INLINE_MODE = inlineOverride ?? false
 
 // Live FPS counter overlay, fed by ink's onFrame (real render rate, not a
 // synthetic timer).

@@ -154,8 +154,9 @@ describe('LogUpdate.render diff contract', () => {
     next.damage = { x: 0, y: 0, width: w, height: h }
 
     const log = new LogUpdate({ isTTY: true, stylePool })
+    log.resetAnchor(h - 1)
     log.requestInlineHeal()
-    const diff = log.render(mkFrame(prev, w, h, h), mkFrame(next, w, h, h), false, false)
+    const diff = log.render(mkFrame(prev, w, h, h - 1), mkFrame(next, w, h, h - 1), false, false)
 
     expect(stdoutOnly(diff)).toContain('same')
     expect(diff.some(p => p.type === 'eraseLine')).toBe(true)
@@ -174,11 +175,12 @@ describe('LogUpdate.render diff contract', () => {
     paint(next, 1, 'unchanged')
 
     const log = new LogUpdate({ isTTY: true, stylePool })
+    log.resetAnchor(h - 1)
     const nextFrame: Frame = {
-      ...mkFrame(next, w, h, h),
+      ...mkFrame(next, w, h, h - 1),
       layoutShifted: true
     }
-    const diff = log.render(mkFrame(prev, w, h, h), nextFrame, false, false)
+    const diff = log.render(mkFrame(prev, w, h, h - 1), nextFrame, false, false)
 
     expect(stdoutOnly(diff)).toContain('newborder')
     expect(stdoutOnly(diff)).toContain('unchanged')
@@ -195,12 +197,13 @@ describe('LogUpdate.render diff contract', () => {
     paint(next, 0, 'new')
 
     const log = new LogUpdate({ isTTY: true, stylePool })
+    log.resetAnchor(h - 1)
     const shiftedFrame: Frame = {
-      ...mkFrame(next, w, h, h),
+      ...mkFrame(next, w, h, h - 1),
       layoutShifted: true
     }
 
-    const first = log.render(mkFrame(prev, w, h, h), shiftedFrame, false, false)
+    const first = log.render(mkFrame(prev, w, h, h - 1), shiftedFrame, false, false)
     expect(first.filter(p => p.type === 'eraseLine')).toHaveLength(h)
 
     // A second layout shift must not be throttled: delaying this repair can
@@ -224,7 +227,7 @@ describe('LogUpdate.render diff contract', () => {
     const log = new LogUpdate({ isTTY: true, stylePool })
     log.resetAnchor(viewportH - 1)
     log.requestInlineHeal()
-    const diff = log.render(mkFrame(prev, w, viewportH, h), mkFrame(next, w, viewportH, h), false, false)
+    const diff = log.render(mkFrame(prev, w, viewportH, h - 1), mkFrame(next, w, viewportH, h - 1), false, false)
     const written = stdoutOnly(diff)
 
     expect(written).not.toContain('row0')
@@ -283,6 +286,7 @@ describe('LogUpdate.render diff contract', () => {
     next.damage = { x: 0, y: 0, width: nextWidth, height: screenHeight }
 
     const log = new LogUpdate({ isTTY: true, stylePool })
+    log.resetAnchor(viewportHeight - 1)
     const diff = log.render(
       mkFrame(prev, prevWidth, viewportHeight, screenHeight),
       mkFrame(next, nextWidth, viewportHeight, screenHeight),
@@ -293,7 +297,9 @@ describe('LogUpdate.render diff contract', () => {
     // The top row is already in inline scrollback for this cursor anchor;
     // only the three visible/reachable rows may be rewritten.
     expect(diff.filter(p => p.type === 'eraseLine')).toHaveLength(viewportHeight - 1)
-    expect(stdoutOnly(diff)).toContain('resized panel')
+    // Optimisation can encode the separating space as CUF instead of a literal.
+    expect(stdoutOnly(diff)).toContain('resized')
+    expect(stdoutOnly(diff)).toContain('panel')
     expect(stdoutOnly(diff)).toContain('╰────────────────╯')
     expect(diff.some(p => p.type === 'clearTerminal')).toBe(false)
   })
@@ -311,8 +317,9 @@ describe('LogUpdate.render diff contract', () => {
 
     try {
       const log = new LogUpdate({ isTTY: true, stylePool })
+      log.resetAnchor(h - 1)
       now.mockReturnValue(5001)
-      const diff = log.render(mkFrame(prev, w, h, h), mkFrame(next, w, h, h), false, false)
+      const diff = log.render(mkFrame(prev, w, h, h - 1), mkFrame(next, w, h, h - 1), false, false)
 
       expect(diff.filter(p => p.type === 'eraseLine')).toHaveLength(h)
       expect(stdoutOnly(diff)).toContain('stable')

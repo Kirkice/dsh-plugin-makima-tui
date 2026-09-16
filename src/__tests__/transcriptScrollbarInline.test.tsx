@@ -94,6 +94,7 @@ async function paintedRows(bar: null | { scrollHeight: number; viewportHeight: n
       React.createElement(Text, null, SENTINEL),
       bar
         ? React.createElement(TranscriptScrollbar, {
+            inline: true,
             scrollRef: { current: staleTallHandle(bar.viewportHeight, bar.scrollHeight) },
             t: DEFAULT_THEME
           })
@@ -144,8 +145,8 @@ async function paintedRows(bar: null | { scrollHeight: number; viewportHeight: n
 }
 
 describe('TranscriptScrollbar in inline mode', () => {
-  it('is the default mode, so the guard below is the one that ships', () => {
-    expect(INLINE_MODE).toBe(true)
+  it('keeps fullscreen as the stable default', () => {
+    expect(INLINE_MODE).toBe(false)
   })
 
   it('adds no rows when the content fits — the real inline case', async () => {

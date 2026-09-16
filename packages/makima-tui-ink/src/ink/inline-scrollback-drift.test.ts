@@ -58,12 +58,38 @@ class Vt {
   pendingWrap = false
 
   constructor(
-    readonly cols: number,
-    readonly rows: number
+    public cols: number,
+    public rows: number
   ) {
     for (let r = 0; r < rows; r++) {
       this.grid.push(new Array<string>(cols).fill(' '))
     }
+  }
+
+  resize(cols: number, rows: number) {
+    const oldGrid = this.grid
+    const keptRows = oldGrid.slice(Math.max(0, oldGrid.length - rows))
+
+    this.cols = cols
+    this.rows = rows
+    this.grid = []
+
+    for (let r = 0; r < rows; r++) {
+      const source = keptRows[r - (rows - keptRows.length)]
+      const row = new Array<string>(cols).fill(' ')
+
+      if (source) {
+        for (let x = 0; x < Math.min(cols, source.length); x++) {
+          row[x] = source[x]!
+        }
+      }
+
+      this.grid.push(row)
+    }
+
+    this.x = Math.min(this.x, cols - 1)
+    this.y = Math.min(this.y, rows - 1)
+    this.pendingWrap = false
   }
 
   private scroll() {
@@ -350,6 +376,9 @@ function Harness({ busy, flash, lines, scrollbox, value }: HarnessState) {
 // Scenario runner
 // ---------------------------------------------------------------------------
 type StepOpts = Partial<HarnessState> & {
+  /** Emit a synchronous resize burst. The host buffer is resized after every
+   * event, while Ink coalesces them and repaints the final dimensions. */
+  resize?: Array<{ columns: number; rows: number }>
   /** Skip invariant checks for setup steps that deliberately inject drift. */
   assert?: boolean
   /** Invoke ink.forceRedraw() after rendering this step (the ctrl+L /
@@ -362,7 +391,7 @@ type StepOpts = Partial<HarnessState> & {
   label: string
 }
 
-function runScenario(steps: StepOpts[], scrollbox: boolean, shellRows = 0) {
+async function runScenario(steps: StepOpts[], scrollbox: boolean, shellRows = 0) {
   const stdout = new FakeTty()
   const stdin = new FakeTty()
   const stderr = new FakeTty()
@@ -425,19 +454,46 @@ function runScenario(steps: StepOpts[], scrollbox: boolean, shellRows = 0) {
     }
   }
 
-  for (const { assert = true, forceRedraw = false, foreign, label, ...patch } of steps) {
+  for (const { assert = true, forceRedraw = false, foreign, label, resize, ...patch } of steps) {
     Object.assign(state, patch)
     const before = stdout.chunks.length
-    ink.render(React.createElement(Harness, { ...state, lines: [...state.lines] }))
-    ink.onRender()
+    const scrollbackBeforeResize = [...vt.scrollback]
 
-    if (forceRedraw) {
-      ink.forceRedraw()
+    if (resize) {
+      for (const dimensions of resize) {
+        stdout.columns = dimensions.columns
+        stdout.rows = dimensions.rows
+        vt.resize(dimensions.columns, dimensions.rows)
+        stdout.emit('resize')
+      }
+
+      // Resize handling is intentionally coalesced in a microtask. Allow that
+      // transaction to consume the final dimensions and write its full repaint.
+      await new Promise<void>(resolve => setTimeout(resolve, 0))
+    } else {
+      ink.render(React.createElement(Harness, { ...state, lines: [...state.lines] }))
+      ink.onRender()
+
+      if (forceRedraw) {
+        ink.forceRedraw()
+      }
     }
 
     const bytes = stdout.chunks.slice(before).join('')
     frames.push({ bytes, label })
     vt.feed(bytes)
+
+    if (resize) {
+      expect(bytes, `resize did not establish a known viewport origin\n${ctx(label)}`).toContain(`${ESC}[2J${ESC}[H`)
+      expect(bytes, `resize erased native scrollback\n${ctx(label)}`).not.toContain(`${ESC}[3J`)
+      // A full inline frame taller than the viewport legitimately scrolls new
+      // application rows into history. Preservation means the host's existing
+      // history remains an exact prefix (and, critically, CSI 3J was absent).
+      expect(
+        vt.scrollback.slice(0, scrollbackBeforeResize.length),
+        `native scrollback was erased or rewritten during resize\n${ctx(label)}`
+      ).toEqual(scrollbackBeforeResize)
+    }
 
     if (foreign) {
       vt.grid[foreign.y < 0 ? vt.findRow('deepseek') : foreign.y]![foreign.x] = foreign.ch
@@ -521,53 +577,68 @@ function lifecycleSteps(opts: {
 }
 
 describe('inline-mode physical screen stays in sync across a full turn', () => {
-  it('A: plain transcript column', () => {
-    runScenario(lifecycleSteps({ flashOnEnd: false, reflowOnEnd: false }), false)
+  it('A: plain transcript column', async () => {
+    await runScenario(lifecycleSteps({ flashOnEnd: false, reflowOnEnd: false }), false)
   })
 
-  it('B: transcript inside a sticky ScrollBox', () => {
-    runScenario(lifecycleSteps({ flashOnEnd: false, reflowOnEnd: false }), true)
+  it('B: transcript inside a sticky ScrollBox', async () => {
+    await runScenario(lifecycleSteps({ flashOnEnd: false, reflowOnEnd: false }), true)
   })
 
-  it('C: ScrollBox + right-edge flash on turn end', () => {
-    runScenario(lifecycleSteps({ flashOnEnd: true, reflowOnEnd: false }), true)
+  it('C: ScrollBox + right-edge flash on turn end', async () => {
+    await runScenario(lifecycleSteps({ flashOnEnd: true, reflowOnEnd: false }), true)
   })
 
-  it('D: ScrollBox + flash + streaming tail reflow on turn end', () => {
-    runScenario(lifecycleSteps({ flashOnEnd: true, reflowOnEnd: true }), true)
+  it('D: ScrollBox + flash + streaming tail reflow on turn end', async () => {
+    await runScenario(lifecycleSteps({ flashOnEnd: true, reflowOnEnd: true }), true)
   })
 
-  it('E: frame starts below shell output (control — no top-band repaint)', () => {
-    runScenario(lifecycleSteps({ flashOnEnd: false, reflowOnEnd: false }), false, 3)
+  it('E: frame starts below shell output (control — no top-band repaint)', async () => {
+    await runScenario(lifecycleSteps({ flashOnEnd: false, reflowOnEnd: false }), false, 3)
   })
 
-  it('F: frame starts below shell output + idle virtualization slide', () => {
-    runScenario(lifecycleSteps({ flashOnEnd: false, reflowOnEnd: false, virtSlideOnIdle: true }), false, 3)
+  it('F: frame starts below shell output + idle virtualization slide', async () => {
+    await runScenario(lifecycleSteps({ flashOnEnd: false, reflowOnEnd: false, virtSlideOnIdle: true }), false, 3)
   })
 
-  it('G: full realism — shell offset + ScrollBox + flash + reflow + virt slide', () => {
-    runScenario(lifecycleSteps({ flashOnEnd: true, reflowOnEnd: true, virtSlideOnIdle: true }), true, 3)
+  it('G: full realism — shell offset + ScrollBox + flash + reflow + virt slide', async () => {
+    await runScenario(lifecycleSteps({ flashOnEnd: true, reflowOnEnd: true, virtSlideOnIdle: true }), true, 3)
+  })
+
+  it('K: width resize burst re-anchors once and preserves typed composer content', async () => {
+    const steps = lifecycleSteps({ flashOnEnd: true, reflowOnEnd: true, virtSlideOnIdle: true })
+    const at = steps.findIndex(step => step.label === 'q2-type-2')
+    steps.splice(at + 1, 0, {
+      label: 'resize-narrow-wide-restore',
+      resize: [
+        { columns: 32, rows: ROWS },
+        { columns: 48, rows: ROWS },
+        { columns: COLS, rows: ROWS }
+      ]
+    })
+
+    await runScenario(steps, true, 3)
   })
 
   // The renderer skips empty cells instead of painting spaces, so a character
   // it did not write sits in a cell its model calls empty and no diff can ever
   // remove it. Before the row-tail erase this survived the whole lifecycle.
-  it('I: a foreign char on a repainted row is cleared by later frames', () => {
+  it('I: a foreign char on a repainted row is cleared by later frames', async () => {
     const steps = lifecycleSteps({ flashOnEnd: false, reflowOnEnd: false, virtSlideOnIdle: true })
     const at = steps.findIndex(s => s.label === 'virt-slide')
     steps.splice(at + 1, 0, { assert: false, foreign: { ch: FOREIGN, x: 30, y: -1 }, label: 'foreign-write' })
 
-    runScenario(steps, false, 3)
+    await runScenario(steps, false, 3)
   })
 
   // ctrl+L was the only thing that could clear one. Keep it that way.
-  it('J: ctrl+L clears a foreign char', () => {
+  it('J: ctrl+L clears a foreign char', async () => {
     const steps = lifecycleSteps({ flashOnEnd: false, reflowOnEnd: false, virtSlideOnIdle: true })
     const at = steps.findIndex(s => s.label === 'virt-slide')
     steps.splice(at + 1, 0, { assert: false, foreign: { ch: FOREIGN, x: 30, y: -1 }, label: 'foreign-write' })
     steps.splice(at + 2, 0, { forceRedraw: true, label: 'ctrl-l' })
 
-    runScenario(steps, false, 3)
+    await runScenario(steps, false, 3)
   })
 
   // The full-row inline heal closes both historical row-tail gaps: unchanged
@@ -582,19 +653,19 @@ describe('inline-mode physical screen stays in sync across a full turn', () => {
     return steps
   }
 
-  it('clears a foreign char INTERIOR to a stable painted row', () => {
-    runScenario(gapSteps({ ch: FOREIGN, x: 20, y: 4 }), false, 3)
+  it('clears a foreign char INTERIOR to a stable painted row', async () => {
+    await runScenario(gapSteps({ ch: FOREIGN, x: 20, y: 4 }), false, 3)
   })
 
-  it('clears a foreign char on an otherwise UNTOUCHED transcript row', () => {
-    runScenario(gapSteps({ ch: FOREIGN, x: 35, y: 1 }), false, 3)
+  it('clears a foreign char on an otherwise UNTOUCHED transcript row', async () => {
+    await runScenario(gapSteps({ ch: FOREIGN, x: 35, y: 1 }), false, 3)
   })
 
-  it('H: ctrl+L mid-session re-anchors and typing stays correct after it', () => {
+  it('H: ctrl+L mid-session re-anchors and typing stays correct after it', async () => {
     const steps = lifecycleSteps({ flashOnEnd: false, reflowOnEnd: false, virtSlideOnIdle: true })
     const at = steps.findIndex(s => s.label === 'virt-slide')
     steps.splice(at + 1, 0, { forceRedraw: true, label: 'ctrl-l' })
 
-    runScenario(steps, false, 3)
+    await runScenario(steps, false, 3)
   })
 })
