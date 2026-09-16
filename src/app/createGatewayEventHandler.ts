@@ -1,3 +1,5 @@
+import { forceRedraw } from '@makima-tui/ink'
+
 import { STARTUP_IMAGE, STARTUP_QUERY } from '../config/env.js'
 import { STREAM_BATCH_MS } from '../config/timing.js'
 import { buildSetupRequiredSections, SETUP_REQUIRED_TITLE } from '../content/setup.js'
@@ -102,6 +104,15 @@ const foldSessionStats = (snap: CostSnapshot | undefined, usage: Usage | undefin
     return { ...state, sessionStats: { ...state.sessionStats, turns: turns! } }
   })
 }
+
+// Completion replaces the streaming Markdown subtree with settled transcript
+// rows. Some terminals retain stale wide-glyph/box-drawing cells after that
+// large layout transition until a full repaint (the same operation as
+// `/redraw`). Defer one tick so React/Ink commits the settled tree first.
+export const scheduleTurnCompleteRedraw = (
+  stdout?: NodeJS.WriteStream,
+  redraw: (target?: NodeJS.WriteStream) => boolean = forceRedraw
+): ReturnType<typeof setImmediate> => setImmediate(() => redraw(stdout ?? process.stdout))
 
 export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev: GatewayEvent) => void {
   const { rpc } = ctx.gateway
@@ -1073,6 +1084,7 @@ export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev:
         setLastCostSnapshot(ev.payload?.cost)
 
         foldSessionStats(ev.payload?.cost, ev.payload?.usage, ev.payload?.session_turns)
+        scheduleTurnCompleteRedraw(stdout)
 
         return
       }

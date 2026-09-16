@@ -253,6 +253,13 @@ const clear = (t: Timer): null => {
 
 class TurnController {
   bufRef = ''
+  /**
+   * Full raw assistant text accepted during the current turn. Unlike bufRef,
+   * this survives flushStreamingSegment(), so cumulative snapshots/replays
+   * that cross a tool boundary can be folded before they reach the renderer.
+   */
+  private streamedTextRef = ''
+  private lastDeltaText = ''
   interrupted = false
   lastStatusNote = ''
   persistedToolLabels = new Set<string>()
@@ -424,6 +431,8 @@ class TurnController {
     this.activeTools = []
     this.streamTimer = clear(this.streamTimer)
     this.bufRef = ''
+    this.streamedTextRef = ''
+    this.lastDeltaText = ''
     this.pendingSegmentTools = []
     this.pendingSegmentToolsVerbose = []
     this.segmentMessages = []
@@ -891,18 +900,54 @@ class TurnController {
     this.pruneTransient()
     this.endReasoningPhase()
 
-    // Always accumulate the raw text delta.  The pre-#16391 path replaced
-    // the entire buffer with `rendered` (an *incremental* Rich ANSI
-    // fragment), which on every tick discarded everything streamed so far
-    // — visible as overlapping coloured text and lost prose under
-    // `display.final_response_markdown: render`.
-    this.bufRef += text
+    // Native events are incremental, but adapters may replay an event or emit
+    // a cumulative snapshot after reconnect/tool boundaries. bufRef is cleared
+    // by flushStreamingSegment(), so comparisons must use the turn-wide stream.
+    // Otherwise a snapshot containing already-settled Markdown is appended as a
+    // new segment, duplicating headings, bullets and complete fenced-code boxes.
+    const minimumReplayOverlap = 32
+    const history = this.streamedTextRef
+    let shared = 0
+
+    if (text === this.lastDeltaText || text === history || (text.length >= minimumReplayOverlap && history.startsWith(text))) {
+      // Exact event replay, complete snapshot replay, or an older sufficiently
+      // large snapshot arriving late. All are already represented in history.
+      this.lastDeltaText = text
+
+      return
+    }
+
+    if (history && text.startsWith(history)) {
+      // Snapshot growth: retain only the suffix not seen during this turn.
+      shared = history.length
+    } else {
+      const overlap = Math.min(history.length, text.length)
+
+      // Replay beginning inside a settled/current block. Keep this conservative
+      // so ordinary repeated short prose at a real delta boundary is preserved.
+      for (let size = overlap; size >= minimumReplayOverlap; size--) {
+        if (history.endsWith(text.slice(0, size))) {
+          shared = size
+          break
+        }
+      }
+    }
+
+    const addition = text.slice(shared)
+    this.lastDeltaText = text
+
+    if (!addition) {
+      return
+    }
+
+    this.bufRef += addition
+    this.streamedTextRef += addition
     patchTurnState((state) => ({
       ...state,
       lastDeltaAt: Date.now(),
-      streamedChars: state.streamedChars + text.length
+      streamedChars: state.streamedChars + addition.length
     }))
-
+ 
     if (getUiState().streaming) {
       this.scheduleStreaming()
     }
@@ -1203,6 +1248,8 @@ class TurnController {
   hydrateStreamingText(text: string) {
     this.streamTimer = clear(this.streamTimer)
     this.bufRef = text
+    this.streamedTextRef = text
+    this.lastDeltaText = ''
     const raw = this.bufRef.trimStart()
     const visible = hasReasoningTag(raw) ? splitReasoning(raw).text : raw
     patchTurnState({ streaming: boundedLiveRenderText(visible) })
@@ -1212,6 +1259,9 @@ class TurnController {
     this.endReasoningPhase()
     this.clearReasoning()
     this.activeTools = []
+    this.bufRef = ''
+    this.streamedTextRef = ''
+    this.lastDeltaText = ''
     this.activeReasoningText = ''
     this.reasoningSegmentIndex = null
     this.turnTools = []

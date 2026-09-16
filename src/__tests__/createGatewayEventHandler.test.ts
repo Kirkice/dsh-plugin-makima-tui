@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createGatewayEventHandler } from '../app/createGatewayEventHandler.js'
+import { createGatewayEventHandler, scheduleTurnCompleteRedraw } from '../app/createGatewayEventHandler.js'
 import { getOverlayState, patchOverlayState, resetOverlayState } from '../app/overlayStore.js'
 import { turnController } from '../app/turnController.js'
 import { getTurnState, resetTurnState } from '../app/turnStore.js'
@@ -64,6 +64,23 @@ describe('createGatewayEventHandler', () => {
     resetTurnState()
     turnController.fullReset()
     patchUiState({ showReasoning: true })
+  })
+
+  it('schedules a full repaint after the settled completion tree commits', () => {
+    vi.useFakeTimers()
+    const stdout = {} as NodeJS.WriteStream
+    const redraw = vi.fn(() => true)
+
+    try {
+      scheduleTurnCompleteRedraw(stdout, redraw)
+      expect(redraw).not.toHaveBeenCalled()
+
+      vi.runOnlyPendingTimers()
+      expect(redraw).toHaveBeenCalledOnce()
+      expect(redraw).toHaveBeenCalledWith(stdout)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('keeps an incomplete list pinned in the HUD across the turn boundary', () => {
@@ -539,7 +556,7 @@ describe('createGatewayEventHandler', () => {
   it('always accumulates raw text in message.delta and ignores `rendered` (#16391)', () => {
     const appended: Msg[] = []
     const onEvent = createGatewayEventHandler(buildCtx(appended))
-
+ 
     // Stream of partial text deltas; each delta carries an incremental
     // Rich-ANSI fragment.  Pre-fix code would replace the whole bufRef
     // with the latest fragment, dropping prior text.
@@ -547,9 +564,59 @@ describe('createGatewayEventHandler', () => {
     onEvent({ payload: { rendered: '\u001b[33mrst.\u001b[0m', text: 'rst.' }, type: 'message.delta' } as any)
     onEvent({ payload: { text: ' second.' }, type: 'message.delta' } as any)
     onEvent({ payload: {}, type: 'message.complete' } as any)
-
+ 
     const assistant = appended.find((msg) => msg.role === 'assistant')
     expect(assistant?.text).toBe('First. second.')
+  })
+ 
+  it('deduplicates replayed and cumulative message.delta payloads', () => {
+    const appended: Msg[] = []
+    const onEvent = createGatewayEventHandler(buildCtx(appended))
+
+    // A reconnect can replay a prior delta, while some adapters send the
+    // current accumulated block rather than only its new suffix.
+    onEvent({ payload: { text: '需要优先注意的问题\n\n1. MCP 权限' }, type: 'message.delta' } as any)
+    onEvent({ payload: { text: '需要优先注意的问题\n\n1. MCP 权限' }, type: 'message.delta' } as any)
+    onEvent({ payload: { text: '需要优先注意的问题\n\n1. MCP 权限\n\n建议：默认关闭。' }, type: 'message.delta' } as any)
+    onEvent({ payload: { text: '默认关闭。\n\n2. Checkpoint' }, type: 'message.delta' } as any)
+    onEvent({ payload: {}, type: 'message.complete' } as any)
+
+    const assistant = appended.find((msg) => msg.role === 'assistant')
+    expect(assistant?.text).toBe('需要优先注意的问题\n\n1. MCP 权限\n\n建议：默认关闭。\n\n2. Checkpoint')
+  })
+
+  it('deduplicates cumulative Markdown snapshots across a flushed tool boundary', () => {
+    const appended: Msg[] = []
+    const onEvent = createGatewayEventHandler(buildCtx(appended))
+    const beforeTool = [
+      '## 完成内容',
+      '',
+      '1. 已移除 Checkpoint',
+      '2. 已更新知识库',
+      '',
+      '```json',
+      '{"status":"ready"}',
+      '```'
+    ].join('\n')
+    const afterTool = '\n\n## 验证结果\n\n- 编译通过\n- 查询正常'
+
+    onEvent({ payload: {}, type: 'message.start' } as any)
+    onEvent({ payload: { text: beforeTool }, type: 'message.delta' } as any)
+    turnController.flushStreamingSegment()
+
+    // The adapter restarts from the beginning of the assistant turn after the
+    // tool. Only the newly grown suffix may enter the current live segment.
+    onEvent({ payload: { text: beforeTool }, type: 'message.delta' } as any)
+    onEvent({ payload: { text: beforeTool + afterTool }, type: 'message.delta' } as any)
+    onEvent({ payload: {}, type: 'message.complete' } as any)
+
+    const assistants = appended.filter((msg) => msg.role === 'assistant').map((msg) => msg.text)
+    const rendered = assistants.join('\n\n')
+
+    expect(assistants).toEqual([beforeTool, afterTool.trimStart()])
+    expect(rendered.match(/## 完成内容/g)).toHaveLength(1)
+    expect(rendered.match(/```json/g)).toHaveLength(1)
+    expect(rendered.match(/\{"status":"ready"\}/g)).toHaveLength(1)
   })
 
   // KNOWN-SKEW(upstream): fails identically in the pristine clawcodex ui-tui checkout — see docs/PORTING-NOTES.md
