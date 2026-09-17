@@ -114,11 +114,28 @@ export const scheduleTurnCompleteRedraw = (
   redraw: (target?: NodeJS.WriteStream) => boolean = forceRedraw
 ): ReturnType<typeof setImmediate> => setImmediate(() => redraw(stdout ?? process.stdout))
 
+// The settled response replaces the live streaming tail after the completion
+// event. Re-snap on the next turn only when the viewer was following that tail;
+// users who scrolled up must retain their reading position.
+export const scheduleTurnCompleteScrollSettle = (
+  scrollRef: GatewayEventHandlerContext['transcript']['scrollRef']
+): ReturnType<typeof setImmediate> | undefined => {
+  if (!scrollRef.current?.isSticky()) {
+    return undefined
+  }
+
+  return setImmediate(() => {
+    if (scrollRef.current?.isSticky()) {
+      scrollRef.current.scrollToBottom()
+    }
+  })
+}
+
 export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev: GatewayEvent) => void {
   const { rpc } = ctx.gateway
   const { STARTUP_RESUME_ID, newSession, recoverSidRef, resumeById, setCatalog } = ctx.session
   const { bellOnComplete, stdout, sys } = ctx.system
-  const { appendMessage, panel, setHistoryItems } = ctx.transcript
+  const { appendMessage, panel, scrollRef, setHistoryItems } = ctx.transcript
   const { setInput } = ctx.composer
   const { submitRef } = ctx.submission
   const { setProcessing: setVoiceProcessing, setRecording: setVoiceRecording, setVoiceEnabled } = ctx.voice
@@ -1084,6 +1101,7 @@ export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev:
         setLastCostSnapshot(ev.payload?.cost)
 
         foldSessionStats(ev.payload?.cost, ev.payload?.usage, ev.payload?.session_turns)
+        scheduleTurnCompleteScrollSettle(scrollRef)
         scheduleTurnCompleteRedraw(stdout)
 
         return

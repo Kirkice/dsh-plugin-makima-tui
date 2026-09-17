@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createGatewayEventHandler, scheduleTurnCompleteRedraw } from '../app/createGatewayEventHandler.js'
+import { createGatewayEventHandler, scheduleTurnCompleteRedraw, scheduleTurnCompleteScrollSettle } from '../app/createGatewayEventHandler.js'
 import { getOverlayState, patchOverlayState, resetOverlayState } from '../app/overlayStore.js'
 import { turnController } from '../app/turnController.js'
 import { getTurnState, resetTurnState } from '../app/turnStore.js'
@@ -48,6 +48,7 @@ const buildCtx = (appended: Msg[]) =>
     transcript: {
       appendMessage: (msg: Msg) => appended.push(msg),
       panel: (title: string, sections: any[]) => appended.push({ kind: 'panel', panelData: { sections, title }, role: 'system', text: '' }),
+      scrollRef: ref(null),
       setHistoryItems: vi.fn()
     },
     voice: {
@@ -78,6 +79,52 @@ describe('createGatewayEventHandler', () => {
       vi.runOnlyPendingTimers()
       expect(redraw).toHaveBeenCalledOnce()
       expect(redraw).toHaveBeenCalledWith(stdout)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('re-snaps a sticky transcript after the settled completion tree commits', () => {
+    vi.useFakeTimers()
+    const scrollToBottom = vi.fn()
+    const scrollRef = ref({ isSticky: () => true, scrollToBottom })
+
+    try {
+      scheduleTurnCompleteScrollSettle(scrollRef as any)
+      expect(scrollToBottom).not.toHaveBeenCalled()
+
+      vi.runOnlyPendingTimers()
+      expect(scrollToBottom).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('does not move a transcript that was not sticky at completion', () => {
+    vi.useFakeTimers()
+    const scrollToBottom = vi.fn()
+    const scrollRef = ref({ isSticky: () => false, scrollToBottom })
+
+    try {
+      expect(scheduleTurnCompleteScrollSettle(scrollRef as any)).toBeUndefined()
+      vi.runOnlyPendingTimers()
+      expect(scrollToBottom).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('does not override a manual scroll that happens before completion settles', () => {
+    vi.useFakeTimers()
+    const scrollToBottom = vi.fn()
+    let sticky = true
+    const scrollRef = ref({ isSticky: () => sticky, scrollToBottom })
+
+    try {
+      scheduleTurnCompleteScrollSettle(scrollRef as any)
+      sticky = false
+      vi.runOnlyPendingTimers()
+      expect(scrollToBottom).not.toHaveBeenCalled()
     } finally {
       vi.useRealTimers()
     }
