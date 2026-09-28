@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   activeSessionCountLabel,
   canTypeOrchestratorPrompt,
+  compactMessageCount,
   clampOrchestratorSelection,
   closeFallbackAfterClose,
   currentSessionSelectionIndex,
@@ -209,6 +210,11 @@ describe('unified Sessions overlay helpers', () => {
   it('labels live + resumable counts compactly', () => {
     expect(sessionsCountLabel(0, 0)).toBe('0 live · 0 resumable')
     expect(sessionsCountLabel(2, 7)).toBe('2 live · 7 resumable')
+  })
+
+  it('uses a fixed-width compact message count in history rows', () => {
+    expect(compactMessageCount(1)).toBe('1 msg')
+    expect(compactMessageCount(11)).toBe('11 msg')
   })
 
   it('renders relative session age, blank when unknown', () => {

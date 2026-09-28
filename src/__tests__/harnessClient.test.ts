@@ -1505,7 +1505,7 @@ describe('HarnessGatewayClient', () => {
     expect(rejected.answers[0]).toEqual({ custom: 'tighten scope', id: 'p2', selected: [] })
   })
 
-  it('permission.cycle walks default → plan → bypassPermissions and drives services', async () => {
+  it('permission.cycle keeps sandbox policy and approval policy aligned', async () => {
     const w = makeWorld()
 
     w.client.start()
@@ -1514,13 +1514,19 @@ describe('HarnessGatewayClient', () => {
 
     await expect(w.client.request('permission.cycle', {})).resolves.toEqual({ mode: 'plan' })
     expect(w.planSets.at(-1)).toEqual([w.agent, true])
+    expect(SESSION.events.at(-1)).toMatchObject({ data: { mode: 'workspace-write' }, type: 'sandbox/mode' })
 
     await expect(w.client.request('permission.cycle', {})).resolves.toEqual({ mode: 'bypassPermissions' })
     expect(w.planSets.at(-1)).toEqual([w.agent, false])
     expect(w.policies.at(-1)).toEqual([w.agent, 'never'])
+    // Full Access must grant the actual sandbox mode too. Otherwise the model
+    // can repeatedly request a redundant `danger-full-access` escalation that
+    // the sandbox rejects before it reaches the approval prompt.
+    expect(SESSION.events.at(-1)).toMatchObject({ data: { mode: 'danger-full-access' }, type: 'sandbox/mode' })
 
     await expect(w.client.request('permission.cycle', {})).resolves.toEqual({ mode: 'default' })
     expect(w.policies.at(-1)).toEqual([w.agent, 'ask'])
+    expect(SESSION.events.at(-1)).toMatchObject({ data: { mode: 'workspace-write' }, type: 'sandbox/mode' })
     expect(w.events.filter((e) => e.type === 'permission.mode').map((e) => (e as { payload: { mode: string } }).payload.mode)).toEqual([
       'plan',
       'bypassPermissions',

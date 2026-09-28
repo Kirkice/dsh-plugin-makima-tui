@@ -65,6 +65,9 @@ export const activeSessionCountLabel = (count: number) => `${count} live ${count
 
 export const sessionsCountLabel = (liveCount: number, resumableCount: number) => `${liveCount} live · ${resumableCount} resumable`
 
+/** Keep history rows scannable: the full prompt and workspace live in the detail view. */
+export const compactMessageCount = (count: number) => `${count} msg`
+
 export type SessionRowKind = 'history' | 'live' | 'new'
 
 /**
@@ -873,21 +876,16 @@ export function ActiveSessionSwitcher({
                 </Text>
               </Box>
 
-              <Box {...fixedSessionColumnStyle()} width={18}>
+              <Box {...fixedSessionColumnStyle()} width={7}>
                 <Text color={rowTextColor ?? t.color.muted} wrap="truncate-end">
-                  {h.message_count} messages
+                  {compactMessageCount(h.message_count)}
                 </Text>
               </Box>
 
-              <Box flexDirection="column" flexGrow={1} flexShrink={1} minWidth={0}>
+              <Box flexGrow={1} flexShrink={1} minWidth={0}>
                 <Text bold={selected} color={pendingDelete ? t.color.label : (rowTextColor ?? t.color.muted)} wrap="truncate-end">
                   {title}
                 </Text>
-                {!pendingDelete && (
-                  <Text color={t.color.muted} wrap="truncate-end">
-                    {h.preview ? `${h.preview} · ${sessionWorkspaceLabel(h.cwd)}` : sessionWorkspaceLabel(h.cwd)}
-                  </Text>
-                )}
               </Box>
             </Box>
           )

@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url'
 
 import type { Context } from '@deepseek-ai/cordis'
 import { installModelSelection, type Agent, type AgentHandle, type ModelSelection, type ModelSelectionRef } from '@deepseek-ai/dsh-agent'
+import type { ToolDefinition } from '@deepseek-ai/dsh-tools'
 import { SessionId, type Session, type SessionEvent, type SessionHeader } from '@deepseek-ai/dsh-session'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'
 import { createUserMessage, type ContentBlock, type StreamChunk, type TokenUsage } from '@deepseek-ai/dsh-llm'
@@ -45,6 +46,7 @@ import { readImageFile, readWindowsClipboardImage, type IngressImage } from './i
 import { HarnessMcpManager, type McpServerConfig } from './mcpManager.js'
 import { DEFAULT_PERSONALITY, personalityById, personalityCatalog } from './personas.js'
 import { speakWithFishAudio, type FishAudioProfile } from './fishAudio.js'
+import { SANDBOX_ESCALATION_TOOL_NAMES, type SandboxMode, wrapSandboxEscalationTool } from './redundantSandboxEscalation.js'
 
 const PLUGIN_VERSION = (() => {
   const require = createRequire(import.meta.url)
@@ -557,6 +559,7 @@ export class HarnessGatewayClient extends GatewayClient {
       sessionId,
       setup: (agentCtx) => {
         installModelSelection(agentCtx, this.selection)
+        this.installRedundantEscalationCompatibility(agentCtx)
       }
     })
 
@@ -575,12 +578,43 @@ export class HarnessGatewayClient extends GatewayClient {
       resumeSessionId: SessionId(sessionId),
       setup: (agentCtx) => {
         installModelSelection(agentCtx, this.selection)
+        this.installRedundantEscalationCompatibility(agentCtx)
       }
     })
 
     this.live.set(sessionId, handle)
 
     return handle
+  }
+
+  /**
+   * Shadow only mutation tools which expose the generic sandbox escalation
+   * fields. The upstream definitions retain their schema and rendering exactly;
+   * the wrapper merely removes a paired, no-op Full Access escalation before
+   * the upstream strict-widening validator observes it.
+   */
+  private installRedundantEscalationCompatibility(agentCtx: Context): void {
+    const tools = agentCtx.get('tools') as
+      | {
+          get?: (name: string) => ToolDefinition | undefined
+          register?: (definition: ToolDefinition) => unknown
+        }
+      | undefined
+    const sandboxPolicy = agentCtx.get('sandboxPolicy') as
+      | {
+          resolve?: (request?: { session?: Session }) => { mode: SandboxMode }
+        }
+      | undefined
+
+    if (!tools?.get || !tools.register) return
+
+    for (const name of SANDBOX_ESCALATION_TOOL_NAMES) {
+      const definition = tools.get(name)
+
+      if (definition) {
+        tools.register(wrapSandboxEscalationTool(definition, (exec) => sandboxPolicy?.resolve?.({ session: exec.agent?.session })?.mode ?? 'workspace-write'))
+      }
+    }
   }
 
   /** Bind the UI to one live agent: event subscriptions, info, turn odometer. */
@@ -1395,8 +1429,23 @@ export class HarnessGatewayClient extends GatewayClient {
 
     const planMode = this.ctx.get('planMode') as { set?: (a: Agent, active: boolean) => unknown } | undefined
     const approval = this.ctx.get('approval') as { setPolicy?: (a: Agent, policy: 'ask' | 'never') => void } | undefined
+    // `/permissions full` must change both halves of the Harness permission
+    // contract. Previously it only disabled the approval service, leaving this
+    // session's sandbox policy at workspace-write. That contradictory state
+    // advertised "full access" in the TUI while a tool could still ask for an
+    // escalation (or, when the deployment default was already full access,
+    // retry an invalid same-level escalation forever).
+    //
+    // `acceptEdits` has no distinct sandbox-policy equivalent in Harness: it
+    // remains workspace-write + ask, while the TUI uses it as its presentation
+    // level. `plan` changes workflow only and preserves the confined policy.
+    const sandboxMode = mode === 'bypassPermissions' ? 'danger-full-access' : 'workspace-write'
 
     planMode?.set?.(agent, mode === 'plan')
+    // Equivalent to `setSandboxMode(agent.session, sandboxMode)`: this is the
+    // canonical log-only state transition, kept inline to avoid loading the
+    // service implementation merely to call its one-line event writer.
+    ;(agent.session as Session & { append: (type: 'sandbox/mode', data: { mode: string }) => unknown }).append('sandbox/mode', { mode: sandboxMode })
     approval?.setPolicy?.(agent, mode === 'bypassPermissions' ? 'never' : 'ask')
     this.permissionMode = mode
 
